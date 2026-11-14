@@ -5,10 +5,10 @@ Les investisseurs autonomes doivent arbitrer entre rendement perçu, risque, hor
 
 ## Approche agentique
 AlphaForge AI combine un **cœur quantitatif déterministe** et des **agents LLM via Amazon Bedrock (API Converse)** :
-- **Interprétation** des demandes en langage naturel (Claude Haiku 3.5) vers des intentions/actifs structurés.
-- **Orchestration** (Claude Sonnet 3.5) avec boucle d’outils et exécution de calculs Python : chargement/alignement des données, métriques de risque, optimisation de portefeuille à deux niveaux sous contraintes, test de résistance (épisode 2022).
-- **Gouvernance** : règles déterministes (adéquation, interdictions/plafonds, avis de simulation) avec escalade possible vers Claude Opus 3.5 pour cas ambigus.
-- **Explication** (Claude Sonnet 3.5) produisant un JSON structuré fondé sur des preuves.
+- **Interprétation** des demandes en langage naturel (Claude Haiku 5.5) vers des intentions/actifs structurés.
+- **Orchestration** (Claude Sonnet 5.5) avec boucle d’outils et exécution de calculs Python : chargement/alignement des données, métriques de risque, optimisation de portefeuille à deux niveaux sous contraintes, test de résistance (épisode 2022).
+- **Gouvernance** : règles déterministes (adéquation, interdictions/plafonds, avis de simulation) avec escalade possible vers Claude Opus 5.5 pour cas ambigus.
+- **Explication** (Claude Sonnet 5.5) produisant un JSON structuré fondé sur des preuves.
 
 Chaque résultat chiffré issu des outils est enregistré dans un **registre de preuves `E1…En`** ; un **vérificateur déterministe** contrôle la présence des identifiants cités et la cohérence des nombres avant restitution. Une **trace d’exécution observable** (étapes, appels d’outils, preuves, alertes) est exposée sans chaîne de pensée interne.
 

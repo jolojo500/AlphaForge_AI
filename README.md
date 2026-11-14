@@ -15,16 +15,16 @@ Le cœur du système est déterministe : les chiffres proviennent d’outils Pyt
 flowchart TD
     U[Interface Streamlit<br/>frontend/app.py] --> P[Pipeline run_analysis<br/>alphaforge/app/pipeline.py]
     P --> T[Trace d'exécution observable<br/>ExecutionTrace]
-    P --> I[Interpréteur de requête<br/>RequestInterpreterAgent<br/>Claude Haiku 3.5]
-    P --> O[Orchestrateur agentique<br/>OrchestratorAgent<br/>Claude Sonnet 3.5 + outils]
+    P --> I[Interpréteur de requête<br/>RequestInterpreterAgent<br/>Claude Haiku 5.5]
+    P --> O[Orchestrateur agentique<br/>OrchestratorAgent<br/>Claude Sonnet 5.5 + outils]
     O --> Q[Outils déterministes]
     Q --> PR[prices.py<br/>alignement calendrier, FX CAD, retours]
     Q --> RK[risk.py<br/>vol, drawdown, CVaR95, bêta, contributions]
     Q --> OP[optimize.py<br/>optimisation 2 niveaux / CVXPY]
     Q --> ST[stress.py<br/>stress 2022, fenêtres roulantes, sensibilité]
     Q --> E[EvidenceRegistry<br/>preuves E1..En]
-    P --> G[Gouvernance<br/>règles déterministes + escalade Claude Opus 3.5]
-    P --> X[Explicateur<br/>Claude Sonnet 3.5<br/>JSON structuré fondé sur E#]
+    P --> G[Gouvernance<br/>règles déterministes + escalade Claude Opus 5.5]
+    P --> X[Explicateur<br/>Claude Sonnet 5.5<br/>JSON structuré fondé sur E#]
     X --> V[Vérificateur déterministe<br/>IDs E# + nombres cités]
     V -->|valide| R[Résultat : allocation, métriques, stress,<br/>explication, alertes, trace, vérification]
     V -->|erreurs| X
@@ -32,7 +32,7 @@ flowchart TD
 
 **Notes factuelles :**
 - Le point d’entrée utilisateur implémenté est `frontend/app.py` (Streamlit), qui appelle `alphaforge.app.pipeline.run_analysis`.
-- Les agents sont dans `alphaforge/app/agents/` (`interpreter.py`, `orchestrator.py`, `governance.py`, `explainer.py`) et utilisent `BedrockConverseClient` (profil AWS `datathon` par défaut, région `us-east-1`, modèles configurés dans le code : Sonnet/Opus/Haiku 3.5 via IDs `global.anthropic.claude-*`).
+- Les agents sont dans `alphaforge/app/agents/` (`interpreter.py`, `orchestrator.py`, `governance.py`, `explainer.py`) et utilisent `BedrockConverseClient` (profil AWS `datathon` par défaut, région `us-east-1`, modèles configurés dans le code : Sonnet/Opus/Haiku 5.5 via IDs `global.anthropic.claude-*`).
 - Les API FastAPI/SSE et la persistance DynamoDB/S3 décrites dans les documents de planification ne sont pas implémentées dans ce dépôt tel quel ; le pipeline retourne un dictionnaire de résultats et une trace sérialisable. Ces éléments sont **prévus** si une couche service devait être ajoutée.
 
 ## Inventaire des sources de données
