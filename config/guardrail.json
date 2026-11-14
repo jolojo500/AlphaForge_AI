@@ -1,0 +1,30 @@
+{
+  "guardrail_id": "4xv8l1wjndtl",
+  "guardrail_arn": "arn:aws:bedrock:us-east-1:908027403910:guardrail/4xv8l1wjndtl",
+  "guardrail_version": "2",
+  "name": "alphaforge-guardrail",
+  "region": "us-east-1",
+  "status": "READY",
+  "created_at": "2026-11-14T20:33:05.237372+00:00",
+  "denied_topics": [
+    "personalized-financial-advice",
+    "executing-real-trades",
+    "guaranteed-return-promises"
+  ],
+  "content_filters": [
+    "SEXUAL",
+    "VIOLENCE",
+    "HATE",
+    "INSULTS",
+    "MISCONDUCT",
+    "PROMPT_ATTACK"
+  ],
+  "pii_entities": [
+    "EMAIL",
+    "PHONE",
+    "US_BANK_ACCOUNT_NUMBER",
+    "INTERNATIONAL_BANK_ACCOUNT_NUMBER",
+    "CREDIT_DEBIT_CARD_NUMBER",
+    "CA_SOCIAL_INSURANCE_NUMBER"
+  ]
+}

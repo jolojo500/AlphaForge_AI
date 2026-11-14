@@ -42,9 +42,11 @@ class BedrockConverseClient:
         region_name: str = "us-east-1",
         default_model: str = MODEL_SONNET,
         client: Any = None,
+        default_guardrail_config: dict[str, Any] | None = None,
     ):
         self.region_name = region_name
         self.default_model = default_model
+        self.default_guardrail_config = default_guardrail_config
 
         if client is not None:
             self.client = client
@@ -71,6 +73,7 @@ class BedrockConverseClient:
         model_id: str | None = None,
         tool_config: dict[str, Any] | None = None,
         max_tokens: int = 4096,
+        guardrail_config: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Invoke the Bedrock Converse operation.
 
@@ -88,6 +91,10 @@ class BedrockConverseClient:
 
         if tool_config:
             params["toolConfig"] = tool_config
+
+        gc = guardrail_config if guardrail_config is not None else self.default_guardrail_config
+        if gc:
+            params["guardrailConfig"] = gc
 
         response = self.client.converse(**params)
         return response
@@ -119,6 +126,7 @@ class BedrockConverseClient:
         model_id: str | None = None,
         max_iterations: int = 6,
         max_tokens: int = 4096,
+        guardrail_config: dict[str, Any] | None = None,
     ) -> tuple[str, list[dict[str, Any]]]:
         """Execute Bedrock Converse multi-turn tool-use loop.
 
@@ -132,6 +140,7 @@ class BedrockConverseClient:
             model_id: Target Bedrock model ID.
             max_iterations: Safety cap on tool turns.
             max_tokens: Maximum token generation.
+            guardrail_config: Optional Bedrock guardrailConfig dict.
 
         Returns:
             Tuple of (final_text_response, full_conversation_messages).
@@ -146,6 +155,7 @@ class BedrockConverseClient:
                 model_id=model_id,
                 tool_config=tool_config,
                 max_tokens=max_tokens,
+                guardrail_config=guardrail_config,
             )
 
             msg = response["output"]["message"]
