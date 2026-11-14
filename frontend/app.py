@@ -57,6 +57,37 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Password gate (if APP_PASSWORD is set in environment)
+app_password = os.environ.get("APP_PASSWORD")
+if app_password:
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+
+    if not st.session_state["authenticated"]:
+        st.markdown(
+            """
+            <div style="max-width: 480px; margin: 60px auto 20px auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <h3 style="margin-top: 0; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                    <span>🔒</span> Accès restreint — AlphaForge AI
+                </h3>
+                <p style="color: #64748b; font-size: 0.92rem; margin-bottom: 0;">
+                    Cette instance de démonstration est protégée. Veuillez saisir le mot de passe pour accéder au copilote d'investissement.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col2:
+            pwd_input = st.text_input("Mot de passe", type="password", key="app_pwd_input")
+            if st.button("Se connecter", use_container_width=True, type="primary"):
+                if pwd_input == app_password:
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("Mot de passe incorrect.")
+        st.stop()
+
 # Custom Styling
 st.markdown(
     """
