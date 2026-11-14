@@ -5,6 +5,7 @@ Datathon PolyFinances 2026 (BNCD + AWS).
 
 - Product, architecture, contracts and who builds what: [docs/PRD.md](docs/PRD.md)
 - Work is tracked in the GitHub issues, one track label per agent (`track:a`, `track:b`, `track:c`)
+- Prompt to start an agent on a track: [docs/AGENT_PROMPT.md](docs/AGENT_PROMPT.md)
 
 ## Quick start
 
