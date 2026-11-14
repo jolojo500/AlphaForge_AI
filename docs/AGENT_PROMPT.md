@@ -10,9 +10,9 @@ Paste the block below into your coding agent. Change only the first line.
 
 Before pasting:
 
-- Everyone: `gh auth login` done, `uv` installed, repo invite accepted.
-- Track B: workshop AWS credentials in the environment for the live Bedrock tests, plus free `FINNHUB_API_KEY` and `TAVILY_API_KEY` for the news agent. Until then the agent works from mocks and cache.
-- Track C: the same AWS credentials, needed from the S3/DynamoDB issue onward.
+- Everyone: `gh auth login` done, `uv` installed, repo invite accepted. AWS credentials for the workshop account are already in everyone's environment (region `us-east-1`).
+- Track B: free `FINNHUB_API_KEY` and `TAVILY_API_KEY` for the news agent. Without them the agent works from the committed cache.
+- Track C: Node 22 and npm for the React frontend in `frontend/`.
 
 The workshop credentials are temporary; get fresh ones from the Event Dashboard when calls fail with `ExpiredToken`.
 
@@ -29,6 +29,8 @@ Setup (do this first):
 2. uv sync && uv run pytest -q && uv run python -m alphaforge.graph robert
    All tests must pass and the stub graph must print a full run before you change anything.
 3. Read docs/PRD.md completely. Section 3 (contracts) and section 4 (workflow) are binding.
+   Tracks B and C: also skim the BNCD workshop deck PDFs in Datathon2026/; prompts and UI
+   wording follow it (four questions, six risk types, tolerance vs capacity).
 
 Find your work:
   gh issue list --label "track:a" --state open     (use track:b or track:c for your track)
@@ -43,7 +45,8 @@ For each issue:
 4. Write the tests named in the acceptance criteria. No network in unit tests: mock LLM
    and HTTP calls; mark anything needing AWS with @pytest.mark.live.
 5. uv run ruff check . && uv run pytest -q must both pass, including
-   tests/test_graph_stub.py (the contract test).
+   tests/test_graph_stub.py (the contract test). Track C, for frontend changes:
+   cd frontend && npm run lint && npm run build must also pass.
 6. Push and open a PR titled like "[A-2] Quant metrics", body containing
    "Closes #<issue-number>" and a short "How I verified" note. Open it as a draft while
    working; mark it ready when done. Ready = the orchestrator reviews and merges.

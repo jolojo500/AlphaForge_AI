@@ -14,6 +14,10 @@ uv sync
 uv run pytest -q
 uv run ruff check .
 uv run python -m alphaforge.graph robert     # runs the whole graph (stub nodes for now)
+
+# frontend (once frontend/ exists)
+uv run uvicorn alphaforge.api.server:app --reload
+cd frontend && npm install && npm run dev
 ```
 
 Environment variables are listed in `.env.example`.
