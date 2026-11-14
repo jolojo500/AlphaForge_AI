@@ -76,17 +76,57 @@ ORCHESTRATOR_TOOL_SPECS = [
             }
         },
     },
+    {
+        "name": "recent_filings",
+        "description": "Retrieves recent dated official SEC EDGAR regulatory filings (Form 10-K, 10-Q, 8-K, publication dates, and official URLs) for an equity ticker up to a cutoff date. Factual regulatory documents, no invented headlines.",
+        "inputSchema": {
+            "json": {
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string", "description": "Canonical equity ticker symbol, e.g. TSLA, AAPL"},
+                    "as_of": {"type": "string", "description": "Cutoff date in YYYY-MM-DD format (default: 2026-11-13)"}
+                },
+                "required": ["ticker"]
+            }
+        },
+    },
+    {
+        "name": "etf_look_through",
+        "description": "Calculates the effective economic single-stock exposure by expanding ETF holdings (transparence FNB). Note: top-25 holdings coverage only.",
+        "inputSchema": {
+            "json": {
+                "type": "object",
+                "properties": {
+                    "weights": {"type": "object", "description": "Portfolio weights mapping ticker to decimal weight"}
+                }
+            }
+        },
+    },
+    {
+        "name": "esg_screen",
+        "description": "Screens universe tickers against sourced FTSE Russell Global Choice Index Series ESG exclusion criteria. Identifies excluded, flagged, and unverified tickers.",
+        "inputSchema": {
+            "json": {
+                "type": "object",
+                "properties": {
+                    "tickers": {"type": "array", "items": {"type": "string"}, "description": "List of tickers to screen"}
+                },
+                "required": ["tickers"]
+            }
+        },
+    },
 ]
 
 ORCHESTRATOR_SYSTEM_PROMPT = """Tu es l'Agent Orchestrateur d'AlphaForge AI pour le courtage direct (BNCD).
-Ton rôle est de piloter l'analyse quantitative pour éclairer la décision d'un investisseur.
-Tu as accès à des outils déterministes d'analyse de marché, de risque et de simulation.
+Ton rôle est de piloter l'analyse quantitative et réglementaire pour éclairer la décision d'un investisseur.
+Tu as accès à des outils déterministes d'analyse de marché, de risque, de simulation, de dépôts réglementaires SEC et de filtrage ESG.
 
 Directives :
 1. Examine la requête de l'investisseur et son profil de risque.
 2. Si un actif spécifique est mentionné (ex: Tesla TSLA, Bitcoin, Enbridge), appelle impérativement 'evaluate_asset_addition' pour mesurer son risque individuel et simuler l'impact sur le portefeuille.
-3. Si pertinent, appelle 'compare_tickers' ou 'run_sensitivity_analysis' pour enrichir le dossier de décision.
-4. Reste concis dans ta planification.
+3. Si un actif américain est analysé (ex: TSLA), appelle 'recent_filings' pour intégrer les derniers dépôts officiels SEC EDGAR (10-Q, 8-K) au dossier factuel.
+4. Si pertinent, appelle 'compare_tickers', 'run_sensitivity_analysis', 'etf_look_through' ou 'esg_screen' pour enrichir le dossier de décision.
+5. Reste concis dans ta planification.
 """
 
 
@@ -165,10 +205,23 @@ class OrchestratorAgent:
                     max_cap=max_cap,
                 )
 
+            def handle_recent_filings(ticker: str, as_of: str = "2026-11-13") -> list[dict[str, Any]]:
+                return self.recent_filings(ticker=ticker, as_of=as_of, registry=reg, trace=trace)
+
+            def handle_look_through(weights: dict[str, float] | None = None) -> dict[str, Any]:
+                w = weights or base_output["weights"]
+                return self.etf_look_through(weights=w, registry=reg, trace=trace)
+
+            def handle_esg_screen(tickers: list[str]) -> dict[str, Any]:
+                return self.screen_esg(tickers=tickers, registry=reg, trace=trace)
+
             tool_handlers: dict[str, Callable[..., Any]] = {
                 "evaluate_asset_addition": handle_eval_asset,
                 "compare_tickers": handle_compare_tickers,
                 "run_sensitivity_analysis": handle_sensitivity,
+                "recent_filings": handle_recent_filings,
+                "etf_look_through": handle_look_through,
+                "esg_screen": handle_esg_screen,
             }
 
             # Prepare prompt for Bedrock Sonnet 5.5
@@ -443,17 +496,31 @@ class OrchestratorAgent:
         if trace:
             trace.evidence_added(e_stress.id, e_stress.tool, f"Max DD 2022 : {stress_payload['portfolio']['max_drawdown']:.2%} vs 60/40 : {stress_payload['benchmarks']['benchmark_60_40']['max_drawdown']:.2%}")
 
+        # 5. ETF Look-Through (Transparence des FNB)
+        look_through_res = self.etf_look_through(weights=filtered_weights, registry=reg, trace=trace)
+
+        # 6. ESG Screening (Sourced FTSE Russell criteria)
+        esg_res = None
+        if persona.id == "mateo":
+            esg_res = self.screen_esg(tickers=universe["ticker"].tolist(), registry=reg, trace=trace)
+
+        evidence_ids_map = {
+            "data": e_data.id,
+            "risk": e_risk.id,
+            "opt": e_opt.id,
+            "stress": e_stress.id,
+        }
+        if isinstance(look_through_res, dict) and "evidence_id" in look_through_res:
+            evidence_ids_map["look_through"] = look_through_res["evidence_id"]
+
         return {
             "weights": filtered_weights,
             "dollar_amounts": dollar_allocations,
             "metrics": port_metrics_clean,
             "stress_test": stress_payload,
-            "evidence_ids": {
-                "data": e_data.id,
-                "risk": e_risk.id,
-                "opt": e_opt.id,
-                "stress": e_stress.id,
-            },
+            "etf_look_through": look_through_res,
+            "esg_screen": esg_res,
+            "evidence_ids": evidence_ids_map,
             "risk_summary_df": risk_summary_df,
             "universe_df": universe,
         }
@@ -509,6 +576,13 @@ class OrchestratorAgent:
         )
         if trace:
             trace.evidence_added(e_asset.id, "compute_asset_risk", f"{ticker} : Vol={asset_vol:.2%}, Max DD={asset_dd:.2%}")
+
+        # 1b. Retrieve official SEC EDGAR filings for equities (e.g. TSLA)
+        recent_filings_list = []
+        try:
+            recent_filings_list = self.recent_filings(ticker=ticker, as_of="2026-11-13", limit=5, registry=registry, trace=trace)
+        except Exception as e:
+            logger.warning(f"Recent filings lookup skipped for {ticker}: {e}")
 
         # 2. Side-by-Side 3-Way Portfolio Comparison (Issue #33: No silent 0.20 default)
         m_base = portfolio_risk_metrics(baseline_weights, returns_cad)
@@ -627,6 +701,7 @@ class OrchestratorAgent:
             "asset_metrics": asset_metrics,
             "comparison": comparison_payload,
             "capped_weights": w_alt,
+            "recent_filings": recent_filings_list,
         }
 
     def compare_tickers(
@@ -709,5 +784,144 @@ class OrchestratorAgent:
         )
         if trace:
             trace.evidence_added(e_item.id, "run_sensitivity_analysis", f"Sensibilité calculée sur {len(cap_levels)} paliers.")
+
+        return payload
+
+    def screen_esg(
+        self,
+        tickers: list[str],
+        registry: EvidenceRegistry | None = None,
+        trace: ExecutionTrace | None = None,
+    ) -> dict[str, Any]:
+        """Screen universe tickers against sourced FTSE Russell Global Choice ESG exclusions."""
+        from alphaforge.app.tools.esg import esg_screen
+
+        if trace:
+            trace.step_start("Filtrage ESG Institutionnel", f"Screening ESG de {len(tickers)} actifs selon les règles FTSE Global Choice.")
+            trace.tool_call("esg_screen", {"tickers": tickers})
+
+        res = esg_screen(tickers)
+
+        if registry:
+            e_item = registry.register(
+                tool="esg_screen",
+                args={"tickers": tickers},
+                result=res,
+                source="FTSE Russell FTSE Global Choice Index Series Ground Rules v5.0",
+                date_str="2026-11-14",
+                currency="CAD",
+                description="Filtrage d'exclusion et statut ESG des actifs selon les règles FTSE Global Choice.",
+                summary_metrics={
+                    "excluded_tickers": res["excluded"],
+                    "flagged_tickers": res["flagged"],
+                    "unverified_tickers": res["unverified"],
+                    "excluded_count": len(res["excluded"]),
+                    "flagged_count": len(res["flagged"]),
+                    "unverified_count": len(res["unverified"]),
+                },
+            )
+            if trace:
+                trace.evidence_added(
+                    e_item.id,
+                    "esg_screen",
+                    f"Exclusions: {res['excluded']} | Non vérifiés: {len(res['unverified'])} | Flagged: {len(res['flagged'])}",
+                )
+
+        return res
+
+    def recent_filings(
+        self,
+        ticker: str,
+        as_of: str = "2026-11-13",
+        limit: int = 5,
+        registry: EvidenceRegistry | None = None,
+        trace: ExecutionTrace | None = None,
+    ) -> list[dict[str, Any]]:
+        """Retrieve factual SEC EDGAR filings for ticker up to as_of date without look-ahead."""
+        from alphaforge.app.tools.news import news_for
+
+        if trace:
+            trace.step_start(f"Dépôts Réglementaires SEC : {ticker}", f"Consultation des dépôts officiels SEC EDGAR pour {ticker} au {as_of}.")
+            trace.tool_call("recent_filings", {"ticker": ticker, "as_of": as_of})
+
+        news_frame = news_for(ticker, as_of_date=as_of)
+        all_records = news_frame.to_records_list() if hasattr(news_frame, "to_records_list") else list(news_frame)
+        recent_records = all_records[-limit:] if len(all_records) >= limit else all_records
+
+        if registry:
+            e_item = registry.register(
+                tool="recent_filings",
+                args={"ticker": ticker, "as_of": as_of},
+                result={"ticker": ticker, "as_of": as_of, "filings": recent_records},
+                source="SEC EDGAR (dépôts réglementaires officiels)",
+                date_str=as_of,
+                currency="USD",
+                description=f"Derniers dépôts réglementaires officiels SEC EDGAR pour {ticker} au {as_of}.",
+                summary_metrics={
+                    "ticker": ticker,
+                    "filings_count": len(recent_records),
+                    "filings": [
+                        {
+                            "form": r.get("form_or_type", ""),
+                            "date": r.get("published_date", ""),
+                            "title": r.get("title", ""),
+                            "url": r.get("url", ""),
+                        }
+                        for r in recent_records
+                    ],
+                },
+            )
+            if trace:
+                trace.evidence_added(
+                    e_item.id,
+                    "recent_filings",
+                    f"{len(recent_records)} dépôts SEC récents enregistrés pour {ticker} (aucun titre inventé).",
+                )
+
+        return recent_records
+
+    def etf_look_through(
+        self,
+        weights: dict[str, float],
+        registry: EvidenceRegistry | None = None,
+        trace: ExecutionTrace | None = None,
+    ) -> dict[str, Any]:
+        """Calculate effective single-stock economic exposure by expanding ETF holdings."""
+        from alphaforge.app.tools.etf_overlap import look_through
+
+        if trace:
+            trace.step_start("Transparence des FNB (Look-Through)", "Calcul de l'exposition économique effective des fonds (top-25 titres).")
+            trace.tool_call("etf_look_through", {"weights": weights})
+
+        expanded = look_through(weights)
+        sorted_top = sorted(expanded.items(), key=lambda kv: kv[1], reverse=True)[:10]
+
+        payload = {
+            "effective_exposure": expanded,
+            "top_10": dict(sorted_top),
+            "caveat": "top-25 only / partial coverage",
+        }
+
+        if registry:
+            e_item = registry.register(
+                tool="etf_look_through",
+                args={"weights": weights},
+                result=payload,
+                source="AlphaForge ETF Look-Through Engine (Holdings Top-25)",
+                date_str="2026-11-14",
+                currency="CAD",
+                description="Exposition économique effective par transparence des FNB (couverture partielle top-25 titres par fonds).",
+                summary_metrics={
+                    "effective_top_5": dict(sorted_top[:5]),
+                    "caveat": "top-25 only / partial coverage",
+                },
+            )
+            payload["evidence_id"] = e_item.id
+            if trace:
+                trace.evidence_added(
+                    e_item.id,
+                    "etf_look_through",
+                    f"Transparence FNB calculée (couverture partielle top-25). Top: {list(dict(sorted_top[:3]).keys())}",
+                )
 
         return payload

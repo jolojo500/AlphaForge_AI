@@ -217,20 +217,19 @@ def check_governance_rules(
         )
 
     if persona.id == "mateo":
-        # Provisional ESG screening alert (per Datathon Case & GitHub issue #4)
+        # Sourced ESG screening notice (FTSE Russell Global Choice rules)
         alerts.append(
             GovernanceAlert(
-                rule_name="provisional_esg_screening_mateo",
+                rule_name="esg_screening_mateo",
                 level="info",
                 message=(
-                    "Provisional ESG Screening Notice: Oil sands, pipelines, and fossil fuel assets (CNQ.TO, ENB.TO, XOM) "
-                    "are excluded based on provisional team assumptions (source: 'hypothese_equipe — à remplacer par source ESG'; ref GitHub issue #4). "
-                    "Vanguard ESG U.S. Stock ETF (ESGV) is utilized as the primary ESG-screened equity vehicle."
+                    "Filtre ESG Sévère : Les actifs d'hydrocarbures et sables bitumineux (CNQ.TO, ENB.TO, XOM) sont formellement exclus "
+                    "conformément aux règles d'exclusion FTSE Russell Global Choice Index Series v5.0 (data/esg/esg_flags.csv). "
+                    "Le FNB Vanguard ESG U.S. Stock (ESGV) constitue le véhicule de référence actions durables."
                 ),
                 details={
-                    "provisional_exclusions": ["CNQ.TO", "ENB.TO", "XOM"],
-                    "source": "hypothese_equipe — à remplacer par source ESG",
-                    "issue_reference": "GitHub issue #4",
+                    "excluded_tickers": ["CNQ.TO", "ENB.TO", "XOM"],
+                    "source": "FTSE Russell FTSE Global Choice Index Series Ground Rules v5.0",
                     "esg_core_vehicle": "ESGV",
                 },
             )

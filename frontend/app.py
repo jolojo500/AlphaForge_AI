@@ -151,9 +151,16 @@ st.markdown(
 )
 
 # Sidebar Configuration
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Polytechnique_Montr%C3%A9al.svg", width=150)
-st.sidebar.title("🛡️ AlphaForge AI")
-st.sidebar.caption("Copilote Institutionnel pour le Courtage Direct")
+st.sidebar.markdown(
+    """
+    <div style="text-align: center; padding: 10px 0 15px 0;">
+        <span style="font-size: 2.8rem;">🏛️</span>
+        <h2 style="margin: 0; color: #1E3A8A; font-size: 1.5rem; font-weight: 700;">AlphaForge AI</h2>
+        <span style="font-size: 0.8rem; color: #4B5563; font-weight: 500;">Copilote Courtage Direct &middot; BNCD</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 persona_choice = st.sidebar.selectbox(
     "Profil Investisseur :",
@@ -442,6 +449,21 @@ with tab_main:
                 yaxis=dict(autorange="reversed"),
             )
             st.plotly_chart(fig_bar, use_container_width=True)
+
+        # Sourced ESG Status Badges for Mateo (FTSE Russell Global Choice rules)
+        if "Mateo" in persona_name or current_persona_id == "mateo":
+            st.markdown("#### 🌱 Statut ESG des Actifs (Source : Règles FTSE Russell Global Choice)")
+            st.caption("Filtrage fondé sur data/esg/esg_flags.csv. Les actifs exclus sont retirés ; les actifs 'non vérifiés' sont indiqués comme tels (jamais présentés comme conformes).")
+            esg_cols = st.columns(3)
+            with esg_cols[0]:
+                st.markdown("**🟢 Screené ESG / Conforme :**")
+                st.markdown("• `ESGV` (Vanguard ESG U.S. Stock ETF)")
+            with esg_cols[1]:
+                st.markdown("**🔴 Exclus (Hydrocarbures / Pipelines) :**")
+                st.markdown("• `ENB.TO` (Enbridge — Pipelines)<br>• `CNQ.TO` (Canadian Natural — Sables bitumineux)<br>• `XOM` (ExxonMobil — Production fossile)", unsafe_allow_html=True)
+            with esg_cols[2]:
+                st.markdown("**⚪ Non Vérifiés (Aucun label vert garanti) :**")
+                st.markdown("• Actions ordinaires (FTS, CNR, Banques)<br>• FNB larges (XIU, SPY, XBB, ZST)", unsafe_allow_html=True)
 
         st.markdown("---")
 
@@ -831,6 +853,20 @@ with tab_audit:
         with aud_tab1:
             all_evidence = aud_res.get("evidence", {})
             st.markdown(f"**Total preuves enregistrées :** `{len(all_evidence)}`")
+
+            # ETF Look-Through Section
+            look_through = aud_res.get("etf_look_through")
+            if look_through and isinstance(look_through, dict):
+                st.markdown("#### 🔬 Transparence des FNB (ETF Look-Through)")
+                st.caption("Exposition économique effective par transparence des FNB (Avertissement : couverture partielle top-25 titres par fonds / *top-25 only / partial coverage*).")
+                eff_exp = look_through.get("effective_exposure", {})
+                if eff_exp:
+                    df_lt = pd.DataFrame([
+                        {"Actif sous-jacent": t, "Exposition effective (%)": round(float(w) * 100, 2)}
+                        for t, w in sorted(eff_exp.items(), key=lambda kv: kv[1], reverse=True)[:12]
+                    ])
+                    st.dataframe(df_lt, use_container_width=True, hide_index=True)
+
             for eid, ev_data in all_evidence.items():
                 with st.expander(f"📝 Preuve [{eid}] — Outil : `{ev_data.get('tool')}`", expanded=False):
                     c_src, c_dt, c_cur = st.columns(3)

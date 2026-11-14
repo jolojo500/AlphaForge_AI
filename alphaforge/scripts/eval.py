@@ -377,7 +377,7 @@ BENCHMARK_CASES: list[EvalCaseSpec] = [
         persona_or_profile="mateo",
         question="",
         expected_governance_level="info",
-        expected_rule="provisional_esg_screening_mateo",
+        expected_rule="esg_screening_mateo",
         description="Profil équilibré 32 ans, exclusions éthiques et énergies fossiles provisionnelles.",
     ),
     EvalCaseSpec(

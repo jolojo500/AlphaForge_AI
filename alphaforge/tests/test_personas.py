@@ -125,8 +125,8 @@ class TestPersonasEndToEnd:
         bond_w = sum(w for t, w in weights.items() if class_map.get(t) == "etf_bond")
         assert bond_w >= 0.30
 
-        # Governance has provisional ESG info alert
-        assert any(a.rule_name == "provisional_esg_screening_mateo" and a.level == "info" for a in gov.alerts)
+        # Governance has ESG info alert
+        assert any(a.rule_name in ("esg_screening_mateo", "provisional_esg_screening_mateo") and a.level == "info" for a in gov.alerts)
 
         # Governance and Verifier
         assert gov.passed is True

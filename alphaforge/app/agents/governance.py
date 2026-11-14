@@ -92,6 +92,7 @@ class GovernanceAgent:
                 parsed_request=parsed_request,
                 orchestrator_output=orchestrator_output or {},
                 report=report,
+                registry=registry,
                 trace=trace,
             )
 
@@ -148,9 +149,12 @@ class GovernanceAgent:
         parsed_request: ParsedRequest,
         orchestrator_output: dict[str, Any],
         report: GovernanceReport,
+        registry: EvidenceRegistry | None = None,
         trace: ExecutionTrace | None = None,
     ) -> None:
         """Apply specialized adequation rules to parsed natural language requests."""
+        if registry is None:
+            registry = orchestrator_output.get("evidence_registry")
         requested_evals = orchestrator_output.get("requested_evaluations", [])
         eval_map = {e["comparison"]["ticker"]: e for e in requested_evals if "comparison" in e}
 
@@ -275,19 +279,37 @@ class GovernanceAgent:
 
             # --- CASE 3: Mateo + ENB (ESG Tension with Fossil Fuel Yield) ---
             elif persona.id == "mateo" and ticker == "ENB.TO":
+                # Find ESG screening evidence ID from registry
+                e_esg_id = None
+                if registry:
+                    for ev in registry.list_all():
+                        if ev.tool == "esg_screen":
+                            e_esg_id = ev.id
+                            break
+                if not e_esg_id:
+                    eval_data = eval_map.get("ENB.TO", {})
+                    e_esg_id = eval_data.get("comparison_evidence_id", "E2")
+
                 report.alerts.append(
                     GovernanceAlert(
                         rule_name="tension_esg_mateo_enbridge",
                         level="attention",
                         message=(
                             "Tension d'objectifs ESG : Mateo demande l'intégration d'Enbridge (ENB.TO) pour son rendement de dividende. "
-                            "Or, Enbridge est un exploitant majeur d'infrastructures de transport d'hydrocarbures et de sables bitumineux, "
-                            "ce qui entre en contradiction directe avec les préférences d'exclusion ESG de Mateo. "
+                            "Or, selon le filtre ESG officiel AlphaForge fondé sur les règles d'exclusion FTSE Russell Global Choice Index Series v5.0, "
+                            "Enbridge est formellement exclu en raison de ses activités majeures de transport et transmission d'hydrocarbures par pipelines. "
                             "Alternative constructive : privilégier des titres de dividendes de qualité à plus faible intensité carbone "
                             "(ex: Fortis FTS.TO, banques canadiennes) ou le FNB ESG (ESGV) pour maintenir la conformité éthique."
                         ),
-                        details={"ticker": "ENB.TO", "requested_weight": raw_weight, "esg_status": "provisional_exclusion"},
+                        details={
+                            "ticker": "ENB.TO",
+                            "requested_weight": raw_weight,
+                            "esg_status": "exclude",
+                            "criterion": "fossil_fuel_midstream_pipelines",
+                            "source": "FTSE Russell FTSE Global Choice Index Series Ground Rules v5.0",
+                        },
                         suggested_action="Exclure ENB.TO au profit d'actifs de dividende conformes aux critères ESG (ex: FTS.TO, ESGV).",
+                        evidence_ids=[e_esg_id] if e_esg_id else [],
                     )
                 )
                 report.has_attention = True

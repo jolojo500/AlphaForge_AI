@@ -47,6 +47,9 @@ Les fichiers du jeu de départ sont fournis sous `Datathon2026/alphaforge_starte
 | `fx_usdcad_daily.csv` | Taux de change quotidien USD/CAD et inverse | Banque du Canada, API Valet série `FXUSDCAD` | https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json | 2021-11-12 à 2026-11-12 (extrait 2026-11-13) | jours ouvrables (jours ouvrables canadiens) | `cadusd = 1/usdcad` arrondi à 6 décimales | Taux quotidien publié vers 16 h 30 HE ; aucun taux les jours fériés canadiens | Conditions Banque du Canada : https://www.bankofcanada.ca/terms/ |
 | `macro_rates.csv` | Taux directeur BdC ; rendements obligations gouv. Canada 2 ans et 10 ans ; IPC Canada a/a | Banque du Canada, API Valet (`V39079`, `BD.CDN.2YR.DQ.YLD`, `BD.CDN.10YR.DQ.YLD`, `STATIC_TOTALCPICHANGE`) | https://www.bankofcanada.ca/valet/docs | 2021-11-12 à 2026-11-12 (extrait 2026-11-13) | quotidien / mensuel | Format long ; une ligne par (`date`, `series_id`) | IPC mensuel daté au mois de référence et publié plusieurs semaines plus tard ; ne pas utiliser avant sa date de publication | Conditions Banque du Canada : https://www.bankofcanada.ca/terms/ |
 | `macro_rates.csv` | Taux des fonds fédéraux US ; rendements bons du Trésor US 2 ans et 10 ans ; IPC US ; taux de chômage US | FRED (Federal Reserve Bank of St. Louis) : `DFF`, `DGS2`, `DGS10`, `CPIAUCSL`, `UNRATE` | https://fred.stlouisfed.org | 2021-11-12 à 2026-11-12 (extrait 2026-11-13) | quotidien / mensuel | Format long ; valeurs manquantes supprimées | Séries mensuelles datées au mois de référence et publiées des semaines plus tard ; valeurs = dernière révision (pas « première publication ») | Sources d’origine : agences gouvernementales américaines (Federal Reserve Board, BLS) ; voir conditions FRED : https://fred.stlouisfed.org/legal/ |
+| `data/esg/esg_flags.csv` | Screening d'exclusion ESG pour les 31 actifs de l'univers | Règles de filtrage négatif FTSE Russell Global Choice Index Series v5.0 | Méthodologie FTSE Global Choice | 2026 (référentiel v5.0) | statique | Classification explicite : `ok` (ESGV), `exclude` (`CNQ.TO`, `ENB.TO`, `XOM`), et `non_verifie` pour les titres sans couverture FTSE formelle | Statut vérifié vs non vérifié documenté ; aucun titre non vérifié n'est marqué faussement vert | Données de référence méthodologique |
+| `data/news/news_references.csv` | Dépôts réglementaires officiels SEC EDGAR par actif et date | Dépôts réglementaires officiels SEC EDGAR (Form 8-K, 10-Q, 10-K) | https://www.sec.gov/edgar | 2021 à 2026 | événementiel | Horodatage strict par date de dépôt effectif ; URLs directes vers les pièces de dépôt | Limité aux dépôts réglementaires officiels des émetteurs américains (pas d'articles de presse sensationnalistes) | Données publiques SEC EDGAR |
+| `data/etf/fund_holdings.csv` | Compositions détaillées des FNB indiciels (`XIU.TO`, `XBB.TO`, `AGG`, `TLT`, `SPY`) | Fiches et rapports officiels des gestionnaires (BlackRock iShares, State Street SPDR) | Sites officiels des gestionnaires | 2026 | trimestriel / annuel | Extraction des 25 premières positions pondérées par fonds | Limité aux 25 principales positions déclarées (« top-25 only / partial coverage ») | Données publiques des émetteurs de FNB |
 
 ## Traitements de données (implémentés dans le code)
 
@@ -57,8 +60,9 @@ Les fichiers du jeu de départ sont fournis sous `Datathon2026/alphaforge_starte
 - **Anomalie CNQ.TO (2022-08-22)** (`prices.py`) : le rapport qualité signale une entrée « split » de facteur 1,021 le même jour qu’un dividende de 0,75 CAD (distribution spéciale probable, non un fractionnement 1,021:1) et recommande de vérifier avant toute interprétation fine autour de cette date.
 - **Décalage de publication macro (anti look-ahead)** (`prices.py`) : documentation explicite que les séries mensuelles (ex. IPC Canada/US, chômage) sont datées au mois de référence mais publiées des semaines plus tard ; recommandation de décalage (≥ 30 jours) pour tout conditionnement dynamique. Les séries macro ne sont pas intégrées comme signaux dynamiques dans le pipeline quantitatif actuel — cette contrainte est **documentée**.
 - **Biais du survivant** (`prices.py`) : l’univers de 31 actifs a été constitué rétrospectivement (novembre 2026) ; les performances historiques simulées sont illustratives et non prédictives.
-
-> D’autres traitements évoqués en planification (ex. intégration de fondamentaux, nouvelles datées, chevauchement détaillé des FNB au-delà des expositions déclarées) ne sont pas implémentés dans le code actuel : **prévus / non implémentés**.
+- **Filtrage ESG institutionnel** (`alphaforge/app/tools/esg.py`) : screening systématique de l’univers selon les règles de filtrage négatif FTSE Russell Global Choice Index Series v5.0 (`data/esg/esg_flags.csv`). Exclusions documentées (`CNQ.TO`, `ENB.TO`, `XOM`), `ESGV` qualifié, et actifs non couverts marqués explicitement `non_verifie` (jamais présumés conformes sans audit).
+- **Dépôts réglementaires SEC EDGAR sans antériorité** (`alphaforge/app/tools/news.py` via `news_for()`) : intégration de dépôts historiques officiels (Form 8-K, 10-Q, 10-K) indexés par date de publication avec URLs SEC vérifiables. Pas d’anticipation (anti look-ahead respecté).
+- **Transparence et look-through des FNB** (`alphaforge/app/tools/etf_overlap.py` via `look_through()`) : décomposition pondérée des FNB indiciels de l’univers (`XIU.TO`, `XBB.TO`, `AGG`, `TLT`, `SPY`) vers leurs détentions sous-jacentes directes, avec mention systématique de la limite `top-25 only / partial coverage`.
 
 ## Hypothèses de persona (équipe)
 
@@ -67,7 +71,7 @@ Les personas de référence et leurs contraintes chiffrées sont définis dans `
 | Persona (cas officiel) | Profil de risque / horizon (cas) | Paramétrage implémenté (hypothèses d’équipe, voir `personas.py`) | Particularités implémentées |
 |---|---|---|---|
 | **Amira** (26 ans, ingénieure logicielle) | Élevé, 15+ ans | Bandes/poches stratégiques et contraintes intra-poche (actions ~80 %, crypto ~10 %, obligations ~5 %, or ~5 %), plancher techno (exposition IA/tech), crypto plafonnée (ex. 10 % total dans le paramétrage), plafond par actif individuel (ex. 10 % total) | Univers actions incluant titres techno/IA ; crypto (BTC, ETH) dans la poche dédiée |
-| **Mateo** (41 ans, gestionnaire des opérations) | Modéré, 8–12 ans | Poches stratégiques (actions/obligations/or), crypto exclue, exclusions provisoires ESG de certains titres énergie/fossiles (`CNQ.TO`, `ENB.TO`, `XOM`) et utilisation d’`ESGV` comme véhicule ESG principal — **hypothèse provisoire** (« à remplacer par source ESG », réf. enjeu #4 dans le code) | Filtrage ESG opérationnel limité aux règles/exclusions codées et aux actifs disponibles |
+| **Mateo** (41 ans, gestionnaire des opérations) | Modéré, 8–12 ans | Poches stratégiques (actions/obligations/or), crypto exclue, exclusions ESG sourcées sur la méthodologie FTSE Russell Global Choice v5.0 (titres énergie/fossiles : `CNQ.TO`, `ENB.TO`, `XOM`) et utilisation d’`ESGV` comme véhicule ESG principal. Alertes de gouvernance systématiques en cas de demande d’actif exclu (ex. Enbridge) avec citation de preuve ESG | Filtrage ESG opérationnel fondé sur référentiel formel FTSE (`data/esg/esg_flags.csv`) |
 | **Robert** (59 ans, professionnel de la santé) | Faible à modéré, 3–5 ans | Forte poche obligataire (socle de préservation), actions défensives, crypto interdite par règles, actif spéculatif médiatisé (ex. TSLA) exclu en base et traité comme cas d’incohérence avec alternative plafonnée (satellite) selon la logique de gouvernance/évaluation | Test « actif médiatisé plus risqué que le profil » généralisable par la logique de gouvernance |
 
 > Les valeurs numériques exactes (plafonds, planchers, bandes de volatilité cibles) sont celles codées dans `personas.py` et doivent être lues comme des **choix d’équipe** documentés, pas comme des constantes imposées par le cas.
@@ -78,7 +82,7 @@ Les personas de référence et leurs contraintes chiffrées sont définis dans `
 - **Trace observable** (`alphaforge/app/trace.py`) : événements structurés (`step_start`, `tool_call`, `evidence_added`, `governance_alert`, `verification_result`, `done`) destinés à l’affichage/traçabilité ; **pas d’exposition de chaîne de pensée interne**.
 - **Explication structurée** (`alphaforge/app/schemas.py`, agent explicateur) : format JSON aligné sur les rubriques BNCD (résumé, données utilisées, justification, limites, ce qui changerait la réponse, alertes de gouvernance) avec références `evidence_ids`.
 - **Vérificateur déterministe** (`alphaforge/app/verifier.py`) : vérifie l’existence des `E#` cités et la présence des nombres des affirmations dans les preuves citées (tolérances/équivalences gérées). En cas d’échec, l’explicateur tente une régénération corrective ; une sanitation déterministe peut être appliquée pour garantir la conformité.
-- **Gouvernance** (`alphaforge/app/governance.py`, `alphaforge/app/agents/governance.py`) : règles codées (ex. crypto prohibée pour Robert, traitement des demandes TSLA, plancher obligataire, contrôles de concentration, exclusions/alertes ESG provisoires pour Mateo, avis de simulation obligatoire) avec escalade possible vers Claude Opus pour cas ambigus/texte libre.
+- **Gouvernance** (`alphaforge/app/governance.py`, `alphaforge/app/agents/governance.py`) : règles codées (ex. crypto prohibée pour Robert, traitement des demandes TSLA, plancher obligataire, contrôles de concentration, exclusions/alertes ESG sourcées FTSE pour Mateo, avis de simulation obligatoire) avec escalade possible vers Claude Opus pour cas ambigus/texte libre.
 - **Limites responsables** : simulation éducative uniquement ; distinction faits/hypothèses/scénarios dans la conception de l’explication ; pas d’exécution de transactions.
 
 ## Installation, exécution et tests
@@ -135,10 +139,15 @@ cd /home/wilson-lab/Datathon-Poly/wt-docs
 │   │   ├── bedrock.py              # Client Bedrock Converse
 │   │   ├── schemas.py, trace.py
 │   │   ├── agents/                 # interpreter, orchestrator, governance, explainer
-│   │   └── tools/                  # prices, risk, optimize, stress
+│   │   └── tools/                  # prices, risk, optimize, stress, esg, news, etf_overlap
 │   ├── scripts/
-│   │   └── run_personas.py         # Exécution déterministe des scénarios personas
+│   │   ├── run_personas.py         # Exécution déterministe des scénarios personas
+│   │   └── eval.py                 # Évaluation systématique (fidélité, couverture, gouvernance)
 │   └── tests/                      # tests outils, vérificateur, personas, bedrock (mock/live)
+├── data/
+│   ├── esg/                        # esg_flags.csv (règles de filtrage FTSE Russell Global Choice)
+│   ├── news/                       # news_references.csv (dépôts réglementaires SEC EDGAR datés)
+│   └── etf/                        # fund_holdings.csv (décomposition top-25 des FNB)
 └── Datathon2026/
     └── alphaforge_starter/         # Données de départ, métadonnées, script de génération
 ```
@@ -146,7 +155,7 @@ cd /home/wilson-lab/Datathon-Poly/wt-docs
 ## Limites
 
 - **Biais du survivant** : univers sélectionné rétrospectivement.
-- **Couverture ESG/fondamentaux/nouvelles** : pas de cotes ESG tierces, pas de RAG documentaire sur dépôts réglementaires ni de flux de nouvelles datées intégrés dans le pipeline actuel (exclusions/étiquettes ESG partielles et provisoires selon le code).
+- **Couverture ESG/fondamentaux/nouvelles** : le filtrage ESG institutionnel (FTSE Russell v5.0 sur 31 actifs), les dépôts réglementaires SEC EDGAR officiels (sans antériorité) et le look-through FNB top-25 sont pleinement intégrés dans le pipeline d’agents et le registre de preuves [E#]. Les limites restantes (couverture partielle top-25 des FNB, univers de 31 actifs, dépôts SEC sans flux de presse journalistique non audité) restent systématiquement signalées à l’utilisateur.
 - **Stress tests** : épisode historique 2022 implémenté comme scénario principal de stress dans les outils/pipeline présentés ; autres régimes (ex. 2008, 2020) non implémentés comme scénarios dédiés dans ce code.
 - **Pas de prédiction de rendements** : optimisation fondée sur la structure de risque/covariance historique et contraintes, sans prévision de rendement futur.
 - **Dépendance AWS/Bedrock** pour les fonctions agentiques LLM (interprétation, génération d’explication, escalade gouvernance) ; le script `run_personas.py` illustre un pipeline déterministe distinct.

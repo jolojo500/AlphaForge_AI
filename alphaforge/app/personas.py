@@ -172,15 +172,28 @@ def get_mateo_persona() -> Persona:
     Strategic Sleeves: Equity 60% / Bonds 35% / Gold 5% / Crypto 0%.
     Intra-sleeve: Explicit provisional ESG exclusions (CNQ.TO, ENB.TO, XOM), ESGV core holding >= 15% total.
     """
-    provisional_esg = [
-        ESGExclusionNote(ticker="CNQ.TO", reason="Oil sands exploration and production"),
-        ESGExclusionNote(ticker="ENB.TO", reason="Crude oil and liquids pipeline transmission"),
-        ESGExclusionNote(ticker="XOM", reason="Integrated fossil fuel oil and gas exploration"),
-    ]
+    # Sourced ESG screening exclusions (FTSE Russell Global Choice Index Series v5.0)
+    try:
+        from alphaforge.app.tools.esg import esg_screen
+        esg_data = esg_screen(["CNQ.TO", "ENB.TO", "XOM"])
+        sourced_esg = [
+            ESGExclusionNote(
+                ticker=row["ticker"],
+                reason=f"{row['criterion']} : {row['evidence_text']} (Source: {row['source_name']})",
+            )
+            for row in esg_data.get("evidence", [])
+            if row.get("status") == "exclude"
+        ]
+    except Exception:
+        sourced_esg = [
+            ESGExclusionNote(ticker="CNQ.TO", reason="Fossil fuel production / oil sands (FTSE Russell FTSE Global Choice Ground Rules v5.0)"),
+            ESGExclusionNote(ticker="ENB.TO", reason="Fossil fuel midstream pipelines (FTSE Russell FTSE Global Choice Ground Rules v5.0)"),
+            ESGExclusionNote(ticker="XOM", reason="Fossil fuel production (FTSE Russell FTSE Global Choice Ground Rules v5.0)"),
+        ]
 
     team_assumptions = {
         "strategic_sleeves": "Equity 60% / Bonds 35% / Gold 5% / Crypto 0% for 8-12 yr balanced family growth.",
-        "provisional_esg_exclusions": "Oil sands, pipelines, and fossil fuels (CNQ.TO, ENB.TO, XOM) excluded under provisional team hypothesis pending dedicated ESG dataset (ref GitHub issue #4).",
+        "esg_exclusions": "Oil sands, pipelines, and fossil fuels (CNQ.TO, ENB.TO, XOM) strictly excluded per sourced FTSE Russell FTSE Global Choice Index Series Ground Rules v5.0 (data/esg/esg_flags.csv).",
         "esg_core_holding": "Vanguard ESG U.S. Stock ETF (ESGV) allocated as core holding at >= 25% of equity (>= 15% total portfolio).",
         "speculative_crypto_exclusion": "Cryptoassets (BTC-USD, ETH-USD) strictly 0% per case preference to avoid speculative instruments.",
         "target_volatility_band": "Target volatility band 6.0% to 11.0% annualized.",
@@ -230,7 +243,7 @@ def get_mateo_persona() -> Persona:
         exclusions=["BTC-USD", "ETH-USD", "CNQ.TO", "ENB.TO", "XOM"],
         preferred_tickers=["ESGV", "XIU.TO", "XBB.TO", "ZST.TO", "AGG", "CNR.TO", "FTS.TO"],
         strategic_sleeves=sleeves,
-        provisional_esg_exclusions=provisional_esg,
+        provisional_esg_exclusions=sourced_esg,
     )
 
     return Persona(

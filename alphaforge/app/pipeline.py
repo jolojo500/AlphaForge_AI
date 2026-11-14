@@ -177,6 +177,8 @@ def run_analysis(
         "dollar_amounts": orchestrator_output["dollar_amounts"],
         "metrics": orchestrator_output["metrics"],
         "stress_test": orchestrator_output["stress_test"],
+        "etf_look_through": orchestrator_output.get("etf_look_through"),
+        "esg_screen": orchestrator_output.get("esg_screen"),
         "evidence": registry.to_dict(),
         "explanation": explanation_payload,
         "alerts": [a.to_dict() for a in gov_report.alerts],
