@@ -340,18 +340,28 @@ class RequestInterpreterAgent:
                     )
 
         # Out-of-scope triggers
-        if any(term in q_lower for term in ["option", "levier", "leverage", "future", "penny", "garanti", "rendement certain"]):
+        if any(term in q_lower for term in [
+            "option", "options", "levier", "leverage", "future", "futures", "penny",
+            "garanti", "rendement certain", "passe un ordre", "passer un ordre",
+            "ordre d'achat", "ordre de vente", "exécute", "exécuter", "acheter immédiatement"
+        ]):
             out_of_scope = True
 
+        # Check for unknown entities or assets outside universe (e.g. GME, Dogecoin, AMC)
+        for term in ["gme", "gamestop", "dogecoin", "doge", "amc", "shiba"]:
+            if re.search(rf"\b{re.escape(term)}\b", q_lower):
+                unknown_entities.append(term.upper())
+                out_of_scope = True
+
         intent = "general_allocation"
-        if requested_positions:
+        if out_of_scope:
+            intent = "out_of_scope"
+        elif requested_positions:
             intent = "add_position"
         elif "esg" in q_lower or "durable" in q_lower or "vert" in q_lower or "carbone" in q_lower:
             intent = "screen_esg"
         elif "risque" in q_lower or "volatilité" in q_lower or "perte" in q_lower:
             intent = "risk_query"
-        elif out_of_scope:
-            intent = "out_of_scope"
 
         summary = f"Demande analysée : {intent}"
         if requested_positions:

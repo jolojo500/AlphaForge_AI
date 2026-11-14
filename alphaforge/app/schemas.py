@@ -78,7 +78,7 @@ class ParsedRequest(BaseModel):
     requested_exclusions: list[str] = Field(default_factory=list, description="Assets requested to be excluded.")
     constraint_changes: dict[str, Any] = Field(default_factory=dict, description="Requested constraint adjustments.")
     out_of_scope: bool = Field(default=False, description="True if query involves options, leverage, unlisted assets, or non-financial advice.")
-    unknown_entities: list[str] = Field(default_factory=list, description="Entities mentioned not found in the universe.")
+    unknown_entities: list[Any] = Field(default_factory=list, description="Entities mentioned not found in the universe.")
     language: str = Field(default="fr", description="Language of request (fr or en).")
     summary: str = Field(default="", description="1-sentence French executive summary of the parsed request.")
 

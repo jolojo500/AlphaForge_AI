@@ -92,7 +92,10 @@ def check_governance_rules(
 
     # --- RULE 1: Crypto Policy ---
     if persona.id == "robert":
-        has_crypto_requested = any("BTC" in r or "ETH" in r or "CRYPTO" in r for r in user_reqs_upper)
+        has_crypto_requested = any(
+            any(k in r for k in ["BTC", "ETH", "CRYPTO", "BITCOIN", "ETHER"])
+            for r in user_reqs_upper
+        )
         if crypto_weight > 0.001 or has_crypto_requested:
             alerts.append(
                 GovernanceAlert(
@@ -281,7 +284,23 @@ def check_governance_rules(
                 )
             )
 
-    # --- RULE 6: Simulation Boundaries (Always active) ---
+    # --- RULE 6: Incoherent Profile / Horizon Adequation ---
+    if persona.age >= 65 and persona.risk_profile == "high" and (persona.horizon_years_max <= 3 or "retraite" in persona.investment_objective.lower() or "liquidi" in persona.investment_objective.lower()):
+        alerts.append(
+            GovernanceAlert(
+                rule_name="incoherence_profil_age_horizon",
+                level="attention",
+                message=(
+                    f"Incohérence majeure de profil : investisseur âgé de {persona.age} ans avec un horizon court "
+                    f"({persona.horizon_years_max} ans) demandant un profil de risque spéculatif élevé. "
+                    "Un tel profil viole les principes de convenance et d'adéquation (mandat de préservation du capital prioritaire)."
+                ),
+                details={"age": persona.age, "horizon_years_max": persona.horizon_years_max, "risk_profile": persona.risk_profile},
+                suggested_action="Requalifier le profil de risque vers prudent ou équilibré et relever le socle obligataire.",
+            )
+        )
+
+    # --- RULE 7: Simulation Boundaries (Always active) ---
     alerts.append(
         GovernanceAlert(
             rule_name="simulation_boundary_notice",

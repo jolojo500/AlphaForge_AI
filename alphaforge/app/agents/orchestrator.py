@@ -517,8 +517,17 @@ class OrchestratorAgent:
         # Resolve requested weight accurately without silent invention
         is_hypothesized = False
         hypothesis_note = ""
+        parsed_w = None
         if requested_weight is not None:
-            req_w = float(requested_weight)
+            val_str = str(requested_weight).strip().lower()
+            if val_str not in ("null", "none", "", "nan"):
+                try:
+                    parsed_w = float(requested_weight)
+                except (ValueError, TypeError):
+                    parsed_w = None
+
+        if parsed_w is not None:
+            req_w = parsed_w
         elif parsed_request:
             # Check if parsed_request has this ticker
             matching = [p for p in parsed_request.requested_positions if p.ticker == ticker]

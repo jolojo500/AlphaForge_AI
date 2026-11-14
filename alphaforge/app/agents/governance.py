@@ -215,6 +215,28 @@ class GovernanceAgent:
                 report.has_attention = True
                 report.capped_alternatives["TSLA"] = 0.03
 
+            # --- CASE 1b: Robert + Crypto (Strict Prohibition) ---
+            elif persona.id == "robert" and ticker in ("BTC-USD", "ETH-USD") and not handled_crypto:
+                handled_crypto = True
+                eval_data = eval_map.get(ticker, {})
+                e_asset_id = eval_data.get("asset_evidence_id", "E2")
+                report.alerts.append(
+                    GovernanceAlert(
+                        rule_name="crypto_prohibition_robert",
+                        level="bloquant",
+                        message=(
+                            f"Interdiction absolue des crypto-actifs pour Robert : Robert (59 ans, horizon 3-5 ans vers la retraite, "
+                            f"mandat de préservation du capital) demande une exposition en {ticker}. "
+                            f"Les crypto-actifs affichent des pertes historiques sévères (>70%) et sont formellement exclus de sa politique d'investissement."
+                        ),
+                        details={"ticker": ticker, "requested_weight": raw_weight, "cap": 0.0},
+                        suggested_action="Refus strict : bloquer toute allocation en cryptomonnaies pour Robert (poids 0.0%).",
+                        evidence_ids=[e_asset_id] if e_asset_id else [],
+                    )
+                )
+                report.has_blocking = True
+                report.passed = False
+
             # --- CASE 2: Amira + Crypto (Concentration Risk Alert, Single Consolidated Alert) ---
             elif persona.id == "amira" and ticker in ("BTC-USD", "ETH-USD") and not handled_crypto:
                 handled_crypto = True
