@@ -105,7 +105,7 @@ Credentials always come from the environment (`AWS_PROFILE` / standard env vars,
 
 ## 3. Contracts (frozen)
 
-These are what make parallel work possible. **Only the orchestrator edits `alphaforge/state.py`, `alphaforge/evidence.py`, `alphaforge/graph.py` and `pyproject.toml`.** Need a change? Comment on your issue with the exact diff you want; do not work around it locally.
+These are what make parallel work possible. **Only the orchestrator edits `alphaforge/state.py`, `alphaforge/evidence.py`, `alphaforge/graph.py`, `alphaforge/tracing.py`, `alphaforge/config.py` and `pyproject.toml`.** (Need a dependency? Ask in your issue; it is added within minutes.) Need a change? Comment on your issue with the exact diff you want; do not work around it locally.
 
 ### 3.1 Repository layout and ownership
 
@@ -113,7 +113,9 @@ These are what make parallel work possible. **Only the orchestrator edits `alpha
 alphaforge/
   state.py            orchestrator   Pydantic models (below)
   evidence.py         orchestrator   EvidenceRegistry
-  graph.py            orchestrator   build_graph(), run helpers
+  graph.py            orchestrator   build_graph(), run(), stream_run(), resume_run(), get_state()
+  tracing.py          orchestrator   @traced(name) decorator
+  personas.py         Track B        persona hypothesis table (created by the skeleton)
   config.py           orchestrator   env settings (model ids, paths, bucket)
   llm.py              Track B        get_llm(kind), call_json(prompt, schema)
   data/
@@ -149,13 +151,19 @@ The skeleton ships every node as a **stub that returns valid fake data**, so the
 ### 3.2 Node signature
 
 ```python
-def node_name(state: GraphState) -> dict:
-    """Return ONLY the state keys this node updates."""
+from alphaforge.tracing import traced
+
+@traced("quant")
+def quant_node(state: GraphState) -> dict:
+    """Return ONLY the state keys this node updates, plus `summary`."""
+    return {"evidence": reg.items(), "summary": "Statistiques de risque calculées."}
 ```
 
 - Nodes never mutate `state`. They return a partial update; LangGraph merges it.
 - `evidence`, `events`, `exclusions`, `trace` use merge reducers, so parallel nodes can all write them.
-- Every node appends one trace entry: `{"node", "started_at", "ended_at", "summary"}`. `summary` is a one-line user-facing sentence, never model reasoning. Use the `traced()` helper from `alphaforge/graph.py`.
+- `@traced` turns the returned `summary` into one trace entry `{"node", "started_at", "ended_at", "summary"}`. `summary` is one user-facing sentence in French, never model reasoning. Keep the function name and the decorator; `graph.py` imports `<name>_node` from each module.
+- `retries` is a merged dict: return `{"retries": {"explain": n + 1}}`.
+- `tests/test_graph_stub.py` is the contract test. It must stay green when your real node replaces the stub.
 - A node must not raise on bad upstream data. Degrade, record the problem in `trace` and in an `assumption` evidence entry.
 
 ### 3.3 State
@@ -172,6 +180,7 @@ class Profile(BaseModel):
     budget_cad: float | None
     request_type: Literal["build", "judge"]
     requested_idea: dict | None # {"ticker": "TSLA", "weight": 0.25}
+    excluded_tickers: list[str] # set by what-if, applied by screening
     conflicts: list[str]        # human-readable contradictions found by Agent 1
     clarification_needed: str | None
 
@@ -242,7 +251,21 @@ Later nodes need to find a number without parsing `method` strings, so quant and
 {"metric": "policy_rate_ca", "value": 2.25, "unit": "%"}
 ```
 
-`alphaforge/evidence.py` provides `find(evidence, metric=..., ticker=...)`.
+`alphaforge/evidence.py` provides `find(evidence, metric=..., ticker=...)`, `find_one(...)`, `numeric(ev)` and `EID_RE` (the id regex).
+
+### 3.6 Running the graph (for the API, the UI and tests)
+
+```python
+from alphaforge.graph import initial_state, stream_run, resume_run, run, get_state
+
+for ev in stream_run(initial_state("robert", text), thread_id):   # as_of_date optional
+    # {"type": "trace", "entry": {...}} | {"type": "interrupt", "question": str} | {"type": "final", "state": GraphState}
+    ...
+for ev in resume_run(answer, thread_id): ...                      # after an interrupt
+state = run("robert", text, profile=changed_profile)              # what-if: a given profile skips Agent 1
+```
+
+Local setup: `uv sync`, then `uv run pytest -q`, `uv run ruff check .`, `uv run python -m alphaforge.graph robert`. Copy `.env.example` to `.env` for the variables.
 
 ---
 
