@@ -1,0 +1,220 @@
+--- SLIDE 1 ---
+ALPHAFORGE AI
+Artificial intelligence at the service of investment decisions
+Your challenge: to imagine an agentic solution, useful and capable of explaining its results.
+DATATHON
+National Bank × AWS × PolyFinances
+It's up to you to turn data into understandable decisions.
+--- SLIDE 2 ---
+WHY THIS CHALLENGE
+The real challenge is not to have more data. It's to make better decisions.
+Investors need to connect markets, companies, economic backlog, risk and personal preferences.
+Select
+Identify the signals that are really relevant.
+Connect
+Cross-referencing data rather than stacking it.
+Explain
+Make the conclusion verifiable.
+Your opportunity: Create an experience that transforms complexity into clarity.
+✓
+A clear investment question
+✓
+A credible and testable approach
+✓
+A useful, contextualized and explainable result
+--- SLIDE 3 ---
+THE CHALLENGE
+Design a self-explanatory agentic solution.
+Using public financial data, inform an investment decision according to different profiles.
+Your solution can...
+✓
+Compare assets
+✓
+Analyze scenarios
+✓
+Explain the risks
+✓
+Offer a fictitious allocation
+✓
+Create another defensible decision aid
+Freedom over use case, assets, models, and architecture.
+So don't start with technology right away. Instead, start by asking yourself:
+What investment problem do we want to solve?
+Then:
+How can agentic AI actually improve this decision?
+Assets, tools, models, and much of the architecture remain voluntarily open.
+We want to see your choices and creativity.
+--- SLIDE 4 ---
+YOUR REALITY TESTS
+Three personas. Three tensions. A solution that must adapt.
+AMIRA
+26 years • High risk • 15 years and older
+Growth, emerging technologies, cryptoassets... without abandoning diversification.
+TEST: "High risk" does not mean "everything is acceptable"
+Your solution must maintain a logic of diversification and be able to explain its choices.
+MATEO
+41 years • Moderate risk • 8 to 12 years
+Growth-stability balance and explicit ESG preferences.
+TEST: Integrate non-financial criteria, not just return and risk.
+Your solution must maintain a logic of diversification and be able to explain its choices.
+ROBERT
+59 years • Low to moderate risk • 3 to 5 years
+Capital preservation, stability and one-time interest in a high-profile opportunity.
+TEST: know how to point out an inconsistency with the profile, explain the risk and put the request in context.
+Does your solution just have to give them what they are asking for?
+A high-profile opportunity that does not necessarily fit his profile
+What we want to test with these personas:
+The ability of your solution to adapt to the context, rather than always producing the same response.
+Tip: Demonstrate at least two contrasting situations to make the adaptation visible.
+--- SLIDE 5 ---
+WHAT "AGENTIC" MEANS
+Give agents a clear role. Avoid decorative complexity.
+1. Mobilize
+Public data, tools, templates, or search engines.
+2. Coordinate
+Tasks, controls, intermediate decisions and interactions.
+3. Adapt
+Analysis according to context, preferences and constraints.
+4. Explain
+Sources, assumptions, factors, uncertainties and limitations.
+We do not want to impose a particular architecture:
+You can have an agent.
+You can have more than one.
+You can have specialized agents.
+The important thing is not their number.
+The important thing is to be able to answer this question:
+Why does this agent exist and what value does it bring?
+An agent could search and select data.
+Another could analyze different scenarios.
+Another could check certain constraints.
+An agent or mechanism dedicated to explainability, etc.
+Tip: Each component should have a clear role.
+--- SLIDE 6 ---
+YOUR PLAYGROUND
+Public data, chosen to serve your question.
+MARKETS
+Prices, volumes, yields, events
+COMPANIES
+Revenues, earnings, debt, cash flow
+BACKGROUND
+Rates, inflation, unemployment, currencies
+SIGNAL
+News, ESG, sectors, cryptoassets
+PROFILES
+Objectives, horizon, risk, preferences
+The starter set is optional. You can complete or replace it, as long as you document your choices.
+So what we're interested in is not the amount of data you're going to accumulate.
+It is your ability to explain:
+Why did you choose this data?
+What is its source?
+How did you transform it?
+And what are its limits?
+--- SLIDE 7 ---
+A STRUCTURING REQUIREMENT
+AWS is a Qualifying Requirement
+ELIGIBILITY
+AWS must make a real and demonstrable contribution to the functioning of the solution.
+Lack of effective integration = project not eligible for final evaluation.
+Relevance
+Choose the services that really serve the case.
+Integration
+Show the real-world role AWS plays in the flow.
+Architecture
+Make the solution understandable and scalable.
+Best practices
+Security, access, data, and resource efficiency.
+The right reflex
+Don't multiply services to impress. Justify each choice.
+--- SLIDE 8 ---
+A SIMPLE WAY FORWARD
+Five decisions to turn an idea into a convincing demonstration.
+01
+FORMULATE
+A helpful question
+02
+DESIGN
+The role of agents
+03
+CONTEXTUALISER
+Personas and constraints
+04
+EXPERIENCE
+Scenarios and sensitivity
+05
+EXPLAIN
+Sources, assumptions, limitations
+A simple, focused, and verifiable approach can be stronger than a spectacular architecture that is impossible to explain.
+What problem are you really trying to solve?
+What are the roles of agents, data and tools?
+How does your solution change when working with Amira, Mateo, or Robert?
+Change a hypothesis. Change a scenario. Change a profile.
+Does your solution remain consistent?
+Your user should be able to understand  what supports the conclusion .
+--- SLIDE 9 ---
+WHAT YOU WILL NEED TO DELIVER
+Four deliverables. One coherent story.
+1. PROTOTYPE + CODE
+A complete, demonstrable use case with an accessible explanation of the outcome.
+Code repository and README: dependencies, data, configuration and reproduction.
+2. VIDEO
+About 5 minutes as a guide.
+Show the problem, the role of the agents, the data, the result, and the end-to-end explanation.
+3. DOCUMENTATION
+Architecture, agents, methods, sources, assumptions, explainability, validations, limitations, and improvements.
+4. ONE PAGER
+One page to summarize the problem, approach, originality, data, explainability, and user value.
+The jury needs to understand what the solution does and what justifies its results.
+--- SLIDE 10 ---
+HOW YOUR PROJECT WILL BE EVALUATED
+The overall value matters more than the historical performance of a simulated portfolio.
+20 %
+Solution
+Relevance, innovation, creativity and prototype
+20 %
+Agentic
+Architecture and Explainability
+20 %
+Data
+Rigour, validation, visualization
+10 %
+UX/UI
+Intuition, ergonomics, clarity
+15 %
+AWS
+Quality of integration
+15 %
+Pitch
+Presentation, business and marketing
+Don't just try to build. Seek to demonstrate, tell and convince.
+--- SLIDE 11 ---
+THE RESPONSIBLE FRAMEWORK
+A credible innovation also knows how to say what it does not know.
+SIMULATION ONLY
+No real transactions.
+No personalized financial advice.
+No confidential banking data.
+Trust is earned through transparency.
+✓
+Distinguish between facts, assumptions and fictitious scenarios:  If a piece of information is a hypothesis, say so.
+✓
+Present important uncertainties:  If an outcome has significant uncertainty, show it.
+✓
+Provide concise and verifiable explanations:  If a piece of data does not allow a solid conclusion to be drawn, your solution must be able to communicate it.
+✓
+Staying true to observable sources and actions
+✓
+Don't invent a justification after the fact
+A credible AI solution is not one that always claims to know the answer.
+It is a solution that also knows how to explain when the answer is uncertain.
+--- SLIDE 12 ---
+IT'S UP TO YOU.
+Choose a problem that is worth solving.
+Build an approach that you can defend.
+Create a solution that the user can understand.
+The best project will not necessarily be the most complex.
+It will be the one that makes a clearer, more credible and more humane decision.
+ALPHAFORGE AI
+BUILD
+EXPLAIN
+INSPIRE
+National Bank × AWS × PolyFinances

@@ -1,0 +1,219 @@
+--- SLIDE 1 ---
+ALPHAFORGE AI
+L’intelligence artificielle au service de la décision d’investissement
+Votre défi : imaginer une solution agentique, utile et capable d’expliquer ses résultats.
+DATATHON
+Banque Nationale × AWS × PolyFinances
+À vous de transformer les données en décisions compréhensibles.
+--- SLIDE 2 ---
+POURQUOI CE DÉFI
+Le vrai défi n’est pas d’avoir plus de données. C’est de mieux décider.
+Les investisseurs doivent relier marchés, entreprises, contexte économique, risques et préférences personnelles.
+Sélectionner
+Identifier les signaux réellement pertinents.
+Mettre en relation
+Croiser les données plutôt que les empiler.
+Expliquer
+Rendre la conclusion vérifiable.
+Votre opportunité : créer une expérience qui transforme la complexité en clarté.
+✓
+Une question d’investissement claire
+✓
+Une démarche crédible et testable
+✓
+Un résultat utile, contextualisé et explicable
+--- SLIDE 3 ---
+LE CHALLENGE
+Concevez une solution agentique auto-explicative.
+À partir de données financières publiques, éclairez une décision d’investissement selon différents profils.
+Votre  solution peut…
+✓
+Comparer des actifs
+✓
+Analyser des scénarios
+✓
+Expliquer les risques
+✓
+Proposer une allocation fictive
+✓
+Créer une autre aide à la décision défendable
+Liberté sur le cas d’usage, les actifs, les modèles et l’architecture.
+Donc ne partez pas immédiatement de la technologie. Commencez plutôt par vous demander :
+Quel problème d’investissement voulons-nous résoudre?
+Puis :
+Comment l’IA agentique peut-elle réellement améliorer cette décision?
+Les actifs, les outils, les modèles et une grande partie de l’architecture restent volontairement ouverts.
+Nous voulons voir vos choix et votre créativité.
+--- SLIDE 4 ---
+VOS TESTS DE RÉALITÉ
+Trois personas. Trois tensions. Une solution qui doit s’adapter.
+AMIRA
+26 ans • Risque élevé • 15 ans et plus
+Croissance, technologies émergentes, cryptoactifs… sans abandonner la diversification.
+TEST : « Risque élevé » ne signifie pas « tout est acceptable »
+Votre solution doit conserver une logique de diversification et être capable d’expliquer ses choix. .
+MATEO
+41 ans • Risque modéré • 8 à 12 ans
+Équilibre croissance-stabilité et préférences ESG explicites.
+TEST : intégrer les critères non financiers, pas seulement rendement et  risque .
+Votre solution est-elle capable d’intégrer autre chose que le rendement et le risque?
+ROBERT
+59 ans • Risque faible à modéré • 3 à 5 ans
+Préservation du capital, stabilité et intérêt ponctuel pour une occasion médiatisée.
+TEST : savoir signaler une incohérence avec le  profil ,  expliquer le risque et remettre la demande en contexte.
+Votre solution doit-elle simplement lui donner ce qu’il demande?
+Une occasion très médiatisée qui ne correspond pas nécessairement à son profil
+Ce que nous voulons tester avec ces  personas  :
+La capacité de votre solution à s’adapter au contexte, plutôt qu’à produire toujours la même réponse.
+Conseil :  démontrez  au  moins  deux situations  contrastées  pour  rendre   l’adaptation  visible.
+--- SLIDE 5 ---
+CE QUE SIGNIFIE « AGENTIQUE »
+Donnez un rôle clair aux agents. Évitez la complexité décorative.
+1. Mobiliser
+Données publiques, outils, modèles ou moteurs de recherche.
+2. Coordonner
+Tâches, contrôles, décisions intermédiaires et interactions.
+3. Adapter
+Analyse selon le contexte, les préférences et les contraintes.
+4. Expliquer
+Sources, hypothèses, facteurs, incertitudes et limites.
+Nous ne voulons pas imposer une architecture particulière:
+Vous pouvez avoir un agent.
+Vous pouvez en avoir plusieurs.
+Vous pouvez avoir des agents spécialisés.
+L’important n’est pas leur nombre.
+L’important est de pouvoir répondre à cette question :
+Pourquoi cet agent existe-t-il et quelle valeur apporte-t-il?
+Un agent pourrait rechercher et sélectionner des données.
+Un autre pourrait analyser différents scénarios.
+Un autre pourrait vérifier certaines contraintes.
+U n agent ou un mécanisme dédié à l’explicabilité, etc.
+Conseil :  Chaque composant doit avoir un rôle clair.
+--- SLIDE 6 ---
+VOTRE TERRAIN DE JEU
+Des données publiques, choisies pour servir votre question.
+MARCHÉS
+Prix, volumes, rendements, événements
+ENTREPRISES
+Revenus, bénéfices, dette, trésorerie
+CONTEXTE
+Taux, inflation, chômage, devises
+SIGNaux
+Actualités, ESG, secteurs, cryptoactifs
+PROFILS
+Objectifs, horizon, risque, préférences
+Le jeu de départ est facultatif. Vous pouvez le compléter ou le remplacer, à condition de documenter vos choix.
+Cn’est  donc pas la quantité de données que vous allez accumuler. C’est votre capacité à expliquer :
+Pourquoi avez-vous choisi cette donnée?
+Quelle est sa source?
+Comment l’avez-vous transformée?
+Et quelles sont ses limites?
+--- SLIDE 7 ---
+UNE EXIGENCE STRUCTURANTE
+AWS est une condition  d’admissibilité
+ADMISSIBILITÉ
+AWS doit contribuer réellement et de manière démontrable au fonctionnement de la solution.
+Absence d’intégration effective = projet non admissible à l’évaluation finale.
+Pertinence
+Choisir les services qui servent vraiment le cas.
+Intégration
+Montrer le rôle concret d’AWS dans le flux.
+Architecture
+Rendre la solution compréhensible et évolutive.
+Bonnes pratiques
+Sécurité, accès, données et utilisation efficace des ressources.
+Le bon réflexe
+Ne multipliez pas les services pour impressionner. Justifiez chaque choix.
+--- SLIDE 8 ---
+UNE MÉTHODE SIMPLE POUR AVANCER
+Cinq décisions pour transformer une idée en démonstration convaincante.
+01
+FORMULER
+Une question utile
+02
+CONCEVOIR
+Le rôle des agents
+03
+CONTEXTUALISER
+Personas et contraintes
+04
+ÉPROUVER
+Scénarios et sensibilité
+05
+EXPLIQUER
+Sources, hypothèses, limites
+Une approche simple, focalisée et vérifiable peut être plus forte qu’une architecture spectaculaire mais impossible à expliquer.
+Quel problème cherchez-vous vraiment à résoudre?
+Quels sont les rôles des agents, des données et des outils?
+Comment votre solution change-t-elle lorsqu’elle travaille avec  Amira , Mateo ou Robert?
+Changez une hypothèse. Changez un scénario. Changez un profil.
+Est-ce que votre solution reste cohérente?
+Votre utilisateur doit pouvoir comprendre  ce qui soutient la conclusion .
+--- SLIDE 9 ---
+CE QUE VOUS DEVREZ LIVRER
+Quatre  livrables . Une seule histoire cohérente.
+1. PROTOTYPE + CODE
+Un cas d’utilisation complet, démontrable, avec une explication accessible du résultat.
+Dépôt de code et README : dépendances, données, configuration et reproduction.
+2. VIDÉO
+Environ 5 minutes à titre indicatif.
+Montrez le problème, le rôle des agents, les données, le résultat et l’explication de bout en bout.
+3. DOCUMENTATION
+Architecture, agents, méthodes, sources, hypothèses, explicabilité, validations, limites et améliorations.
+4. ONE PAGER
+Une page pour résumer le problème, l’approche, l’originalité, les données, l’explicabilité et la valeur utilisateur.
+Le jury doit comprendre ce que fait la solution et ce qui justifie ses résultats.
+--- SLIDE 10 ---
+COMMENT VOTRE PROJET SERA ÉVALUÉ
+La valeur globale compte plus que la performance historique d’un portefeuille simulé.
+20 %
+Solution
+Pertinence, innovation,  créativité  et prototype
+20 %
+Agentique
+Architecture et explicabilité
+20 %
+Données
+Rigueur, validation, visualisation
+10 %
+UX/UI
+Intuition, ergonomie, clarté
+15 %
+AWS
+Qualité de  l’intégration
+15 %
+Pitch
+Présentation, business et marketing
+Ne cherchez pas seulement à construire. Cherchez à  démontrer ,  raconter  et  convaincre .
+--- SLIDE 11 ---
+LE CADRE RESPONSABLE
+Une innovation crédible sait aussi dire ce qu’elle ne sait pas.
+SIMULATION UNIQUEMENT
+Aucune transaction réelle.
+Aucun conseil financier personnalisé.
+Aucune donnée bancaire confidentielle.
+La confiance se gagne par la transparence.
+✓
+Distinguer  faits,  hypothèses  et  scénarios   fictifs  :  Si une information est une hypothèse, dites-le.
+✓
+Présenter  les  incertitudes   importantes  :  Si un résultat comporte une incertitude importante, montrez-la.
+✓
+Fournir  des explications  synthétiques  et  vérifiables  :  Si une donnée ne permet pas de tirer une conclusion solide, votre solution doit être capable de le communiquer.
+✓
+Rester fidèle aux sources et aux actions observables
+✓
+Ne pas inventer de justification après coup
+U ne solution d’IA crédible n’est pas une solution qui prétend toujours connaître la réponse.
+C’est une solution qui sait aussi expliquer quand la réponse est incertaine.
+--- SLIDE 12 ---
+À VOUS DE JOUER.
+Choisissez un problème qui mérite d’être résolu.
+Construisez une démarche que vous pouvez défendre.
+Créez une solution que l’utilisateur peut comprendre.
+Le meilleur projet ne sera pas forcément le plus complexe.
+Ce sera celui qui rend une décision plus claire, plus crédible et plus humaine.
+ALPHAFORGE AI
+BUILD
+EXPLAIN
+INSPIRE
+Banque Nationale × AWS × PolyFinances

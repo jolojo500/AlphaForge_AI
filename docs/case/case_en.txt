@@ -1,0 +1,409 @@
+--- PAGE 1 ---
+POLYFINANCES
+Datathon 2026 
+CHALLENGE BRIEF
+AlphaForge AI
+Artificial intelligence for
+investment decision-making.
+Imagine a self-explaining agentic solution that uses
+public financial data to inform investment decisions and
+make its results understandable across different
+contexts and investor profiles.
+--- PAGE 2 ---
+1. Challenge........................................................................................................03
+Context...........................................................................................................................................03
+Description.................................................................................................................................03
+ Investor personas..............................................................................................................04
+Suggested approach.......................................................................................................08
+    Guidance......................................................................................................................................08
+2. Data.....................................................................................................................10
+Examples of assets and asset classes.........................................................10
+Data families...............................................................................................................................11
+Proposed starter dataset...........................................................................................12
+Public sources and useful resources.............................................................13
+Time period, quality, and roles of use...............................................................14
+3. Expected deliverables.........................................................................15
+Prototype and source code......................................................................................15
+Demonstration video........................................................................................................15
+Technical documentation............................................................................................15
+One-pager.....................................................................................................................................16
+4. Overall assessment................................................................................17
+Responsible boundaries................................................................................................17
+Historical performance and risk...........................................................................17
+SUMMARY
+The spirit of the challenge
+The challenge favors a self-explaining agentic solution. Three
+investor profiles provide reference scenarios. Teams are free to
+choose their assets, use case, and architecture. The goal is to
+produce useful results and explain their sources, assumptions,
+and limitations.
+--- PAGE 3 ---
+1. CHALLENGE
+Context
+Investors have access to a wealth of information: market prices, company
+disclosures, macroeconomic conditions, financial news, and risk
+indicators. The challenge is not only to access this information, but also to
+select it, connect it, and draw understandable conclusions for
+different personal circumstances. 
+Artificial intelligence creates opportunities to rethink analysis and
+decision-making. Its usefulness depends, however, on data quality, the
+methods used, and the ability to acknowledge uncertainty
+and limitations.
+Description
+Your challenge: design a self-explaining agentic solution that uses
+public financial data to inform investment analysis or decisions for
+different investor profiles. The solution should explain its results; teams
+may choose their assets, tools, and architecture.
+The intended direction is agentic: one or more agents may use data and
+tools, coordinate tasks, and adapt their analysis to the context. A solution
+might compare assets, explore scenarios, explain risks, or present a
+hypothetical allocation. These examples leave teams free to choose
+their use case, methods, and solution format.
+The goal is not to select the portfolio with the highest historical return.
+Teams are encouraged to demonstrate a credible, innovative, and
+useful approach suited to the problem they choose to solve.
+.03
+POLYFINANCES
+
+--- PAGE 4 ---
+POLYFINANCES
+Investor personas
+Three fictional personas provide common reference
+scenarios for designing and testing the solution. They
+represent different objectives, time horizons, and
+preferences. Teams are encouraged to explain how their
+approach accounts for each context and its limitations.
+                AMIRA  : High risk and diversification
+                MATEO : Financial balance and ESG preferences
+                ROBERT : Alignment between demand and profile
+1. CHALLENGE
+.04
+
+--- PAGE 5 ---
+POLYFINANCES
+PERSONA 01
+AMIRA
+26 years old • Software engineer
+Profile
+Amira is single, has no children, and has intermediate investment
+experience.
+Investment objective
+Her objective is to grow her capital over the long term.
+Preferences and constraints
+Very interested in artificial intelligence and emerging technologies.
+Open to high-growth companies and significant volatility; interested
+in crypto assets.
+Still wants some diversification and does not want to invest
+exclusively in technology.
+Investment horizon
+15 years or more
+WHAT THIS PERSONA TESTS
+How much risk will the system accept? It should account for an
+aggressive profile without interpreting "high risk" as "anything goes,"
+while respecting Amira's desire for diversification. 
+1. CHALLENGE
+Risk profile
+High
+.05
+
+--- PAGE 6 ---
+POLYFINANCES
+PERSONA 02
+MATEO
+41 years old • Operations manager
+Profile
+Mateo has a partner and two children, and has intermediate investment
+experience.
+Investment objective
+He wants balanced capital growth over the medium and long term.
+Preferences and constraints
+Places high importance on environmental, social, and governance
+(ESG) factors.
+Wants to avoid companies involved in significant environmental or
+social controversies.
+Seeks a balance between growth potential and stability.
+Is open to emerging technologies when they fit his risk profile, but
+has little interest in highly speculative investments.
+Investment horizon
+8-12 years
+WHAT THIS PERSONA TESTS
+Can the system incorporate more than return and risk? It should
+consider financial factors and personal preferences, rather than
+selecting solely for potential return.
+1. CHALLENGE
+Risk profile
+Moderate
+.06
+
+--- PAGE 7 ---
+POLYFINANCES
+PERSONA 03
+ROBERT
+59 years old • Healthcare professional
+Profile
+Robert is married, has adult children, and is considering retirement in the next
+few years. He has advanced investment experience.
+Investment objective
+He wants to preserve capital while maintaining some growth potential.
+Preferences and constraints
+Prefers established companies and investments whose business
+models he understands.
+Values stability and company quality and has little interest in crypto
+assets.
+Follows markets actively and is interested in new opportunities.
+May be tempted by a highly publicized company even when it is riskier
+than he would normally prefer.
+Investment horizon
+3-5 years
+WHAT THIS PERSONA TESTS
+Can the system challenge a request that conflicts with the investor’s
+profile? It should identify the tension between Robert’s immediate
+interest and his objectives, explain the risks, and avoid simply agreeing.
+1. CHALLENGE
+Risk profile
+Low to moderate
+.07
+
+--- PAGE 8 ---
+1. CHALLENGE
+SUGGESTED APPROACH
+The following are possible steps, with no prescribed order or architecture:
+Frame a useful question: identify the financial need or decision the
+solution is intended to inform.
+Design an agentic approach: describe the roles of the agent or
+agents, the data and tools they use, their coordination, and their
+controls.
+Consider the context: account for the personas and, where
+relevant, other explicit objectives, preferences, or constraints.
+Test the results: examine sensitivity to different assumptions, data,
+or scenarios where appropriate.
+Make the solution self-explaining: connect results to sources,
+assumptions, observable steps, and limitations so users can
+understand and verify what supports a conclusion.
+GUIDANCE
+A focused, verifiable agentic solution is encouraged. Technical
+sophistication and the number of agents are not ends in themselves.
+Teams may present a simulated portfolio, a comparative analysis, a
+decision-support tool, or another defensible outcome. Comparing two
+contrasting investor situations can show adaptability without requiring a
+uniform output.
+.08
+POLYFINANCES
+
+--- PAGE 9 ---
+POLYFINANCES
+01. An explainability agent
+A dedicated agent could summarize the evidence supporting a
+result, cite the data used, explain assumptions, and flag uncertainty.
+This capability may instead be built into an existing agent or another
+mechanism. Explainability is expected; the component and
+architecture remain open to teams.
+.09
+POSSIBILITIES
+1. CHALLENGE
+02. A governance agent
+Teams are encouraged to consider how their solution could check
+whether proposed actions or outputs respect the investor’s stated
+constraints and the challenge’s simulation-only boundaries, flag
+conflicts or missing information, and make relevant controls visible. 
+A dedicated governance agent is one possible approach; these
+responsibilities can also be handled by another agent or mechanism.
+No particular architecture or additional agent is required.
+
+--- PAGE 10 ---
+POLYFINANCES
+A starter dataset will be made available to help teams get started. Teams may
+also use other relevant public data.
+WORKING PRINCIPLE
+The starter dataset is optional. Teams may supplement or replace it with other
+public data. No asset or asset class is mandatory. Sources, dates, processing,
+and terms of use must be documented.
+EXAMPLES OF ASSETS AND ASSET CLASSES
+These examples of Canadian and U.S. securities, diversified funds, fixed-income
+instruments, and more volatile assets are illustrative only. They are neither a
+closed universe nor a minimum coverage requirement.
+.10
+2. DATA
+None of these assets or categories are mandatory. Teams may analyze
+one instrument, select their own subset, or choose other assets, provided
+they explain their relevance and sources. Derivatives and margin
+strategies are not required; no real transactions are permitted.
+--- PAGE 11 ---
+POLYFINANCES
+.11
+2. DATA
+DATA FAMILIES
+Teams may combine data families according to their chosen question.
+Availability, historical coverage, and reuse terms vary by source.
+--- PAGE 12 ---
+POLYFINANCES
+.12
+2. DATA
+STARTER DATASET STRUCTURE
+The starter dataset provides a common baseline. It is optional: teams
+may supplement it or use other public data suited to their solution:
+assets_universe.csv: 31 assets: 10 Canadian equities, 10 U.S.
+equities, 9 ETFs covering equities, bonds, gold, and one ESG-screened
+fund, plus Bitcoin and Ether. Fields: identifier, ticker, name, asset class,
+market, currency, and sector.
+prices_daily.csv: about 40,000 rows of daily prices: date, ticker,
+open, high, low, close, adjusted close (dividends and splits), volume,
+and listing currency.
+corporate_actions.csv, fx_usdcad_daily.csv, and
+macro_rates.csv: dividends and splits by ex-date; daily USD/CAD
+exchange rate (Bank of Canada); 9 macro series: policy rates, 2- and
+10-year yields, and CPI for Canada and the U.S., plus U.S.
+unemployment (Bank of Canada and FRED).
+sources_metadata.csv, build_dataset.py, and README.md:
+source, date, processing, limitations, and terms for each file, and the
+script that rebuilds the data. No ESG scores, news, or company
+fundamentals are included.
+
+--- PAGE 13 ---
+POLYFINANCES
+.13
+2. DATA
+To go further
+Teams may add, for example, ESG data, news, company
+fundamentals or other assets if this information serves their
+approach. For each source used, they explain its relevance,
+origin, date, processing and limitations, as well as the
+applicable access and reuse conditions.
+PUBLIC SOURCES AND USEFUL RESOURCES
+According to needs and applicable access conditions, several sources
+may be consulted:
+Company publications: annual reports, continuous disclosure
+documents, earnings releases, investor relations pages.
+Regulatory filings: SEC EDGAR and SEDAR+, for relevant accessible
+filings.
+Macroeconomic and rate data: Bank of Canada, FRED and
+Statistics Canada.
+Fund data: ETF issuer websites, product factsheets, holdings lists
+and published documents.
+Prices and market series: freely accessible data providers, subject
+to applicable licences and API limits.
+
+--- PAGE 14 ---
+POLYFINANCES
+TIME PERIOD, QUALITY, AND RULES OF USE
+The starter dataset covers five years of data from November 12, 2021
+to November 12, 2026, which includes 2022, when stocks and bonds fell
+together. Teams that add other data should specify the dates and
+frequencies they use.
+Traceability: identify the source, date, currency, and relevant
+processing.
+Time consistency: distinguish observation dates from publication
+dates; do not use information in a simulation before it was available.
+Comparability: consider dividends, splits, selection bias, missing
+data, and CAD/USD conversions where relevant.
+Licences: respect access, retention, and redistribution terms.
+Privacy: do not use real client accounts or confidential banking
+information. Portfolios and profiles may be entirely fictional. 
+Optional scenarios include a cautious investor preparing
+for a near-term purchase, a balanced investor pursuing
+multiple objectives, or an aggressive investor seeking long-
+term growth. Teams may define their own fictional
+scenarios.
+.14
+2. DATA
+
+--- PAGE 15 ---
+3. EXPECTED DELIVERABLES
+The jury should be able to understand the value proposition, observe the
+solution, and understand its agentic approach and the evidence
+supporting its results. The formats below are inspired by the 2025
+Datathon.
+1. Prototype and source code
+A demonstrable prototype showing a complete use case and an
+accessible explanation of the result, including sources, assumptions,
+key factors, and limitations.
+A code repository and README summarizing dependencies, data
+sources, configuration, and setup or reproduction instructions.
+2. Demonstration video
+A short video, approximately five minutes as a guide, showing an end-to-
+end example: the chosen problem, the role of the agent or agents, data
+and tools used, the result, and the explanation presented to the user. Two
+distinct investor situations may illustrate adaptation to context, without
+prescribing an output format.
+3. Technical documentation
+Provide a concise document describing:
+The overall logic, roles and interactions of the agent or agents, and
+any controls or governance checks used.
+The methods, models, or technologies used and why they were chosen.
+Sources, selected assets, data processing, and assumptions.
+The explainability mechanism and an example connecting a
+conclusion to data or observable execution traces.
+Validation of results and explanations, limitations, and proposed
+improvements.
+Teams may choose their tools, infrastructure, models, and services unless
+the official technical rules specify otherwise.
+.15
+POLYFINANCES
+
+--- PAGE 16 ---
+3. EXPECTED DELIVERABLES
+4. One-pager
+At most one page summarizing the problem, agentic approach, originality,
+data sources, explainability, and concrete user benefits.
+Deadlines, submission platforms, formats, and any infrastructure
+requirements will be confirmed in the official Datathon logistics.
+.16
+POLYFINANCES
+Key takeaway
+The jury should understand what the solution does and what
+supports its results. An agentic, self-explaining approach is
+sought. The personas and example assets leave teams free to
+choose the use case, architecture, fictional allocation, and
+form of output.
+
+--- PAGE 17 ---
+The assessment will recognize the overall value of each project rather
+than comparing only simulated returns, standard portfolios, or the
+number of models used.
+The jury will consider the relevance of the problem, strength of the
+approach, creativity, execution quality, and usefulness to users. It will
+value the relevance of the agentic approach and the solution’s ability to
+explain its own results using data, assumptions, and limitations.
+Teams remain free to choose the architecture, number of agents, models,
+tools, and result presentation. An explainability agent is one possibility. A
+convincing demonstration and explanations faithful to data and
+observable actions matter more than complexity or historical asset
+performance.
+Responsible boundaries
+The challenge takes place entirely in simulation. Prototypes must not
+execute real transactions or present themselves as providing
+personalized financial advice. Teams must distinguish facts, assumptions,
+and fictional scenarios, and communicate material uncertainties clearly.
+Explanations should be concise, verifiable, and faithful to sources and
+observable actions, without inventing justifications or exposing detailed
+internal model reasoning.
+4. OVERALL ASSESSMENT
+.17
+POLYFINANCES
+
+--- PAGE 18 ---
+Historical performance and risk
+Historical data help describe assets and inform their suitability for the
+personas, for example through returns and volatility calculated over an
+explicit period. Volatility is one indicator among others: investment
+horizon, diversification, and investor preferences also matter. 
+The challenge does not ask teams to predict future returns from
+past performance. Past performance does not guarantee future
+results. Teams should explain their indicators, limitations, and
+uncertainties rather than automatically matching a profile to an asset.
+4. OVERALL  ASSESSMENT
+.18
+POLYFINANCES
+Good luck. May the
+best team win!
+The team
+POLYFINANCES
+
+--- PAGE 19 ---
+SIMPLIFIED EVALUATION GRID
+POLYFINANCES
+APPENDIX 01
+This grid is a simplified version, provided as a summary. It
+includes only the six main criteria and their weightings. The full
+evaluation grid is not available: it is reserved for the jury.
+.19
