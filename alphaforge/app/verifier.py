@@ -21,8 +21,8 @@ from alphaforge.app.evidence import EvidenceItem, EvidenceRegistry
 
 logger = logging.getLogger(__name__)
 
-# Regex for numbers: integers, decimals, signed numbers, percentages
-NUMBER_PATTERN = re.compile(r"[-+]?\d+(?:\.\d+)?%?")
+# Regex for numbers: integers, decimals (dot or French comma), signed numbers, percentages
+NUMBER_PATTERN = re.compile(r"[-+]?\d+(?:[.,]\d+)?%?")
 ISO_DATE_PATTERN = re.compile(r"\b(\d{4})-\d{2}-\d{2}\b")
 
 
@@ -65,11 +65,13 @@ def extract_numbers_from_text(text: str) -> list[str]:
 
 
 def parse_number_value(token: str) -> float:
-    """Convert token string (e.g. '10.55%', '-13.01', '40') into float."""
+    """Convert token string (e.g. '10.55%', '3,99%', '-13.01', '40') into float."""
     clean = token.strip()
     is_pct = clean.endswith("%")
     if is_pct:
         clean = clean[:-1].strip()
+    # Normalize French decimal comma to dot
+    clean = clean.replace(",", ".")
     val = float(clean)
     return val
 
