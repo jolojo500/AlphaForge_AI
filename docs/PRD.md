@@ -80,7 +80,11 @@ flowchart TD
 
 ### Stack
 
-Python 3.12 · LangGraph · langchain-aws (`ChatBedrockConverse`) · Pydantic v2 · pandas, numpy, scipy · httpx · FastAPI (SSE) · Streamlit · pytest · `uv` for the environment.
+Backend: Python 3.12 · LangGraph · langchain-aws (`ChatBedrockConverse`) · Pydantic v2 · pandas, numpy, scipy · httpx · FastAPI (SSE) · pytest · `uv` for the environment.
+
+Frontend: Vite · React · TypeScript · shadcn/ui (Tailwind) · npm. Lives in `frontend/`, built to `frontend/dist`, served as static files by the FastAPI app in production (one container). In development, Vite runs on its own port and FastAPI allows it through CORS.
+
+Reference material for prompts and wording: the BNCD workshop deck "Comprendre l'investisseur avant de bâtir la solution" (FR and EN) in `Datathon2026/`. It is the source of the four questions, the six risk types (market, credit, liquidity, rates/inflation, currency, concentration), tolerance vs capacity, the data checks (source, date, currency, total return vs price, publication vs observation date) and the ETF overlap example (XSP vs ZEQT).
 
 ### Models and AWS
 
@@ -96,7 +100,7 @@ Both inference profiles were confirmed present in the workshop account (us-east-
 | Bedrock | Foundation models. This alone satisfies AWS eligibility. |
 | S3 | Starter data + cached news and ETF holdings, shared and versioned. |
 | DynamoDB | Run traces (and checkpoints if time allows), so the service is auditable. |
-| App Runner (fallback: EC2) | Hosts the FastAPI backend and the Streamlit UI. |
+| App Runner (fallback: EC2) | Hosts one container: the FastAPI backend, which also serves the built React frontend. |
 | CloudWatch | Logs. |
 
 Credentials always come from the environment (`AWS_PROFILE` / standard env vars, region `us-east-1`). Never commit credentials. Workshop credentials are temporary: on `ExpiredToken`, get fresh ones from the Event Dashboard.
@@ -120,7 +124,8 @@ alphaforge/
   llm.py              Track B        get_llm(kind), call_json(prompt, schema)
   data/
     provider.py       Track A        DataProvider protocol
-    csv_provider.py   Track A
+    csv_provider.py   Track A        starter CSVs (default)
+    yfinance_provider.py  Track A    same protocol over yfinance (P2, see 5.3)
     holdings.py       Track A        cached ETF holdings loader
   nodes/
     screening.py      Track A
@@ -136,8 +141,11 @@ alphaforge/
   whatif.py           Track C
   api/server.py       Track C        FastAPI + SSE
   trace_store.py      Track C        local JSON / DynamoDB
-ui/app.py             Track C        Streamlit
-infra/                Track C        Dockerfile, deploy scripts
+frontend/             Track C        Vite + React + TypeScript + shadcn/ui
+  src/api.ts                         typed client for the routes in 6 (fetch + EventSource)
+  src/components/                    one component per block of the page in 6
+  package.json, vite.config.ts, tsconfig.json
+infra/                Track C        Dockerfile (builds frontend, serves it from FastAPI), deploy scripts
 data/cache/           A (holdings/), B (news/)   committed JSON fixtures
 tests/
   test_<module>.py    owner of the module
@@ -266,6 +274,7 @@ state = run("robert", text, profile=changed_profile)              # what-if: a g
 ```
 
 Local setup: `uv sync`, then `uv run pytest -q`, `uv run ruff check .`, `uv run python -m alphaforge.graph robert`. Copy `.env.example` to `.env` for the variables.
+Frontend (Track C): `cd frontend && npm install && npm run dev` with the API running on `uv run uvicorn alphaforge.api.server:app --reload`.
 
 ---
 
@@ -322,6 +331,7 @@ Priorities: `P0` = the demo breaks without it. `P1` = graded value. `P2` = cut f
 - **In.** `persona`, `request_text`, `as_of_date`. **Out.** `profile`.
 - **Functions.** `extract_profile()`, `detect_conflict()`, `needs_clarification()`.
 - **Routing.** Essential field missing, or the request contradicts the profile in a way that needs the user → `interrupt()` with ONE targeted question, at most one per run. A conflict that does not need an answer (Robert + TSLA) is recorded in `profile.conflicts` and the run proceeds.
+- **Invariant.** The node always either sets `profile` or calls `interrupt()`. Returning without a profile (for example after a failed JSON parse) makes the graph loop on this node; on a parse failure, fall back to the persona table and record an `assumption` in `conflicts`.
 - **Persona table** (§7) is passed in the prompt; the model fills gaps from the free text.
 - **Tests.** Three persona fixtures give the expected `Profile` with no question; Robert + TSLA sets `request_type="judge"`, `requested_idea={"ticker":"TSLA","weight":0.25}` and a non-empty `conflicts`.
 
@@ -346,6 +356,7 @@ Priorities: `P0` = the demo breaks without it. `P1` = graded value. `P2` = cut f
   - Survivorship bias: record it once as a limit (`assumption`).
   - Only data ≤ `as_of_date`.
 - **Tests.** Hand-computed checks (e.g. SPY 2022 max drawdown in CAD); changing `as_of_date` changes the window; no row after the as-of date is read.
+- **Data sources.** `CsvProvider` over the starter files is the default and what the demo runs on: frozen data means identical numbers at every run and no rate limit on stage. `YFinanceProvider` (A-7, P2) implements the same `DataProvider` protocol over yfinance, essentially the starter's `build_dataset.py`, selected with `AF_DATA_PROVIDER=csv|yfinance`. Its value is the "refresh the dataset" story for the pitch, not the demo (the CSVs end on 2026-11-12). All as-of, calendar and FX logic lives above the provider so it applies to both.
 
 ### 5.4 Macro (Python) · Track A
 
@@ -362,6 +373,7 @@ Priorities: `P0` = the demo breaks without it. `P1` = graded value. `P2` = cut f
 - **Classification** `classify_item()` on Haiku with a strict JSON schema: relevant, fact vs opinion, risk type (market, credit, liquidity, rates_inflation, currency, concentration, controversy), material.
 - **Rules.** Drop items dated after the as-of date. Store the provider's publication timestamp, not fetch time. News feeds the present-day view only, never the historical stress test. **Cache every fetched item as JSON in `data/cache/news/`** so a rate limit cannot break the demo; the demo runs from cache by default (`AF_NEWS_MODE=cache|live`).
 - **Budget.** At most 8 tool calls and 40 classified items per run. Focus on the requested ticker and the top holdings, not all 31 assets.
+- **Classification eval.** Hand-label ~50 cached news items (`tests/fixtures/news_labels.json`: relevant, kind, risk_type, material). The classifier's accuracy on them is a test and a paragraph in the technical document. The backend is one function `classify_item()`, so a second backend can be compared later if someone has access to one.
 - **Tests.** With a cached fixture, the same classified list twice; items after the as-of date dropped.
 
 ### 5.6 Evidence registry · Orchestrator
@@ -393,6 +405,7 @@ See §3.4 and §3.5.
 - **Why.** A hostile second reading catches what rules cannot express (Amira's "diversified" portfolio being 80% US through overlap).
 - **Out.** `objections`: `{scenario, objection, evidence, severity: "blocking"|"warning"}`. Blocking → back to the scenario builder, max 2 loops.
 - **Status.** Build last. If it adds nothing on the three personas, it stays a pass-through stub. Until then the stub returns no objections.
+- **Loop contract.** The node must return `{"retries": {"red_team": n + 1}}` on every pass (the stub already does); `graph.py` uses that counter to stop the loop after `MAX_RED_TEAM_LOOPS`. On a retry, the scenario builder reads `objections` and must change something (tighten a cap, drop a ticker) or the loop is wasted.
 
 ### 5.9 Agent 4 — Explainability (LLM) · Track B
 
@@ -444,12 +457,25 @@ See §3.4 and §3.5.
 | `POST /runs/{id}/whatif` `{field, value}` | Returns a new `run_id` linked to the parent |
 | `GET /runs/{id}` | Final state as JSON |
 | `GET /health` | For the load balancer |
+| `GET /personas` | Persona table (label, hypotheses, example request) for the picker |
 
-### UI (`ui/app.py`, Streamlit)
+- CORS: allow the Vite dev origin (`http://localhost:5173`) in development.
+- Production: if `frontend/dist` exists, mount it at `/` (static files, SPA fallback to `index.html`). API routes stay under `/runs`, `/personas`, `/health`.
+- SSE events are the ones in 3.6, serialised as JSON: `{"type": "trace", "entry": {...}}`, `{"type": "interrupt", "question": "..."}`, `{"type": "final", "run_id": "..."}` (the client then fetches `GET /runs/{id}`).
+
+### UI (`frontend/`, Vite + React + TypeScript + shadcn/ui)
 
 One page, top to bottom: simulation banner → persona picker with the persona's hypotheses → request box with one example per persona → **live node trace** → clarifying question if any → three scenario cards side by side (weights chart + the six metrics, the most consistent one highlighted) → explanation as four sections, each claim with clickable evidence chips → evidence table (id, value, source, date, method, fact/assumption/fictional) → excluded assets with reasons → what-if controls and before/after diff.
 
 The disclaimer is always visible. Verification failure is shown explicitly.
+
+Rules for the frontend:
+
+- One component per block above, in `frontend/src/components/`. Types for the API payloads in `frontend/src/types.ts`, mirroring `alphaforge/state.py` (hand-written; keep them in sync when the contract changes).
+- Live trace through `EventSource` on `GET /runs/{id}/events`.
+- French UI text. shadcn/ui components only; no second component library.
+- `npm run lint` and `npm run build` must pass; CI runs both. No frontend unit tests required: the acceptance is a screenshot in the PR plus the three personas running from the browser against the stub backend.
+- Scope is exactly the list above. Anything else is P2.
 
 ---
 
@@ -480,4 +506,5 @@ Demo (5 min): Robert asks about TSLA → challenged with the capped alternative.
 | LLM returns invalid JSON | Pydantic validation + one repair retry in `call_json()` |
 | Merge conflicts across tracks | File ownership (§3.1), frozen contracts, small PRs |
 | App Runner blocked in the workshop account | Fall back to EC2 + Docker; decide by Sun 14:00 |
-| Scope | Red team and DynamoDB checkpoints are P2 and cut first |
+| Scope | Red team, DynamoDB checkpoints and the yfinance provider are P2 and cut first |
+| Frontend time | Scope is exactly PRD 6; shadcn/ui only; build against the stub backend from the first hour so the API contract is exercised early |
