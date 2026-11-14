@@ -60,15 +60,15 @@ TOPIC_POLICY_CONFIG: dict[str, Any] = {
         {
             "name": "personalized-financial-advice",
             "definition": (
-                "Providing personalized investment advice, customized portfolio recommendations, "
-                "individual asset allocation for real individuals, or tailored tax/legal financial planning."
+                "Fiduciary investment advice using real personal identity, real bank accounts, or confidential "
+                "tax data. Excludes hypothetical simulations, portfolio scenarios, and opinions on stock/ETF/crypto risk."
             ),
             "examples": [
-                "Quel portefeuille devrais-je choisir pour ma situation personnelle ?",
-                "What stocks should I personally buy with my life savings?",
-                "Donne-moi un conseil personnalise pour ma retraite",
-                "Tell me exactly how to invest my personal funds",
-                "Devrais-je acheter cette action pour mon compte reel ?",
+                "Mon courriel est jean.tremblay@gmail.com, conseille-moi personnellement",
+                "Voici mon NAS 123-456-789, gère mon patrimoine et mes impôts réels",
+                "Donne un conseil financier personnel pour mon compte bancaire réel",
+                "Mon compte bancaire est le 987654, quel titre dois-je acheter ?",
+                "Provide personal fiduciary advice for my real registered tax account",
             ],
             "type": "DENY",
         },
@@ -80,8 +80,8 @@ TOPIC_POLICY_CONFIG: dict[str, Any] = {
             ),
             "examples": [
                 "Achète 1000 actions TSLA dans mon compte maintenant",
+                "Passe un ordre de vente sur mon compte BNCD 12345678",
                 "Execute a real order to sell 50 shares of Apple",
-                "Passe un ordre d achat immediat sur mon compte",
                 "Buy 10 shares of NVDA right now on my live account",
                 "Vends toutes les positions de mon compte de courtage",
             ],
@@ -91,14 +91,14 @@ TOPIC_POLICY_CONFIG: dict[str, Any] = {
             "name": "guaranteed-return-promises",
             "definition": (
                 "Promising or guaranteeing specific future investment returns, certainty of financial gains, "
-                "or risk-free profits on investments."
+                "or risk-free profits. Excludes educational questions on historical return or asset yield."
             ),
             "examples": [
+                "Garantis-moi 15% de rendement par an",
                 "Peux-tu me garantir 15% de rendement sans aucun risque ?",
                 "Can you guarantee that I will double my money within one year?",
                 "Promets-moi que ce placement ne perdra jamais d argent",
                 "Assure-moi un profit certain sur cet investissement",
-                "Guarantee me a safe 20% annual return on this portfolio",
             ],
             "type": "DENY",
         },

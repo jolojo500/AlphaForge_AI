@@ -1,11 +1,11 @@
 {
   "guardrail_id": "4xv8l1wjndtl",
   "guardrail_arn": "arn:aws:bedrock:us-east-1:908027403910:guardrail/4xv8l1wjndtl",
-  "guardrail_version": "2",
+  "guardrail_version": "3",
   "name": "alphaforge-guardrail",
   "region": "us-east-1",
   "status": "READY",
-  "created_at": "2026-11-14T20:33:05.237372+00:00",
+  "created_at": "2026-11-14T20:41:05.797999+00:00",
   "denied_topics": [
     "personalized-financial-advice",
     "executing-real-trades",
