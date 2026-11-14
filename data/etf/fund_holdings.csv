@@ -1,0 +1,126 @@
+etf,holding_ticker,holding_name,weight,as_of_date,source_url,retrieved_date
+XIU.TO,RY,ROYAL BANK OF CANADA,0.0958,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,TD,TORONTO DOMINION,0.0694,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,SHOP,SHOPIFY SUBORDINATE VOTING CLASS A,0.0605,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,BMO,BANK OF MONTREAL,0.0413,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,BNS,BANK OF NOVA SCOTIA,0.0385,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,CM,CANADIAN IMPERIAL BANK OF COMMERCE,0.0361,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,ENB,ENBRIDGE,0.0359,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,CNQ,CANADIAN NATURAL RESOURCES LTD,0.0345,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,AEM,AGNICO EAGLE MINES,0.0308,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,BN,BROOKFIELD CLASS A,0.0303,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,CP,CANADIAN PACIFIC KANSAS CITY,0.0283,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,SU,SUNCOR ENERGY INC,0.0276,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,MFC,MANULIFE FINANCIAL,0.0249,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,CNR,CANADIAN NATIONAL RAILWAY,0.0239,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,TRP,TC ENERGY,0.0229,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,ABX,BARRICK MINING,0.0212,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,WPM,WHEATON PRECIOUS METALS,0.0204,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,NA,NATIONAL BANK OF CANADA,0.0199,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,CSU,CONSTELLATION SOFTWARE,0.0177,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,WCN,WASTE CONNECTIONS,0.0166,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,FNV,FRANCO NEVADA,0.0163,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,ATD,ALIMENTATION COUCHE TARD INC,0.0146,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,DOL,DOLLARAMA,0.0142,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,SLF,SUN LIFE FINANCIAL INC,0.0138,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XIU.TO,CVE,CENOVUS ENERGY,0.0129,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf/1464253357814.ajax?fileType=csv&fileName=XIU_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0149,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0148,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0148,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0145,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0144,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0138,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0118,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0117,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0114,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0108,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0107,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0105,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0105,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0104,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0099,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0095,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0094,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0092,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.009,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.009,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0082,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0079,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0078,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0078,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+XBB.TO,CAN,CANADA (GOVERNMENT OF),0.0075,2026-11-12,https://www.blackrock.com/ca/investors/en/products/239493/ishares-canadian-universe-bond-index-etf/1464253357814.ajax?fileType=csv&fileName=XBB_holdings&dataType=fund,2026-11-14
+AGG,US0669225197,BLACKROCK CASH CL INST SL AGENCY,0.0251,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CMM00,TREASURY NOTE,0.004,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CGQ87,TREASURY NOTE,0.004,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CNC19,TREASURY NOTE,0.0039,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CQQ77,TREASURY NOTE (2OLD),0.0039,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CLW90,TREASURY NOTE,0.0039,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CKQ32,TREASURY NOTE,0.0039,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CLF67,TREASURY NOTE,0.0039,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CJJ18,TREASURY NOTE,0.0039,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CNT44,TREASURY NOTE,0.0038,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CPZ85,TREASURY NOTE,0.0038,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CPJ44,TREASURY NOTE,0.0038,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CJZ59,TREASURY NOTE,0.0037,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CNH06,TREASURY NOTE,0.0036,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CNU17,TREASURY NOTE,0.0034,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CHT18,TREASURY NOTE,0.0034,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CNM90,TREASURY NOTE,0.0034,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CNX55,TREASURY NOTE,0.0032,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CQU89,TREASURY NOTE,0.0032,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CPK17,TREASURY NOTE,0.0032,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CDJ71,TREASURY NOTE,0.0031,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CQK08,TREASURY NOTE,0.0031,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CHC82,TREASURY NOTE,0.0031,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CGH88,TREASURY NOTE,0.0031,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+AGG,US91282CEP23,TREASURY NOTE,0.0031,2026-11-12,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UA42,TREASURY BOND,0.0415,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UK24,TREASURY BOND,0.041,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UU06,TREASURY BOND (OLD),0.0408,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TV08,TREASURY BOND,0.0404,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UP11,TREASURY BOND,0.0391,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UR76,TREASURY BOND (2OLD),0.0389,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UG12,TREASURY BOND,0.0386,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UE63,TREASURY BOND,0.0385,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UW61,TREASURY BOND (OTR),0.0384,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UC08,TREASURY BOND,0.0379,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TX63,TREASURY BOND,0.0377,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TT51,TREASURY BOND,0.0356,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810UM89,TREASURY BOND,0.0347,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TB44,TREASURY BOND,0.0332,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TL26,TREASURY BOND,0.0303,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TR95,TREASURY BOND,0.0296,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SZ21,TREASURY BOND,0.029,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810TN81,TREASURY BOND,0.0263,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SU34,TREASURY BOND,0.023,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SD19,TREASURY BOND,0.0229,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SF66,TREASURY BOND,0.0229,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SP49,TREASURY BOND,0.0228,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SS87,TREASURY BOND,0.0226,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SC36,TREASURY BOND,0.022,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+TLT,US912810SA79,TREASURY BOND,0.0215,2026-11-12,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/latest-holdings.csv,2026-11-14
+SPY,AAPL,APPLE INC,0.079044,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,NVDA,NVIDIA CORP,0.06138,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,MSFT,MICROSOFT CORP,0.05927,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,AMZN,AMAZON.COM INC,0.040062,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,GOOGL,ALPHABET INC CL A,0.026753,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,AVGO,BROADCOM INC,0.026458,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,GOOG,ALPHABET INC CL C,0.021427,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,META,META PLATFORMS INC CLASS A,0.020988,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,LLY,ELI LILLY + CO,0.017409,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,TSLA,TESLA INC,0.017096,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,BRK.B,BERKSHIRE HATHAWAY INC CL B,0.016766,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,AMD,ADVANCED MICRO DEVICES,0.014582,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,JPM,JPMORGAN CHASE + CO,0.013908,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,MU,MICRON TECHNOLOGY INC,0.013763,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,V,VISA INC CLASS A SHARES,0.010931,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,XOM,EXXONMOBIL HOLDINGS CORP,0.010654,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,JNJ,JOHNSON + JOHNSON,0.010426,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,WMT,WALMART INC,0.008581,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,MA,MASTERCARD INC   A,0.008052,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,ABBV,ABBVIE INC,0.007944,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,COST,COSTCO WHOLESALE CORP,0.007395,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,CVX,CHEVRON CORP,0.006526,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,CSCO,CISCO SYSTEMS INC,0.006138,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,PLTR,PALANTIR TECHNOLOGIES INC A,0.006027,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
+SPY,PG,PROCTER + GAMBLE CO/THE,0.005962,2026-11-12,https://www.ssga.com/us/en/intermediary/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx,2026-11-14
