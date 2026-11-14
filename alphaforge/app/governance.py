@@ -198,7 +198,7 @@ def check_governance_rules(
                 )
             )
 
-    # --- RULE 4: Sector Concentration Checks ---
+    # --- RULE 4: Sector Concentration & ESG Checks ---
     if persona.id == "amira" and tech_weight > 0.401:
         alerts.append(
             GovernanceAlert(
@@ -213,25 +213,61 @@ def check_governance_rules(
             )
         )
 
-    if persona.id == "mateo" and energy_weight > 0.051:
+    if persona.id == "mateo":
+        # Provisional ESG screening alert (per Datathon Case & GitHub issue #4)
         alerts.append(
             GovernanceAlert(
-                rule_name="energy_esg_screening_mateo",
-                level="attention",
+                rule_name="provisional_esg_screening_mateo",
+                level="info",
                 message=(
-                    f"Energy sector weight ({energy_weight:.1%}) exceeds Mateo's 5% ESG controversy limit. "
-                    "Mateo seeks to avoid companies with major environmental/social controversy exposure."
+                    "Provisional ESG Screening Notice: Oil sands, pipelines, and fossil fuel assets (CNQ.TO, ENB.TO, XOM) "
+                    "are excluded based on provisional team assumptions (source: 'hypothese_equipe — à remplacer par source ESG'; ref GitHub issue #4). "
+                    "Vanguard ESG U.S. Stock ETF (ESGV) is utilized as the primary ESG-screened equity vehicle."
                 ),
-                details={"energy_weight": round(energy_weight, 4), "cap": 0.05},
-                suggested_action="Screen out non-renewable oil & gas holdings in favor of ESG-screened equities (ESGV).",
+                details={
+                    "provisional_exclusions": ["CNQ.TO", "ENB.TO", "XOM"],
+                    "source": "hypothese_equipe — à remplacer par source ESG",
+                    "issue_reference": "GitHub issue #4",
+                    "esg_core_vehicle": "ESGV",
+                },
             )
         )
 
-    # --- RULE 5: Single Asset Concentration ---
+        fossil_present = [t for t in ["CNQ.TO", "ENB.TO", "XOM"] if weights.get(t, 0.0) > 0.001]
+        if fossil_present:
+            alerts.append(
+                GovernanceAlert(
+                    rule_name="fossil_exclusion_breach_mateo",
+                    level="attention",
+                    message=(
+                        f"Provisional ESG Warning: Fossil fuel assets {fossil_present} detected in Mateo's portfolio. "
+                        "Mateo explicitly requests avoiding companies involved in significant environmental controversies."
+                    ),
+                    details={"fossil_assets": fossil_present},
+                    suggested_action="Exclude fossil fuel assets (CNQ.TO, ENB.TO, XOM) from portfolio.",
+                )
+            )
+
+        if energy_weight > 0.051:
+            alerts.append(
+                GovernanceAlert(
+                    rule_name="energy_esg_screening_mateo",
+                    level="attention",
+                    message=(
+                        f"Energy sector weight ({energy_weight:.1%}) exceeds Mateo's 5% ESG controversy limit. "
+                        "Mateo seeks to avoid companies with major environmental/social controversy exposure."
+                    ),
+                    details={"energy_weight": round(energy_weight, 4), "cap": 0.05},
+                    suggested_action="Screen out non-renewable oil & gas holdings in favor of ESG-screened equities (ESGV).",
+                )
+            )
+
+    # --- RULE 5: Single Stock Concentration Policy ---
     for ticker, w_val in weights.items():
-        # Allow bond ETFs to exceed single asset cap if needed to satisfy bond floor
-        is_bond = class_map.get(ticker) == "etf_bond"
-        if not is_bond and w_val > persona.constraints.single_asset_cap + 0.005:
+        # Only single individual corporate equities are subject to idiosyncratic single-stock cap.
+        # Broad market ETFs (ESGV, XIU.TO, SPY, QQQ) and bond/commodity ETFs (ZST, XBB, AGG, GLD) are diversified pools.
+        is_single_equity = class_map.get(ticker) == "equity"
+        if is_single_equity and w_val > persona.constraints.single_asset_cap + 0.005:
             alerts.append(
                 GovernanceAlert(
                     rule_name="single_asset_concentration",

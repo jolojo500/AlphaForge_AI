@@ -5,14 +5,27 @@ Covers the three official reference personas from the PolyFinances 2026 Datathon
 - Mateo (41, Moderate risk, 8-12 years): ESG preferences, balance growth and stability, exclude speculative.
 - Robert (59, Low-to-moderate risk, 3-5 years): Capital preservation, retirement proximity, high-profile temptation (TSLA).
 
-All team assumptions used to operationalize qualitative case text into quantitative constraints
-are explicitly documented.
+Implements Phase 1b Two-Level Strategic Sleeve Architecture:
+- Level 1: Strategic sleeve weights (Equity, Bonds, Crypto, Gold/Cash) aligned with horizon and risk capacity.
+- Level 2: Quantitative intra-sleeve optimization with preference tilts (tech/AI floor, ESG screening, bond duration).
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
+
+from alphaforge.app.tools.optimize import StrategicSleeveConfig
+
+
+@dataclass
+class ESGExclusionNote:
+    ticker: str
+    reason: str
+    source: str = "hypothese_equipe — à remplacer par source ESG"
+
+    def to_dict(self) -> dict[str, str]:
+        return asdict(self)
 
 
 @dataclass
@@ -29,9 +42,12 @@ class PersonaConstraints:
     per_asset_floors: dict[str, float] = field(default_factory=dict)
     exclusions: list[str] = field(default_factory=list)
     preferred_tickers: list[str] = field(default_factory=list)
+    strategic_sleeves: list[StrategicSleeveConfig] = field(default_factory=list)
+    provisional_esg_exclusions: list[ESGExclusionNote] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        res = asdict(self)
+        return res
 
 
 @dataclass
@@ -59,38 +75,71 @@ class Persona:
 def get_amira_persona() -> Persona:
     """Amira: 26yo, High risk, 15+ years horizon.
 
-    Tests: System must allow aggressive tech/crypto growth without abandoning diversification.
+    Strategic Sleeves: Equity 80% / Crypto 10% / Bonds 5% / Gold 5%.
+    Intra-sleeve: Tech floor 45% of equity (36% total), NVDA floor >= 4.8% total, crypto 10%.
     """
     team_assumptions = {
-        "single_asset_cap": "Capped at 10% to prevent excessive idiosyncratic stock concentration (e.g. NVDA or SHOP alone).",
-        "tech_sector_cap": "Capped at 40% (case rule: 'does not want to invest exclusively in technology').",
-        "crypto_class_cap": "Capped at 15% combined (BTC + ETH) to allow meaningful growth while bounding catastrophic drawdowns (>70%).",
-        "diversification_floor": "Non-tech equities and broad funds must make up at least 45% of portfolio.",
-        "target_volatility": "Target volatility band 16% to 24% annualized (high risk, aggressive growth).",
+        "strategic_sleeves": "Equity 80% / Crypto 10% / Bonds 5% / Gold 5% based on 15+ yr aggressive horizon.",
+        "tech_ai_floor": "Tech sector floor set at 45% of equity (36% total portfolio), with NVDA floor >= 4.8% to guarantee observable AI exposure as tested by case.",
+        "single_asset_cap": "Individual equities capped at 12.5% of equity sleeve (<= 10% total portfolio) to enforce diversification.",
+        "crypto_allocation": "10% strategic allocation split equally between Bitcoin and Ether (5% BTC, 5% ETH) to capture growth without exceeding 15% ceiling.",
+        "target_volatility_band": "Target volatility band 12.0% to 20.0% annualized.",
     }
 
+    sleeves = [
+        StrategicSleeveConfig(
+            name="equity",
+            target_weight=0.80,
+            weight_band=(0.75, 0.85),
+            asset_classes=["equity", "etf_equity"],
+            single_asset_cap=0.125,  # 10% of total portfolio
+            per_asset_caps=0.125,  # 10% of total portfolio
+            per_asset_floors={"NVDA": 0.06, "MSFT": 0.06, "AAPL": 0.06},  # 4.8% each total
+            sector_floors={"Information Technology": 0.45},  # 36% total
+            sector_caps={"Information Technology": 0.50},  # 40% total
+            exclusions=[],
+            rationale="Aggressive equity core with direct exposure to AI leaders (NVDA, MSFT, AAPL, CSU.TO, SHOP.TO) while maintaining non-tech diversification.",
+        ),
+        StrategicSleeveConfig(
+            name="crypto",
+            target_weight=0.10,
+            weight_band=(0.05, 0.10),
+            asset_classes=["crypto"],
+            fixed_allocations={"BTC-USD": 0.50, "ETH-USD": 0.50},
+            rationale="Captures cryptoasset upside aligned with high risk tolerance and 15+ yr horizon, capped at 10% to prevent catastrophic drawdown.",
+        ),
+        StrategicSleeveConfig(
+            name="bonds",
+            target_weight=0.05,
+            weight_band=(0.05, 0.10),
+            asset_classes=["etf_bond"],
+            fixed_allocations={"ZST.TO": 1.0},
+            rationale="Minimal ultra short-term bond cushion for liquidity.",
+        ),
+        StrategicSleeveConfig(
+            name="gold_cash",
+            target_weight=0.05,
+            weight_band=(0.0, 0.05),
+            asset_classes=["etf_commodity"],
+            fixed_allocations={"GLD": 1.0},
+            rationale="Non-correlated commodity buffer.",
+        ),
+    ]
+
     constraints = PersonaConstraints(
-        target_vol_band=(0.16, 0.24),
+        target_vol_band=(0.12, 0.20),
         single_asset_cap=0.10,
-        bond_floor=0.0,
-        crypto_cap=0.15,
-        sector_caps={
-            "Information Technology": 0.40,
-        },
-        sector_floors={
-            "Information Technology": 0.25,
-        },
-        class_caps={
-            "crypto": 0.15,
-            "etf_bond": 0.05,
-        },
-        class_floors={
-            "crypto": 0.05,
-        },
-        per_asset_caps={},
-        per_asset_floors={},
+        bond_floor=0.05,
+        crypto_cap=0.10,
+        sector_caps={"Information Technology": 0.40},
+        sector_floors={"Information Technology": 0.30},
+        class_caps={"crypto": 0.10, "etf_bond": 0.10},
+        class_floors={"crypto": 0.05, "equity": 0.75},
+        per_asset_caps={"NVDA": 0.10, "AAPL": 0.10, "MSFT": 0.10, "BTC-USD": 0.05, "ETH-USD": 0.05},
+        per_asset_floors={"NVDA": 0.04},
         exclusions=[],
-        preferred_tickers=["AAPL", "MSFT", "NVDA", "SHOP.TO", "CSU.TO", "QQQ", "BTC-USD", "ETH-USD"],
+        preferred_tickers=["NVDA", "AAPL", "MSFT", "SHOP.TO", "CSU.TO", "BTC-USD", "ETH-USD"],
+        strategic_sleeves=sleeves,
     )
 
     return Persona(
@@ -120,44 +169,68 @@ def get_amira_persona() -> Persona:
 def get_mateo_persona() -> Persona:
     """Mateo: 41yo, Moderate risk, 8-12 years horizon.
 
-    Tests: System must balance growth & stability, and integrate explicit non-financial ESG preferences.
+    Strategic Sleeves: Equity 60% / Bonds 35% / Gold 5% / Crypto 0%.
+    Intra-sleeve: Explicit provisional ESG exclusions (CNQ.TO, ENB.TO, XOM), ESGV core holding >= 15% total.
     """
+    provisional_esg = [
+        ESGExclusionNote(ticker="CNQ.TO", reason="Oil sands exploration and production"),
+        ESGExclusionNote(ticker="ENB.TO", reason="Crude oil and liquids pipeline transmission"),
+        ESGExclusionNote(ticker="XOM", reason="Integrated fossil fuel oil and gas exploration"),
+    ]
+
     team_assumptions = {
-        "esg_screening": "Prefers ESG-screened US equity ETF (ESGV) over standard SPY. Excludes traditional fossil fuel energy (XOM, CNQ.TO, ENB.TO capped strictly at 0% or <=5%).",
-        "speculative_exclusion": "Excludes crypto assets (BTC-USD, ETH-USD) per case text ('little interest in highly speculative investments').",
-        "bond_floor": "Bonds set to >= 25% to ensure balance between growth and capital stability.",
-        "single_asset_cap": "Capped at 10% per individual asset.",
-        "target_volatility": "Target volatility band 8% to 14% annualized (moderate risk).",
+        "strategic_sleeves": "Equity 60% / Bonds 35% / Gold 5% / Crypto 0% for 8-12 yr balanced family growth.",
+        "provisional_esg_exclusions": "Oil sands, pipelines, and fossil fuels (CNQ.TO, ENB.TO, XOM) excluded under provisional team hypothesis pending dedicated ESG dataset (ref GitHub issue #4).",
+        "esg_core_holding": "Vanguard ESG U.S. Stock ETF (ESGV) allocated as core holding at >= 25% of equity (>= 15% total portfolio).",
+        "speculative_crypto_exclusion": "Cryptoassets (BTC-USD, ETH-USD) strictly 0% per case preference to avoid speculative instruments.",
+        "target_volatility_band": "Target volatility band 6.0% to 11.0% annualized.",
     }
 
+    sleeves = [
+        StrategicSleeveConfig(
+            name="equity",
+            target_weight=0.60,
+            weight_band=(0.55, 0.65),
+            asset_classes=["equity", "etf_equity"],
+            single_asset_cap=0.166,  # 10% of total portfolio (0.166 * 0.60 = 0.10)
+            per_asset_caps={"ESGV": 0.35},  # ESGV core ETF up to 21% of total portfolio
+            per_asset_floors={"ESGV": 0.25},  # 15% total portfolio
+            sector_caps={"Energy": 0.0},  # Fossil energy excluded
+            exclusions=["CNQ.TO", "ENB.TO", "XOM"],
+            rationale="Balanced equity core anchored by ESG-screened US equity (ESGV) and non-fossil Canadian/US dividend companies.",
+        ),
+        StrategicSleeveConfig(
+            name="bonds",
+            target_weight=0.35,
+            weight_band=(0.30, 0.40),
+            asset_classes=["etf_bond"],
+            per_asset_caps=0.50,  # <= 17.5% per bond ETF in total portfolio
+            rationale="Fixed income stability sleeve (ZST.TO, XBB.TO, AGG) providing capital preservation across 8-12 yr horizon.",
+        ),
+        StrategicSleeveConfig(
+            name="gold_cash",
+            target_weight=0.05,
+            weight_band=(0.0, 0.05),
+            asset_classes=["etf_commodity"],
+            fixed_allocations={"GLD": 1.0},
+            rationale="Commodity hedge against stagflation / inflation.",
+        ),
+    ]
+
     constraints = PersonaConstraints(
-        target_vol_band=(0.08, 0.14),
+        target_vol_band=(0.06, 0.11),
         single_asset_cap=0.10,
         bond_floor=0.30,
         crypto_cap=0.0,
-        sector_caps={
-            "Energy": 0.05,
-        },
-        sector_floors={},
-        class_caps={
-            "crypto": 0.0,
-            "etf_bond": 0.50,
-        },
-        class_floors={
-            "etf_bond": 0.30,
-        },
-        per_asset_caps={
-            "ZST.TO": 0.25,
-            "XBB.TO": 0.25,
-            "AGG": 0.25,
-            "TLT": 0.25,
-            "ESGV": 0.25,
-        },
-        per_asset_floors={
-            "ESGV": 0.15,
-        },
-        exclusions=["BTC-USD", "ETH-USD", "XOM"],
+        sector_caps={"Energy": 0.0},
+        class_caps={"crypto": 0.0, "etf_bond": 0.40},
+        class_floors={"etf_bond": 0.30, "equity": 0.55},
+        per_asset_caps={"ESGV": 0.25},
+        per_asset_floors={"ESGV": 0.15},
+        exclusions=["BTC-USD", "ETH-USD", "CNQ.TO", "ENB.TO", "XOM"],
         preferred_tickers=["ESGV", "XIU.TO", "XBB.TO", "ZST.TO", "AGG", "CNR.TO", "FTS.TO"],
+        strategic_sleeves=sleeves,
+        provisional_esg_exclusions=provisional_esg,
     )
 
     return Persona(
@@ -187,36 +260,59 @@ def get_mateo_persona() -> Persona:
 def get_robert_persona() -> Persona:
     """Robert: 59yo, Low-to-moderate risk, 3-5 years horizon (near retirement).
 
-    Tests: System must challenge hyped/speculative requests (e.g. TSLA), explain risk, and avoid blindly complying.
+    Strategic Sleeves: Bonds 65% / Equity 30% / Gold 5% / Crypto 0%.
+    Intra-sleeve: High quality dividend equities (RY, TD, JNJ, PG, FTS). TSLA excluded in baseline, capped at 3% in alternative.
     """
     team_assumptions = {
-        "capital_preservation_priority": "Horizon of 3-5 years before retirement requires high capital preservation.",
-        "bond_floor": "Fixed income + cash equivalents >= 50% (XBB.TO, ZST.TO, AGG). ZST.TO (ultra short-term) prioritized due to 2022 duration lesson.",
-        "crypto_blocking": "Crypto is strictly 0% (blocking governance rule).",
-        "single_equity_cap": "Single equities capped at 8% max.",
-        "hyped_asset_policy_tsla": "When Robert requests TSLA, system issues an Incoherence Warning (horizon 3-5y vs TSLA vol ~58%). System proposes a constructive refusal / capped alternative of at most 3% to 5% with fixed income preserved.",
-        "target_volatility": "Target volatility band 3.5% to 7.0% annualized.",
+        "strategic_sleeves": "Bonds 65% / Equity 30% / Gold 5% / Crypto 0% for imminent retirement capital preservation.",
+        "bond_duration_mix": "Combines ultra short-term bonds (ZST.TO) and aggregate bonds (XBB.TO, AGG) to mitigate interest rate duration risk as observed in 2022.",
+        "crypto_prohibition": "Cryptoassets strictly 0% (blocking rule) due to short horizon and capital preservation mandate.",
+        "tsla_hyped_asset_policy": "When Robert requests TSLA, system issues Incoherence Warning and proposes a capped satellite alternative of at most 3.0% (10% of equity sleeve), preserving 65% bonds.",
+        "target_volatility_band": "Target volatility band 3.5% to 6.0% annualized.",
     }
 
+    sleeves = [
+        StrategicSleeveConfig(
+            name="bonds",
+            target_weight=0.65,
+            weight_band=(0.55, 0.75),
+            asset_classes=["etf_bond"],
+            single_asset_cap=0.55,  # <= 35.75% of total portfolio per bond ETF
+            per_asset_caps=0.55,
+            rationale="Heavy capital preservation anchor protecting imminent retirement capital.",
+        ),
+        StrategicSleeveConfig(
+            name="equity",
+            target_weight=0.30,
+            weight_band=(0.25, 0.35),
+            asset_classes=["equity", "etf_equity"],
+            single_asset_cap=0.25,  # <= 7.5% of total portfolio per stock
+            per_asset_caps=0.25,
+            exclusions=["TSLA"],  # Excluded in baseline
+            rationale="Defensive high-quality dividend equities generating modest growth without severe drawdowns.",
+        ),
+        StrategicSleeveConfig(
+            name="gold_cash",
+            target_weight=0.05,
+            weight_band=(0.0, 0.05),
+            asset_classes=["etf_commodity"],
+            fixed_allocations={"GLD": 1.0},
+            rationale="Safe-haven store of value.",
+        ),
+    ]
+
     constraints = PersonaConstraints(
-        target_vol_band=(0.035, 0.070),
+        target_vol_band=(0.035, 0.060),
         single_asset_cap=0.08,
-        bond_floor=0.50,
+        bond_floor=0.55,
         crypto_cap=0.0,
         sector_caps={},
-        class_caps={
-            "crypto": 0.0,
-        },
-        class_floors={
-            "etf_bond": 0.50,
-        },
-        per_asset_caps={
-            "ZST.TO": 0.35,
-            "XBB.TO": 0.35,
-            "AGG": 0.35,
-        },
+        class_caps={"crypto": 0.0},
+        class_floors={"etf_bond": 0.55, "equity": 0.25},
+        per_asset_caps={"ZST.TO": 0.35, "XBB.TO": 0.35, "AGG": 0.35, "TSLA": 0.03},
         exclusions=["BTC-USD", "ETH-USD", "TSLA"],
         preferred_tickers=["ZST.TO", "XBB.TO", "AGG", "RY.TO", "TD.TO", "JNJ", "PG", "FTS.TO", "XIU.TO"],
+        strategic_sleeves=sleeves,
     )
 
     return Persona(

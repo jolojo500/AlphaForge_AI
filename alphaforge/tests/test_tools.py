@@ -223,6 +223,30 @@ class TestStressTool:
         assert rolling["peak_rolling_vol"] >= rolling["mean_rolling_vol"]
         assert rolling["min_rolling_vol"] <= rolling["mean_rolling_vol"]
 
+    def test_2022_drawdown_window_isolation(self, dataset):
+        """Confirm that stress_test_2022_episode computes drawdown strictly within the 2022 calendar window.
+
+        For assets with major drawdowns occurring in 2023 or 2024 (e.g. GLD, NVDA),
+        the 2022 episode drawdown is strictly different from the full 5-year sample drawdown.
+        """
+        returns_df, _, _ = dataset
+        # For GLD, the full 5-year drawdown was ~-26% (late 2022 to late 2023), whereas 2022 alone was ~-17.4%
+        full_gld_dd = max_drawdown(returns_df["GLD"])
+        stress_gld = stress_test_2022_episode({"GLD": 1.0}, returns_df)
+        gld_2022_dd = stress_gld["portfolio"]["max_drawdown"]
+        assert abs(full_gld_dd - gld_2022_dd) > 0.05
+        assert gld_2022_dd > full_gld_dd  # 2022 drawdown was milder than full-period drawdown
+
+        # Synthetic test: Series with zero drawdown in 2022 and severe crash in 2023
+        synth_ret = pd.Series(0.0001, index=returns_df.index)
+        # Inject crash strictly in 2023
+        synth_ret.loc["2023-05-01":"2023-05-10"] = -0.05
+        synth_df = pd.DataFrame({"SYNTH": synth_ret})
+        synth_full_dd = max_drawdown(synth_ret)
+        synth_stress = stress_test_2022_episode({"SYNTH": 1.0}, synth_df)
+        assert synth_full_dd < -0.30
+        assert synth_stress["portfolio"]["max_drawdown"] == 0.0  # Zero drawdown in 2022 window
+
     def test_sensitivity_to_asset_cap(self, dataset):
         returns_df, _, universe_df = dataset
         base_robert = {

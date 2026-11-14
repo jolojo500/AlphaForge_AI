@@ -277,3 +277,154 @@ def optimize_risk_parity(
         active_assets=len(weights_dict),
         constraints_summary={"exclusions": list(exclusions_set), "risk_budgets": "equal"},
     )
+
+
+@dataclass
+class StrategicSleeveConfig:
+    """Strategic asset allocation sleeve definition."""
+    name: str  # equity, bonds, crypto, gold_cash
+    target_weight: float  # e.g. 0.80
+    weight_band: tuple[float, float]  # e.g. (0.75, 0.85)
+    asset_classes: list[str]  # e.g. ["equity", "etf_equity"]
+    single_asset_cap: float | None = None  # default cap for intra-sleeve assets (e.g. 0.166)
+    per_asset_caps: dict[str, float] | float | None = None
+    per_asset_floors: dict[str, float] | float | None = None
+    sector_caps: dict[str, float] | None = None
+    sector_floors: dict[str, float] | None = None
+    exclusions: list[str] | None = None
+    fixed_allocations: dict[str, float] | None = None  # e.g. {"GLD": 1.0} or {"BTC-USD": 0.5, "ETH-USD": 0.5}
+    rationale: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "target_weight": self.target_weight,
+            "weight_band": self.weight_band,
+            "asset_classes": self.asset_classes,
+            "single_asset_cap": self.single_asset_cap,
+            "per_asset_caps": self.per_asset_caps,
+            "per_asset_floors": self.per_asset_floors,
+            "sector_caps": self.sector_caps,
+            "sector_floors": self.sector_floors,
+            "exclusions": self.exclusions,
+            "fixed_allocations": self.fixed_allocations,
+            "rationale": self.rationale,
+        }
+
+
+def optimize_two_level_portfolio(
+    returns_df: pd.DataFrame,
+    universe_df: pd.DataFrame,
+    sleeves: list[StrategicSleeveConfig],
+    target_vol_band: tuple[float, float] | None = None,
+    annualization_factor: int = TRADING_DAYS_PER_YEAR,
+) -> OptimizationResult:
+    """Execute two-level portfolio allocation:
+
+    Level 1: Strategic sleeve targets (equity, bonds, crypto, gold) aligned with persona horizon and risk profile.
+    Level 2: Intra-sleeve quantitative optimization (constrained minimum variance under preference tilts and caps).
+    """
+    total_sleeve_weight = sum(s.target_weight for s in sleeves)
+    if not (0.98 <= total_sleeve_weight <= 1.02):
+        raise ValueError(f"Sleeve target weights must sum to 1.0, got {total_sleeve_weight}")
+
+    combined_weights: dict[str, float] = {}
+    sleeve_results: dict[str, Any] = {}
+    class_map = dict(zip(universe_df["ticker"], universe_df["asset_class"]))
+
+    for sleeve in sleeves:
+        if sleeve.target_weight <= 1e-5:
+            continue
+
+        if sleeve.fixed_allocations:
+            tot_fixed = sum(sleeve.fixed_allocations.values())
+            intra_weights = {t: w / tot_fixed for t, w in sleeve.fixed_allocations.items()}
+            sleeve_results[sleeve.name] = {
+                "intra_weights": intra_weights,
+                "sleeve_weight": sleeve.target_weight,
+                "method": "fixed_allocation",
+            }
+        else:
+            avail_tickers = [
+                t
+                for t in returns_df.columns
+                if class_map.get(t) in sleeve.asset_classes and t not in (sleeve.exclusions or [])
+            ]
+            if not avail_tickers:
+                raise ValueError(f"No available tickers for sleeve '{sleeve.name}' with classes {sleeve.asset_classes}")
+
+            sub_returns = returns_df[avail_tickers]
+            sub_univ = universe_df[universe_df["ticker"].isin(avail_tickers)]
+
+            # Resolve sleeve per-asset caps with single_asset_cap default
+            intra_caps = sleeve.per_asset_caps
+            if sleeve.single_asset_cap is not None:
+                if isinstance(intra_caps, dict):
+                    resolved_caps = {t: intra_caps.get(t, sleeve.single_asset_cap) for t in avail_tickers}
+                elif intra_caps is None:
+                    resolved_caps = sleeve.single_asset_cap
+                else:
+                    resolved_caps = intra_caps
+            else:
+                resolved_caps = intra_caps
+
+            res = optimize_min_variance(
+                returns_df=sub_returns,
+                universe_df=sub_univ,
+                per_asset_caps=resolved_caps,
+                per_asset_floors=sleeve.per_asset_floors,
+                sector_caps=sleeve.sector_caps,
+                sector_floors=sleeve.sector_floors,
+                exclusions=sleeve.exclusions,
+                annualization_factor=annualization_factor,
+            )
+            intra_weights = res.weights
+            sleeve_results[sleeve.name] = {
+                "intra_weights": intra_weights,
+                "sleeve_weight": sleeve.target_weight,
+                "method": "constrained_min_variance",
+                "status": res.solver_status,
+            }
+
+        # Scale intra-weights by sleeve target weight
+        for ticker, intra_w in intra_weights.items():
+            combined_weights[ticker] = combined_weights.get(ticker, 0.0) + intra_w * sleeve.target_weight
+
+    # Filter negligible weights
+    clean_weights: dict[str, float] = {}
+    for t, w in combined_weights.items():
+        if w > 1e-4:
+            clean_weights[t] = round(w, 4)
+
+    # Normalize to 1.0 exactly
+    tot = sum(clean_weights.values())
+    for t in clean_weights:
+        clean_weights[t] = round(clean_weights[t] / tot, 4)
+    diff = round(1.0 - sum(clean_weights.values()), 4)
+    if diff != 0 and clean_weights:
+        max_k = max(clean_weights, key=clean_weights.get)
+        clean_weights[max_k] = round(clean_weights[max_k] + diff, 4)
+
+    # Calculate portfolio volatility
+    cov = returns_df.cov().to_numpy() * annualization_factor
+    tickers_list = list(returns_df.columns)
+    w_vec = np.array([clean_weights.get(t, 0.0) for t in tickers_list])
+    realized_vol = float(np.sqrt(w_vec.T @ cov @ w_vec))
+
+    within_band = None
+    if target_vol_band:
+        within_band = (target_vol_band[0] - 0.01) <= realized_vol <= (target_vol_band[1] + 0.01)
+
+    return OptimizationResult(
+        weights=clean_weights,
+        annualized_vol=realized_vol,
+        solver_status="optimal",
+        objective_type="two_level_strategic_sleeves",
+        active_assets=len(clean_weights),
+        constraints_summary={
+            "sleeves": [s.to_dict() for s in sleeves],
+            "sleeve_breakdown": sleeve_results,
+            "target_vol_band": target_vol_band,
+            "within_target_vol_band": within_band,
+        },
+    )

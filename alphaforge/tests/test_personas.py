@@ -1,7 +1,12 @@
-"""End-to-end integration tests for the three datathon personas:
-- Amira (High risk, growth & diversification)
-- Mateo (Moderate risk, balanced & ESG)
+"""End-to-end integration tests for the three datathon personas (Phase 1b):
+- Amira (High risk, growth & diversification, AI/NVDA exposure)
+- Mateo (Moderate risk, balanced & provisional ESG exclusions)
 - Robert (Low-to-moderate risk, capital preservation, TSLA test & capped alternative)
+
+Validates strict persona differentiation:
+- Vol_Amira > Vol_Mateo > Vol_Robert
+- Target volatility band adherence
+- Strategic sleeve and preference constraints
 """
 
 from __future__ import annotations
@@ -25,6 +30,28 @@ class TestPersonasEndToEnd:
     def dataset(self, shared_dataset):
         return shared_dataset
 
+    def test_persona_volatility_ordering(self, dataset):
+        """Confirm strict persona differentiation: Amira vol > Mateo vol > Robert vol."""
+        res_amira = run_pipeline_for_persona("amira")
+        res_mateo = run_pipeline_for_persona("mateo")
+        res_robert = run_pipeline_for_persona("robert")
+
+        vol_amira = res_amira["risk_metrics"]["annualized_volatility"]
+        vol_mateo = res_mateo["risk_metrics"]["annualized_volatility"]
+        vol_robert = res_robert["risk_metrics"]["annualized_volatility"]
+
+        # Strict ordering
+        assert vol_amira > vol_mateo > vol_robert
+
+        # Target bands adherence
+        assert 0.12 <= vol_amira <= 0.20
+        assert 0.06 <= vol_mateo <= 0.11
+        assert 0.035 <= vol_robert <= 0.060
+
+        assert res_amira["vol_band_audit"]["within_band"] is True
+        assert res_mateo["vol_band_audit"]["within_band"] is True
+        assert res_robert["vol_band_audit"]["within_band"] is True
+
     def test_amira_pipeline(self, dataset):
         _, _, universe_df = dataset
         res = run_pipeline_for_persona("amira")
@@ -37,24 +64,30 @@ class TestPersonasEndToEnd:
         # Check weights sum to 1.0
         assert pytest.approx(sum(weights.values()), abs=1e-3) == 1.0
 
-        # Check diversification constraints
         sector_map = dict(zip(universe_df["ticker"], universe_df["sector"]))
         class_map = dict(zip(universe_df["ticker"], universe_df["asset_class"]))
 
         tech_w = sum(w for t, w in weights.items() if sector_map.get(t) == "Information Technology")
         crypto_w = sum(w for t, w in weights.items() if class_map.get(t) == "crypto")
 
-        # Tech <= 40% (not exclusively tech)
+        # Amira has meaningful tech exposure and specifically NVDA
+        assert "NVDA" in weights
+        assert weights["NVDA"] >= 0.04
+        assert tech_w >= 0.25
         assert tech_w <= 0.40 + 1e-3
-        # Crypto <= 15%
-        assert crypto_w <= 0.15 + 1e-3
-        # All individual assets <= 10%
-        for t, w in weights.items():
-            assert w <= 0.10 + 1e-3
 
-        # Risk metrics check
-        assert metrics["annualized_volatility"] > 0.07  # Growth oriented vol
-        assert metrics["active_assets_count"] >= 10  # Broadly diversified
+        # Crypto between 5% and 10%
+        assert crypto_w >= 0.05 - 1e-3
+        assert crypto_w <= 0.10 + 1e-3
+
+        # Individual equities capped at 10%
+        for t, w in weights.items():
+            if class_map.get(t) == "equity":
+                assert w <= 0.10 + 1e-3
+
+        # High growth volatility profile
+        assert metrics["annualized_volatility"] >= 0.12
+        assert metrics["active_assets_count"] >= 10
 
         # Governance and Verifier
         assert gov.passed is True
@@ -73,7 +106,6 @@ class TestPersonasEndToEnd:
         # Check weights sum to 1.0
         assert pytest.approx(sum(weights.values()), abs=1e-3) == 1.0
 
-        sector_map = dict(zip(universe_df["ticker"], universe_df["sector"]))
         class_map = dict(zip(universe_df["ticker"], universe_df["asset_class"]))
 
         # ESG core ETF present
@@ -84,16 +116,17 @@ class TestPersonasEndToEnd:
         crypto_w = sum(w for t, w in weights.items() if class_map.get(t) == "crypto")
         assert crypto_w == 0.0
 
-        # Controversial fossil fuel XOM excluded
+        # Provisional ESG exclusions: CNQ.TO, ENB.TO, XOM completely absent
+        assert "CNQ.TO" not in weights
+        assert "ENB.TO" not in weights
         assert "XOM" not in weights
 
-        # Energy sector <= 5%
-        energy_w = sum(w for t, w in weights.items() if sector_map.get(t) == "Energy")
-        assert energy_w <= 0.05 + 1e-3
-
-        # Bonds floor >= 25%
+        # Bonds sleeve represents ~35%
         bond_w = sum(w for t, w in weights.items() if class_map.get(t) == "etf_bond")
-        assert bond_w >= 0.25 - 1e-3
+        assert bond_w >= 0.30
+
+        # Governance has provisional ESG info alert
+        assert any(a.rule_name == "provisional_esg_screening_mateo" and a.level == "info" for a in gov.alerts)
 
         # Governance and Verifier
         assert gov.passed is True
@@ -114,9 +147,9 @@ class TestPersonasEndToEnd:
 
         class_map = dict(zip(universe_df["ticker"], universe_df["asset_class"]))
 
-        # Bonds floor >= 50% for capital preservation
+        # Bonds sleeve >= 55% for retirement capital preservation
         bond_w = sum(w for t, w in weights.items() if class_map.get(t) == "etf_bond")
-        assert bond_w >= 0.50 - 1e-3
+        assert bond_w >= 0.55
 
         # Crypto strictly 0%
         assert "BTC-USD" not in weights
@@ -126,7 +159,7 @@ class TestPersonasEndToEnd:
         assert "TSLA" not in weights
 
         # Volatility is low (capital preservation)
-        assert metrics["annualized_volatility"] < 0.05
+        assert metrics["annualized_volatility"] < 0.045
 
         # Governance and Verifier
         assert gov.passed is True
@@ -173,10 +206,10 @@ class TestPersonasEndToEnd:
 
         assert pytest.approx(weights.get("TSLA", 0.0), abs=1e-3) == 0.03
 
-        # Bonds still satisfy >= 50%
+        # Bonds still satisfy >= 55%
         class_map = dict(zip(universe_df["ticker"], universe_df["asset_class"]))
         bond_w = sum(w for t, w in weights.items() if class_map.get(t) == "etf_bond")
-        assert bond_w >= 0.50 - 1e-3
+        assert bond_w >= 0.55
 
         # Controlled volatility
         assert metrics["annualized_volatility"] <= 0.05

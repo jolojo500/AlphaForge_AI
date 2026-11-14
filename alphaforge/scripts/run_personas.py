@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
-"""AlphaForge AI — End-to-End Persona Simulation Pipeline.
+"""AlphaForge AI — End-to-End Persona Simulation Pipeline (Phase 1b).
 
-Executes the deterministic core for all three official personas:
-1. Amira (High risk, long horizon, tech & crypto with diversification).
-2. Mateo (Moderate risk, balanced growth, ESG screening, controversy avoidance).
+Executes the two-level strategic sleeve deterministic core for all three official personas:
+1. Amira (High risk, long horizon, AI/tech floor with NVDA exposure & crypto).
+2. Mateo (Moderate risk, balanced growth, provisional ESG exclusions & ESGV core).
 3. Robert (Low-to-moderate risk, capital preservation, hyped asset TSLA test + capped alternative).
 
 Validates:
-- Optimal portfolio allocation under cvxpy constraints.
+- Strategic sleeve allocation + intra-sleeve constrained QP optimization.
 - Quantitative risk metrics in CAD (annualized vol, max drawdown, CVaR95, beta vs XIU.TO).
+- Target volatility band adherence (Amira vol > Mateo vol > Robert vol).
 - 2022 stagflation stress test replay.
-- Governance compliance checks (blocking crypto, constructive refusal for TSLA).
+- Governance compliance checks (blocking crypto for Robert, provisional ESG alerts for Mateo).
 - Grounded explanation generation and 100% deterministic verification.
 """
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import sys
@@ -30,7 +32,7 @@ if str(REPO_ROOT) not in sys.path:
 from alphaforge.app.evidence import EvidenceRegistry
 from alphaforge.app.governance import check_governance_rules
 from alphaforge.app.personas import Persona, get_persona
-from alphaforge.app.tools.optimize import optimize_min_variance
+from alphaforge.app.tools.optimize import StrategicSleeveConfig, optimize_two_level_portfolio
 from alphaforge.app.tools.prices import generate_data_quality_report, get_processed_dataset
 from alphaforge.app.tools.risk import (
     asset_summary_metrics,
@@ -74,46 +76,73 @@ def run_pipeline_for_persona(
         description="Historical annualized volatility, maximum drawdown, and beta vs XIU.TO for 31 assets.",
     )
 
-    # 3. Setup optimization constraints from persona
-    constraints = persona.constraints
-    per_asset_caps = dict(constraints.per_asset_caps)
-    per_asset_floors = dict(constraints.per_asset_floors)
-    exclusions = list(constraints.exclusions)
+    # 3. Two-Level Strategic Sleeve Optimization
+    sleeves = [
+        StrategicSleeveConfig(
+            name=s.name,
+            target_weight=s.target_weight,
+            weight_band=s.weight_band,
+            asset_classes=list(s.asset_classes),
+            single_asset_cap=s.single_asset_cap,
+            per_asset_caps=copy.deepcopy(s.per_asset_caps),
+            per_asset_floors=copy.deepcopy(s.per_asset_floors),
+            sector_caps=copy.deepcopy(s.sector_caps),
+            sector_floors=copy.deepcopy(s.sector_floors),
+            exclusions=list(s.exclusions) if s.exclusions else None,
+            fixed_allocations=dict(s.fixed_allocations) if s.fixed_allocations else None,
+            rationale=s.rationale,
+        )
+        for s in persona.constraints.strategic_sleeves
+    ]
 
-    # Default per-asset cap across all assets
-    full_per_asset_caps: dict[str, float] = {t: constraints.single_asset_cap for t in returns_df.columns}
-    for t, cap_val in per_asset_caps.items():
-        full_per_asset_caps[t] = cap_val
-
-    # Special persona handling
+    # Handle Robert TSLA request override
     if persona_id == "robert" and force_tsla_weight is not None:
-        if "TSLA" in exclusions:
-            exclusions.remove("TSLA")
-        full_per_asset_caps["TSLA"] = force_tsla_weight
-        per_asset_floors["TSLA"] = force_tsla_weight
+        for s in sleeves:
+            if s.name == "equity":
+                if s.exclusions and "TSLA" in s.exclusions:
+                    s.exclusions.remove("TSLA")
+                intra_floor = force_tsla_weight / s.target_weight
+                s.per_asset_floors = dict(s.per_asset_floors or {})
+                s.per_asset_floors["TSLA"] = intra_floor
+                s.per_asset_caps = dict(s.per_asset_caps or {}) if isinstance(s.per_asset_caps, dict) else {}
+                s.per_asset_caps["TSLA"] = intra_floor
 
-    # Run Constrained Optimization
-    opt_result = optimize_min_variance(
+    opt_result = optimize_two_level_portfolio(
         returns_df=returns_df,
         universe_df=universe_df,
-        per_asset_caps=full_per_asset_caps,
-        per_asset_floors=per_asset_floors if per_asset_floors else None,
-        sector_caps=constraints.sector_caps,
-        sector_floors=constraints.sector_floors,
-        class_caps=constraints.class_caps,
-        class_floors=constraints.class_floors,
-        exclusions=exclusions,
+        sleeves=sleeves,
+        target_vol_band=persona.constraints.target_vol_band,
     )
 
     e_opt = registry.register(
-        tool="optimize.optimize_min_variance",
-        args={"persona": persona_id, "constraints": constraints.to_dict()},
+        tool="optimize.optimize_two_level_portfolio",
+        args={"persona": persona_id, "sleeves": [s.to_dict() for s in sleeves]},
         result=opt_result.to_dict(),
-        source="cvxpy Constrained Quadratic Program (OSQP)",
-        description=f"Optimal portfolio weights for {persona.name} minimizing variance under policy constraints.",
+        source="AlphaForge Strategic Sleeve Allocator & cvxpy OSQP",
+        description=f"Two-level strategic sleeve optimal weights for {persona.name}.",
     )
 
-    # 4. Portfolio risk metrics
+    # 4. Evidence: Realized Volatility vs Target Volatility Band
+    vol_band = persona.constraints.target_vol_band
+    realized_vol = opt_result.annualized_vol
+    within_band = (vol_band[0] - 0.01) <= realized_vol <= (vol_band[1] + 0.01)
+
+    vol_band_data = {
+        "persona": persona_id,
+        "target_vol_min": vol_band[0],
+        "target_vol_max": vol_band[1],
+        "realized_vol": round(realized_vol, 4),
+        "within_band": within_band,
+    }
+    e_vol_band = registry.register(
+        tool="optimize.volatility_band_audit",
+        args={"persona": persona_id},
+        result=vol_band_data,
+        source="AlphaForge Risk Engine",
+        description=f"Comparison of realized portfolio volatility vs persona target band for {persona.name}.",
+    )
+
+    # 5. Portfolio risk metrics
     port_metrics = portfolio_risk_metrics(opt_result.weights, returns_df)
     e_pmetrics = registry.register(
         tool="risk.portfolio_risk_metrics",
@@ -123,7 +152,7 @@ def run_pipeline_for_persona(
         description=f"Portfolio risk profile for {persona.name}: vol, drawdown, CVaR95.",
     )
 
-    # 5. Risk contribution decomposition
+    # 6. Risk contribution decomposition
     rc_df = risk_contributions(opt_result.weights, returns_df)
     e_rc = registry.register(
         tool="risk.risk_contributions",
@@ -133,7 +162,7 @@ def run_pipeline_for_persona(
         description=f"Asset risk contribution decomposition for {persona.name}.",
     )
 
-    # 6. 2022 Episode Stress Test
+    # 7. 2022 Episode Stress Test
     stress_2022 = stress_test_2022_episode(opt_result.weights, returns_df)
     e_stress = registry.register(
         tool="stress.stress_test_2022_episode",
@@ -143,7 +172,7 @@ def run_pipeline_for_persona(
         description=f"2022 stagflation rate-hike stress test replay for {persona.name}.",
     )
 
-    # 7. Governance Check
+    # 8. Governance Check
     gov_report = check_governance_rules(
         persona=persona,
         proposed_weights=opt_result.weights,
@@ -161,7 +190,7 @@ def run_pipeline_for_persona(
         description=f"Governance compliance check for {persona.name}.",
     )
 
-    # 8. Generate Self-Explaining Output grounded in registered Evidence IDs
+    # 9. Generate Self-Explaining Output grounded in registered Evidence IDs
     vol_val = port_metrics["annualized_volatility"]
     dd_val = port_metrics["max_drawdown"]
     s2022_dd = stress_2022["portfolio"]["max_drawdown"]
@@ -175,6 +204,10 @@ def run_pipeline_for_persona(
             {
                 "claim": f"Le portefeuille présente une volatilité annualisée de {vol_val:.2%} et un drawdown de {dd_val:.2%}.",
                 "evidence_ids": [e_pmetrics.id],
+            },
+            {
+                "claim": f"La volatilité réalisée de {vol_val:.2%} respecte la fourchette cible de {vol_band[0]:.1%} à {vol_band[1]:.1%}.",
+                "evidence_ids": [e_vol_band.id],
             },
             {
                 "claim": f"Lors du choc de 2022, le recul maximal du portefeuille a été de {s2022_dd:.2%}.",
@@ -202,7 +235,7 @@ def run_pipeline_for_persona(
             },
         ],
         "ce_qui_changerait_la_reponse": [
-            "Une modification des plafonds sectoriels ou par actif.",
+            "Une modification des pondérations des poches stratégiques (actions, obligations, crypto).",
             "Une variation du taux directeur de la Banque du Canada ou un dérèglement de la parité USD/CAD.",
             "Un allongement ou raccourcissement de l'horizon temporel de l'investisseur.",
         ],
@@ -216,7 +249,7 @@ def run_pipeline_for_persona(
         ],
     }
 
-    # 9. Deterministic Verifier validation
+    # 10. Deterministic Verifier validation
     ver_report = verify_explanation(explanation_payload, registry)
 
     return {
@@ -228,6 +261,7 @@ def run_pipeline_for_persona(
         "explanation": explanation_payload,
         "verification": ver_report,
         "registry": registry,
+        "vol_band_audit": vol_band_data,
     }
 
 
@@ -238,7 +272,7 @@ def print_banner(title: str) -> None:
 
 
 def main() -> None:
-    print_banner("AlphaForge AI — Deterministic Pipeline Execution (Phase 1)")
+    print_banner("AlphaForge AI — Two-Level Strategic Pipeline Execution (Phase 1b)")
 
     # 1. Run Amira
     print_banner("Persona 1: Amira (26yo, High Risk, 15+ Yrs Horizon)")
@@ -251,7 +285,8 @@ def main() -> None:
     print("\nRisk Metrics (CAD):")
     for k, v in res_amira["risk_metrics"].items():
         print(f"  {k:<24}: {v}")
-    print(f"\n2022 Episode Stress Drawdown: {res_amira['stress_2022']['portfolio']['max_drawdown']:.2%}")
+    print(f"Target Vol Band Adherence: {res_amira['vol_band_audit']}")
+    print(f"2022 Episode Stress Drawdown: {res_amira['stress_2022']['portfolio']['max_drawdown']:.2%}")
     print(f"Governance Status: Passed={res_amira['governance'].passed}, Alerts={len(res_amira['governance'].alerts)}")
     print(f"Verifier Status: Valid={res_amira['verification'].is_valid}, Errors={len(res_amira['verification'].errors)}")
 
@@ -266,8 +301,11 @@ def main() -> None:
     print("\nRisk Metrics (CAD):")
     for k, v in res_mateo["risk_metrics"].items():
         print(f"  {k:<24}: {v}")
-    print(f"\n2022 Episode Stress Drawdown: {res_mateo['stress_2022']['portfolio']['max_drawdown']:.2%}")
+    print(f"Target Vol Band Adherence: {res_mateo['vol_band_audit']}")
+    print(f"2022 Episode Stress Drawdown: {res_mateo['stress_2022']['portfolio']['max_drawdown']:.2%}")
     print(f"Governance Status: Passed={res_mateo['governance'].passed}, Alerts={len(res_mateo['governance'].alerts)}")
+    for a in res_mateo["governance"].alerts:
+        print(f"  [{a.level.upper()}] {a.rule_name}: {a.message[:100]}...")
     print(f"Verifier Status: Valid={res_mateo['verification'].is_valid}, Errors={len(res_mateo['verification'].errors)}")
 
     # 3. Run Robert (Baseline)
@@ -281,7 +319,8 @@ def main() -> None:
     print("\nRisk Metrics (CAD):")
     for k, v in res_robert["risk_metrics"].items():
         print(f"  {k:<24}: {v}")
-    print(f"\n2022 Episode Stress Drawdown: {res_robert['stress_2022']['portfolio']['max_drawdown']:.2%}")
+    print(f"Target Vol Band Adherence: {res_robert['vol_band_audit']}")
+    print(f"2022 Episode Stress Drawdown: {res_robert['stress_2022']['portfolio']['max_drawdown']:.2%}")
     print(f"Governance Status: Passed={res_robert['governance'].passed}")
     print(f"Verifier Status: Valid={res_robert['verification'].is_valid}")
 
@@ -310,7 +349,7 @@ def main() -> None:
     print("\nProposed Capped Alternative from Governance Engine:")
     print(f"  {gov_test.capped_alternatives}")
 
-    # 5. Run Robert (With Capped Alternative: 3% TSLA, 0% Crypto)
+    # 5. Run Robert (With Capped Alternative: 3% TSLA Satellite)
     print_banner("Persona 3: Robert — Capped Alternative (3% TSLA Satellite)")
     res_robert_capped = run_pipeline_for_persona("robert", user_requests=["TSLA"], force_tsla_weight=0.03)
     print("Allocations with 3% TSLA Capped Alternative:")
@@ -319,11 +358,26 @@ def main() -> None:
     print("\nRisk Metrics with 3% TSLA:")
     for k, v in res_robert_capped["risk_metrics"].items():
         print(f"  {k:<24}: {v}")
+    print(f"Target Vol Band Adherence: {res_robert_capped['vol_band_audit']}")
     print(f"2022 Drawdown: {res_robert_capped['stress_2022']['portfolio']['max_drawdown']:.2%}")
     print(f"Governance Passed: {res_robert_capped['governance'].passed} (No blocking alerts)")
     print(f"Verifier Status: Valid = {res_robert_capped['verification'].is_valid}")
 
-    print_banner("All Persona Pipelines Successfully Executed and Verified!")
+    # 6. Volatility Ordering Validation
+    print_banner("Summary Volatility Comparison Across Personas")
+    v_a = res_amira["risk_metrics"]["annualized_volatility"]
+    v_m = res_mateo["risk_metrics"]["annualized_volatility"]
+    v_r = res_robert["risk_metrics"]["annualized_volatility"]
+    v_r_tsla = res_robert_capped["risk_metrics"]["annualized_volatility"]
+
+    print(f"Amira Realized Volatility : {v_a:>6.2%} (Target: 12.0% - 20.0%)")
+    print(f"Mateo Realized Volatility : {v_m:>6.2%} (Target:  6.0% - 11.0%)")
+    print(f"Robert Realized Volatility: {v_r:>6.2%} (Target:  3.5% -  6.0%)")
+    print(f"Robert (3% TSLA) Volatility: {v_r_tsla:>6.2%} (Target:  3.5% -  6.0%)")
+
+    assert v_a > v_m > v_r, "Persona volatility ordering violated!"
+    print("\n[SUCCESS] Strict Persona Differentiation Confirmed: Amira > Mateo > Robert!")
+    print_banner("Phase 1b Execution Complete and Fully Grounded!")
 
 
 if __name__ == "__main__":

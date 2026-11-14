@@ -235,3 +235,129 @@ Pipeline executed via `alphaforge/scripts/run_personas.py`:
 
 3. **Streamlit Interactive UI:**
    - Build persona cards (Amira, Mateo, Robert), interactive capital allocation doughnut chart, 2022 stress replay graph, and clickable `[E#]` evidence drawer.
+
+---
+
+## 7. Phase 1b — Persona Differentiation & Strategic Sleeve Architecture
+
+### 7.1 Problem Identified in Review & Architectural Fix
+In the initial review of Phase 1, unconstrained minimum-variance optimization across the entire asset universe collapsed every persona toward defensive assets (utilities like FTS.TO, gold GLD, staples JNJ/PG, short-term bonds ZST.TO). 
+- Amira (aggressive, 15+ years, explicit AI/tech interest) was assigned only 9.8% annualized volatility and **0% NVDA**, failing the case reality test: *"how much risk will the system accept?"*.
+- Mateo (seeking ESG alignment) was allocated oil sands (`CNQ.TO`) and pipeline (`ENB.TO`) assets alongside 25% short-term bonds over an 8–12 year horizon.
+
+### 7.2 Two-Level Strategic Sleeve Allocation Model
+To solve this while remaining strictly deterministic and avoiding subjective return forecasts, a **Two-Level Strategic Sleeve Architecture** was implemented in `optimize.py` (`optimize_two_level_portfolio`) and `personas.py`:
+
+```
+Strategic SAA Sleeves (Level 1)
+   ├── Amira:  Equity 80% (75-85%) | Crypto 10% (5-10%) | Bonds 5% (5-10%) | Gold 5% (0-5%)
+   ├── Mateo:  Equity 60% (55-65%) | Bonds 35% (30-40%) | Gold 5% (0-5%)  | Crypto 0%
+   └── Robert: Bonds 65% (≥55%)     | Equity 30% (25-35%) | Gold 5% (0-5%)  | Crypto 0%
+          │
+Intra-Sleeve Quantitative Optimization (Level 2)
+   ├── Amira:  Tech floor 45% of equity (36% total), NVDA floor ≥ 4.8% total, single cap ≤ 10%
+   ├── Mateo:  Provisional ESG exclusions (CNQ, ENB, XOM), ESGV core ≥ 15% total, single cap ≤ 10%
+   └── Robert: Dividend defensives, bond duration mix (ZST/XBB/AGG). TSLA excluded (capped at 3% in test)
+```
+
+### 7.3 Target Volatility Bands & Evidence Reporting
+Each persona was assigned an explicit target volatility band, audited as a registered evidence item (`optimize.volatility_band_audit`):
+
+| Persona | Horizon & Objective | Target Vol Band | Realized Volatility | Within Band? | Active Assets |
+|---|---|---|---|---|---|
+| **Amira** | 15+ yrs, Aggressive Growth | **[12.0%, 20.0%]** | **13.28%** | **Yes** | 14 |
+| **Mateo** | 8–12 yrs, Balanced / ESG | **[6.0%, 11.0%]** | **6.70%** | **Yes** | 12 |
+| **Robert (Baseline)** | 3–5 yrs, Capital Preservation | **[3.5%, 6.0%]** | **3.99%** | **Yes** | 18 |
+| **Robert (3% TSLA)** | 3–5 yrs, Preserved Satellite | **[3.5%, 6.0%]** | **4.32%** | **Yes** | 16 |
+
+$$\mathbf{\text{Vol}_{\text{Amira}} (13.28\%) > \text{Vol}_{\text{Mateo}} (6.70\%) > \text{Vol}_{\text{Robert}} (3.99\%)}$$
+
+Strict, monotonic persona differentiation is mathematically verified and financially coherent.
+
+### 7.4 Mateo Provisional ESG Screening
+Pending dedicated ESG ratings data (ref GitHub issue #4), an explicit provisional exclusion policy was integrated for oil sands, pipelines, and fossil fuel assets:
+- **Excluded Assets:** `CNQ.TO` (oil sands), `ENB.TO` (liquids transmission), `XOM` (integrated fossil fuel).
+- **Metadata Label:** `source="hypothese_equipe — à remplacer par source ESG"`.
+- **Governance Alert:** Registered as an `INFO` alert (`provisional_esg_screening_mateo`) explaining that provisional screening is in place and `ESGV` is utilized as the primary ESG-screened equity vehicle.
+
+### 7.5 Audit of 2022 Drawdown Window Isolation (`stress.py`)
+Investigation into why 2022 drawdown equaled full-period drawdown for Amira and Robert confirmed:
+1. **Window Isolation is Genuine:** `stress_test_2022_episode` slices strictly the 2022 calendar year (`2022-01-01` to `2022-12-31`).
+2. **Historical Market Reality:** For diversified multi-asset portfolios in the 2021–2026 window, the global peak-to-trough crash literally occurred during the 2022 central bank tightening (for Amira: peak 2022-04-04 to trough 2022-10-12; for Robert: peak 2022-02-02 to trough 2022-06-14).
+3. **Differentiation for Other Assets:** For assets whose troughs or peaks occurred outside 2022, 2022 DD is strictly different from full 5-year DD (e.g. GLD: -17.37% in 2022 vs. -26.00% full period; NVDA: -59.24% in 2022 vs. -63.46% full period).
+4. **Verification Test:** Unit test `test_2022_drawdown_window_isolation` added to `test_tools.py`, validating both empirical assets and synthetic out-of-window crash series.
+
+### 7.6 Phase 1b Updated Pipeline Outputs (`run_personas.py`)
+
+#### Amira (High Risk, 15+ Yrs)
+- **Allocations:** `CSU.TO` 10.0%, `ENB.TO` 10.0%, `FTS.TO` 10.0%, `JNJ` 10.0%, `MSFT` 10.0%, `AAPL` 10.0%, **`NVDA` 6.0%**, `XOM` 5.2%, `BTC-USD` 5.0%, `ETH-USD` 5.0%, `ZST.TO` 5.0%, `GLD` 5.0%, `PG` 4.9%, `TD.TO` 3.9%.
+- **Tech Exposure:** **36.0%** (satisfying $\ge 25\%$ floor, $\le 40\%$ ceiling).
+- **Crypto Exposure:** **10.0%** (5% BTC, 5% ETH).
+- **Risk Profile:** Volatility **13.28%**, Max Drawdown **-19.88%**, CVaR95 **1.95%**, Beta vs XIU **0.6953**, Active Assets **14**.
+- **Verifier:** 100% Valid (zero errors).
+
+#### Mateo (Moderate Risk, 8–12 Yrs, ESG)
+- **Allocations:** `ZST.TO` 17.5%, **`ESGV` 15.0%**, `XBB.TO` 11.0%, `FTS.TO` 10.0%, `JNJ` 10.0%, `XIU.TO` 8.7%, `AGG` 6.5%, `RY.TO` 6.1%, `PG` 5.5%, `GLD` 5.0%, `TD.TO` 4.3%, `ATD.TO` 0.5%.
+- **ESG Verification:** Zero fossil fuels (`CNQ.TO`: 0%, `ENB.TO`: 0%, `XOM`: 0%). Zero crypto (`BTC-USD`: 0%, `ETH-USD`: 0%).
+- **Fixed Income:** **35.0%** (`ZST.TO` 17.5%, `XBB.TO` 11.0%, `AGG` 6.5%).
+- **Risk Profile:** Volatility **6.70%**, Max Drawdown **-10.42%**, CVaR95 **0.93%**, Beta vs XIU **0.3891**, Active Assets **12**.
+- **Verifier:** 100% Valid (zero errors).
+
+#### Robert Baseline & Reality Test (3–5 Yrs, Capital Preservation)
+- **Baseline Allocations:** Bonds **65.1%** (`ZST.TO` 35.8%, `XBB.TO` 18.3%, `AGG` 11.0%), Equities **29.9%** (`FTS` 7.5%, `JNJ` 4.2%, `XIU` 4.0%, `RY` 3.4%, `PG` 2.4%, `TD` 2.1%, `XOM` 2.1%, `MSFT` 1.5%, `ENB` 1.1%, `QQQ` 0.5%, `GOOGL` 0.4%, `CNQ` 0.4%, `ATD` 0.2%, `CSU` 0.2%), Gold `GLD` 5.0%.
+- **Baseline Risk Profile:** Volatility **3.99%**, Max Drawdown **-5.73%**, CVaR95 **0.55%**, Beta vs XIU **0.1936**, Active Assets **18**.
+- **Reality Test (Requesting 20% TSLA & 5% Crypto):**
+  - `[BLOQUANT]` Crypto prohibited for Robert.
+  - `[ATTENTION]` TSLA incoherence detected (3-5y capital preservation horizon vs. 58.2% TSLA vol).
+  - `[ATTENTION]` Single-asset cap exceeded ($20\% > 8\%$).
+  - **Proposed Alternative:** Capped satellite alternative of 3.0% TSLA.
+- **Capped Alternative Execution (3% TSLA Satellite):**
+  - Allocations: Bonds **65.0%** (`ZST.TO` 35.7%, `XBB.TO` 18.3%, `AGG` 11.0%), **`TSLA` 3.0%**, Equities 27.0%, Gold 5.0%.
+  - Risk Profile: Volatility **4.32%**, Max Drawdown **-5.89%**, CVaR95 **0.60%**, Active Assets **16**.
+  - Governance: **Passed** (zero blocking alerts).
+  - Verifier: 100% Valid.
+
+### 7.7 Updated Pytest Summary (30 Tests Passing)
+
+```
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/wilson-lab/Datathon-Poly/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/wilson-lab/Datathon-Poly/repo
+plugins: anyio-4.16.0, platformdirs-4.14.5
+collected 30 items
+
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_persona_volatility_ordering PASSED [  3%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_amira_pipeline PASSED [  6%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_mateo_pipeline PASSED [ 10%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_robert_baseline_pipeline PASSED [ 13%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_robert_reality_check_governance_block PASSED [ 16%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_robert_capped_alternative_pipeline PASSED [ 20%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_load_starter_data PASSED [ 23%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_calendar_union PASSED [ 26%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_cad_conversion PASSED [ 30%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_data_quality_report PASSED [ 33%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_annualized_volatility PASSED [ 36%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_max_drawdown PASSED   [ 40%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_cvar95 PASSED         [ 43%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_beta_vs_benchmark PASSED [ 46%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_portfolio_risk_metrics PASSED [ 50%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_risk_contributions_sum_to_one PASSED [ 53%]
+alphaforge/tests/test_tools.py::TestOptimizeTool::test_min_variance_basic PASSED [ 56%]
+alphaforge/tests/test_tools.py::TestOptimizeTool::test_min_variance_sector_and_class_constraints PASSED [ 60%]
+alphaforge/tests/test_tools.py::TestOptimizeTool::test_risk_parity_equal_risk PASSED [ 63%]
+alphaforge/tests/test_tools.py::TestStressTool::test_stress_test_2022_episode PASSED [ 66%]
+alphaforge/tests/test_tools.py::TestStressTool::test_rolling_risk_windows PASSED [ 70%]
+alphaforge/tests/test_tools.py::TestStressTool::test_2022_drawdown_window_isolation PASSED [ 73%]
+alphaforge/tests/test_tools.py::TestStressTool::test_sensitivity_to_asset_cap PASSED [ 76%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_number_extraction PASSED [ 80%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_percentage_and_sign_equivalence PASSED [ 83%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_valid_explanation_passes PASSED [ 86%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_non_existent_evidence_id PASSED [ 90%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_hallucinated_number PASSED [ 93%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_number_without_evidence_citation PASSED [ 96%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_wrong_evidence_cited PASSED [100%]
+
+============================== 30 passed in 3.59s ==============================
+```
+
