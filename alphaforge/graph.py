@@ -12,6 +12,7 @@ import uuid
 from collections.abc import Iterator
 
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
@@ -76,7 +77,13 @@ def build_graph(checkpointer=None):
     g.add_conditional_edges("red_team", _after_red_team, ["scenarios", "explain"])
     g.add_edge("explain", "verifier")
     g.add_conditional_edges("verifier", _after_verifier, ["explain", END])
-    return g.compile(checkpointer=checkpointer or MemorySaver())
+    return g.compile(checkpointer=checkpointer or MemorySaver(serde=_serde()))
+
+
+def _serde() -> JsonPlusSerializer:
+    # Our Pydantic models are stored in checkpoints; declare them so LangGraph trusts them.
+    models = [("alphaforge.state", n) for n in ("Profile", "Evidence", "Scenario", "GraphState")]
+    return JsonPlusSerializer(allowed_msgpack_modules=models)
 
 
 _GRAPH = None
