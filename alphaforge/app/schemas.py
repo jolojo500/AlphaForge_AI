@@ -66,11 +66,14 @@ class RequestedPosition(BaseModel):
     ticker: str = Field(..., description="Canonical ticker symbol from universe, e.g. TSLA, BTC-USD, ENB.TO.")
     weight: float | None = Field(default=None, description="Requested portfolio weight as decimal (e.g. 0.20 for 20%), or null if unspecified.")
     company_name: str = Field(default="", description="Mentioned company or asset name, e.g. Tesla, Bitcoin, Enbridge.")
+    is_hypothesized: bool = Field(default=False, description="True if weight is an inferred hypothesis (e.g. 50/50 split of 100% total envelope).")
+    hypothesis_note: str = Field(default="", description="Explanation of how the weight was inferred or split.")
 
 
 class ParsedRequest(BaseModel):
     """Structured interpretation of natural language investor request."""
     intent: str = Field(default="general_allocation", description="Classified intent: add_position, screen_esg, risk_query, general_allocation, out_of_scope.")
+    total_requested_weight: float | None = Field(default=None, description="Total envelope weight mentioned, e.g. 1.00 for 100% crypto.")
     requested_positions: list[RequestedPosition] = Field(default_factory=list, description="Specific assets requested with weights.")
     requested_exclusions: list[str] = Field(default_factory=list, description="Assets requested to be excluded.")
     constraint_changes: dict[str, Any] = Field(default_factory=dict, description="Requested constraint adjustments.")

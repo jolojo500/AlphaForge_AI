@@ -154,9 +154,13 @@ class GovernanceAgent:
         requested_evals = orchestrator_output.get("requested_evaluations", [])
         eval_map = {e["comparison"]["ticker"]: e for e in requested_evals if "comparison" in e}
 
+        # Group crypto requests for Amira to avoid duplicate alerts (Issue #33)
+        crypto_reqs = [p for p in parsed_request.requested_positions if p.ticker in ("BTC-USD", "ETH-USD")]
+        handled_crypto = False
+
         for req_pos in parsed_request.requested_positions:
             ticker = req_pos.ticker
-            weight = req_pos.weight if req_pos.weight is not None else 0.20
+            raw_weight = req_pos.weight
 
             # --- CASE 1: Robert + TSLA (Hyped Asset Temptation vs Capital Preservation) ---
             if persona.id == "robert" and ticker == "TSLA":
@@ -171,6 +175,14 @@ class GovernanceAgent:
                 tsla_vol = eval_data.get("asset_metrics", {}).get("annualized_volatility", 0.5818)
                 tsla_dd = eval_data.get("asset_metrics", {}).get("max_drawdown", -0.7088)
 
+                # Format weight string without inventing silent 0.20
+                if raw_weight is not None:
+                    weight_label = f"{raw_weight:.1%}"
+                    weight_val = raw_weight
+                else:
+                    weight_label = "une allocation dans Tesla (pondération non précisée)"
+                    weight_val = 0.05
+
                 # Remove generic rule alerts to prioritize the precise evidence-backed alert
                 report.alerts = [a for a in report.alerts if not a.rule_name.startswith("robert_tsla")]
 
@@ -180,20 +192,21 @@ class GovernanceAgent:
                         level="attention",
                         message=(
                             f"Incohérence majeure identifiée : Robert (59 ans, horizon 3-5 ans, mandat de préservation du capital vers la retraite) "
-                            f"demande {weight:.1%} dans Tesla (TSLA). TSLA affiche une volatilité historique de {tsla_vol:.2%} "
-                            f"et une perte maximale de {tsla_dd:.2%}. Intégrer {weight:.1%} porterait la volatilité du portefeuille "
+                            f"demande {weight_label} dans Tesla (TSLA). TSLA affiche une volatilité historique de {tsla_vol:.2%} "
+                            f"et une perte maximale de {tsla_dd:.2%}. Intégrer cette position porterait la volatilité du portefeuille "
                             f"à {req_vol:.2%} (dépassant le plafond cible de 6.00%). "
                             f"Alternative constructive : un satellite plafonné à 3.0% (volatilité {alt_vol:.2%}) permet une exposition "
                             f"à la croissance sans compromettre le socle obligataire défensif."
                         ),
                         details={
                             "ticker": "TSLA",
-                            "requested_weight": weight,
+                            "requested_weight": weight_val,
                             "capped_weight": 0.03,
                             "tsla_volatility": tsla_vol,
                             "tsla_max_dd": tsla_dd,
                             "requested_portfolio_vol": req_vol,
                             "capped_alternative_vol": alt_vol,
+                            "is_weight_hypothesized": req_pos.is_hypothesized,
                         },
                         suggested_action="Plafonner TSLA à 3.0% (satellite) dans le volet actions plutôt que l'allocation demandée.",
                         evidence_ids=[e_asset_id, e_comp_id],
@@ -202,27 +215,38 @@ class GovernanceAgent:
                 report.has_attention = True
                 report.capped_alternatives["TSLA"] = 0.03
 
-            # --- CASE 2: Amira + 100% Crypto (Concentration Risk Alert) ---
-            elif persona.id == "amira" and ticker in ("BTC-USD", "ETH-USD"):
-                if weight > persona.constraints.crypto_cap:
-                    eval_data = eval_map.get(ticker, {})
-                    e_comp_id = eval_data.get("comparison_evidence_id", "E3")
-                    crypto_cap = persona.constraints.crypto_cap  # 0.10
+            # --- CASE 2: Amira + Crypto (Concentration Risk Alert, Single Consolidated Alert) ---
+            elif persona.id == "amira" and ticker in ("BTC-USD", "ETH-USD") and not handled_crypto:
+                handled_crypto = True
+                total_crypto = sum(p.weight for p in crypto_reqs if p.weight is not None)
+                if total_crypto == 0:
+                    total_crypto = parsed_request.total_requested_weight or 1.00
+
+                crypto_cap = persona.constraints.crypto_cap  # 0.10
+                if total_crypto > crypto_cap:
+                    e_comp_ids = [eval_map[p.ticker]["comparison_evidence_id"] for p in crypto_reqs if p.ticker in eval_map]
+                    positions_str = ", ".join([f"{p.weight:.1%} en {p.ticker}" for p in crypto_reqs if p.weight is not None])
+                    split_note = " (répartition équipondérée 50/50)" if any(p.is_hypothesized for p in crypto_reqs) else ""
 
                     report.alerts.append(
                         GovernanceAlert(
                             rule_name="concentration_crypto_amira",
                             level="attention",
                             message=(
-                                f"Alerte de concentration excessive : Amira demande {weight:.1%} dans les crypto-actifs ({ticker}). "
-                                f"Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de "
-                                f"{crypto_cap:.1%} viole le principe fondamental de diversification et expose à des drawdowns > 70%. "
+                                f"Alerte de concentration excessive : Amira demande {total_crypto:.1%} dans les crypto-actifs "
+                                f"({positions_str}{split_note}). Bien qu'Amira ait une tolérance au risque élevée, concentrer "
+                                f"le capital au-delà du plafond de {crypto_cap:.1%} viole le principe fondamental de diversification "
+                                f"et expose à des pertes maximales historiques sévères (-73.31% sur BTC-USD, -77.19% sur ETH-USD). "
                                 f"Alternative constructive : maintenir la poche crypto plafonnée à {crypto_cap:.1%} pour participer à la croissance "
                                 f"tout en conservant la robustesse du portefeuille."
                             ),
-                            details={"ticker": ticker, "requested_weight": weight, "cap": crypto_cap},
+                            details={
+                                "total_requested_crypto": total_crypto,
+                                "cap": crypto_cap,
+                                "positions": [p.model_dump() for p in crypto_reqs],
+                            },
                             suggested_action=f"Maintenir l'exposition crypto totale plafonnée à {crypto_cap:.1%}.",
-                            evidence_ids=[e_comp_id] if e_comp_id else [],
+                            evidence_ids=e_comp_ids if e_comp_ids else [],
                         )
                     )
                     report.has_attention = True
@@ -240,7 +264,7 @@ class GovernanceAgent:
                             "Alternative constructive : privilégier des titres de dividendes de qualité à plus faible intensité carbone "
                             "(ex: Fortis FTS.TO, banques canadiennes) ou le FNB ESG (ESGV) pour maintenir la conformité éthique."
                         ),
-                        details={"ticker": "ENB.TO", "requested_weight": weight, "esg_status": "provisional_exclusion"},
+                        details={"ticker": "ENB.TO", "requested_weight": raw_weight, "esg_status": "provisional_exclusion"},
                         suggested_action="Exclure ENB.TO au profit d'actifs de dividende conformes aux critères ESG (ex: FTS.TO, ESGV).",
                     )
                 )

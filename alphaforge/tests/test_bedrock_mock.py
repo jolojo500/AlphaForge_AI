@@ -351,3 +351,245 @@ def test_tool_call_trace_data_consistency():
     assert ev.details["args"]["ticker"] == "TSLA"
     assert ev.details["data"]["tool"] == "evaluate_asset_addition"
     assert ev.details["data"]["args"]["requested_weight"] == 0.20
+
+
+# --- Phase 2c Tests: Issue #32 (Real Bedrock Tool Loop) & Issue #33 (Weight Splitting) ---
+
+def test_orchestrator_bedrock_tool_use_loop_mock():
+    """Issue #32: Verify Orchestrator executes genuine multi-turn Bedrock Converse tool loop."""
+    from alphaforge.app.agents.orchestrator import OrchestratorAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+
+    mock_boto = MagicMock()
+    # Turn 1: Model calls evaluate_asset_addition for TSLA
+    # Turn 2: Model finishes with analysis summary
+    mock_boto.converse.side_effect = [
+        {
+            "stopReason": "tool_use",
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "toolUse": {
+                                "toolUseId": "call_eval_tsla",
+                                "name": "evaluate_asset_addition",
+                                "input": {"ticker": "TSLA", "requested_weight": 0.20},
+                            }
+                        }
+                    ],
+                }
+            },
+        },
+        {
+            "stopReason": "end_turn",
+            "output": {
+                "message": {
+                    "role": "assistant",
+                    "content": [{"text": "Évaluation de TSLA complétée avec succès."}],
+                }
+            },
+        },
+    ]
+
+    client = BedrockConverseClient(client=mock_boto)
+    registry = EvidenceRegistry()
+    trace = ExecutionTrace()
+    orchestrator = OrchestratorAgent(bedrock_client=client)
+
+    persona = get_persona("robert")
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        summary="Ajouter 20% de Tesla au portefeuille.",
+        requested_positions=[RequestedPosition(ticker="TSLA", weight=0.20, company_name="Tesla")],
+    )
+
+    out = orchestrator.run(
+        persona=persona,
+        capital=100000.0,
+        parsed_request=parsed_req,
+        registry=registry,
+        trace=trace,
+    )
+
+    # 1. Verify honest execution_path labelling
+    assert out["execution_path"] == "bedrock_agent_tool_loop"
+    assert mock_boto.converse.call_count == 2
+
+    # 2. Verify tool results and evaluations populated
+    assert len(out["requested_evaluations"]) == 1
+    eval_item = out["requested_evaluations"][0]
+    assert eval_item["comparison"]["ticker"] == "TSLA"
+    assert eval_item["comparison"]["requested"]["weight"] == 0.20
+    assert eval_item["comparison"]["capped_alternative"]["weight"] == 0.03
+
+    # 3. Verify observable trace events with details.tool and details.args
+    tool_calls = [e for e in trace.events if e.event_type == "tool_call"]
+    assert any(tc.details["tool"] == "evaluate_asset_addition" and tc.details["args"]["ticker"] == "TSLA" for tc in tool_calls)
+
+    # 4. Verify registered evidence items
+    ev_tools = [e.tool for e in registry.list_all()]
+    assert "evaluate_asset_addition" in ev_tools
+
+
+def test_orchestrator_deterministic_fallback_on_bedrock_failure():
+    """Issue #32: Verify Orchestrator gracefully falls back and labels deterministic_fallback."""
+    from alphaforge.app.agents.orchestrator import OrchestratorAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+
+    mock_boto = MagicMock()
+    mock_boto.converse.side_effect = RuntimeError("AWS Bedrock API service unavailable")
+
+    client = BedrockConverseClient(client=mock_boto)
+    registry = EvidenceRegistry()
+    trace = ExecutionTrace()
+    orchestrator = OrchestratorAgent(bedrock_client=client)
+
+    persona = get_persona("robert")
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        summary="Ajouter 20% de Tesla au portefeuille.",
+        requested_positions=[RequestedPosition(ticker="TSLA", weight=0.20, company_name="Tesla")],
+    )
+
+    out = orchestrator.run(
+        persona=persona,
+        capital=100000.0,
+        parsed_request=parsed_req,
+        registry=registry,
+        trace=trace,
+    )
+
+    # Must be honestly labelled as deterministic_fallback
+    assert out["execution_path"] == "deterministic_fallback"
+
+    # Deterministic safety net still completed the required asset evaluation
+    assert len(out["requested_evaluations"]) == 1
+    assert out["requested_evaluations"][0]["comparison"]["ticker"] == "TSLA"
+
+
+def test_orchestrator_deterministic_baseline_without_positions():
+    """Issue #32: Verify Orchestrator labels deterministic_baseline when no extra tools needed."""
+    from alphaforge.app.agents.orchestrator import OrchestratorAgent
+
+    mock_boto = MagicMock()
+    client = BedrockConverseClient(client=mock_boto)
+    orchestrator = OrchestratorAgent(bedrock_client=client)
+
+    persona = get_persona("robert")
+    out = orchestrator.run(
+        persona=persona,
+        capital=100000.0,
+        parsed_request=None,
+    )
+
+    assert out["execution_path"] == "deterministic_baseline"
+    assert out["requested_evaluations"] == []
+    # No Bedrock tool call needed for pure baseline
+    mock_boto.converse.assert_not_called()
+
+
+def test_issue_33_interpreter_weight_splitting_and_no_silent_default():
+    """Issue #33: Verify multi-asset total envelope is split equally and marked as hypothesis."""
+    from alphaforge.app.agents.interpreter import RequestInterpreterAgent
+
+    interpreter = RequestInterpreterAgent()
+
+    # Case A: 100% crypto with general crypto phrase
+    p1 = interpreter._deterministic_fallback_parse("Je veux investir 100% de mon capital dans les cryptomonnaies")
+    assert p1.total_requested_weight == 1.00
+    assert len(p1.requested_positions) == 2
+    tickers = {p.ticker for p in p1.requested_positions}
+    assert tickers == {"BTC-USD", "ETH-USD"}
+    for p in p1.requested_positions:
+        assert p.weight == 0.50
+        assert p.is_hypothesized is True
+        assert "50.0%" in p.hypothesis_note
+        assert "100%" in p.hypothesis_note
+
+    # Case B: 100% Bitcoin et Ethereum explicitly mentioned
+    p2 = interpreter._deterministic_fallback_parse("Mets tout en crypto, 100% Bitcoin et Ethereum!")
+    assert p2.total_requested_weight == 1.00
+    assert len(p2.requested_positions) == 2
+    for p in p2.requested_positions:
+        assert p.weight == 0.50
+        assert p.is_hypothesized is True
+
+    # Case C: Unspecified weight (NEVER invent silent 0.20)
+    p3 = interpreter._deterministic_fallback_parse("Je veux ajouter Tesla à mon portefeuille")
+    assert len(p3.requested_positions) == 1
+    assert p3.requested_positions[0].ticker == "TSLA"
+    assert p3.requested_positions[0].weight is None
+    assert p3.requested_positions[0].is_hypothesized is False
+
+
+def test_issue_33_governance_amira_crypto_alert_shows_exact_total_and_no_silent_20pct():
+    """Issue #33: Verify Amira crypto alert shows 100.0% total and 50/50 split without silent 20.0%."""
+    from alphaforge.app.agents.governance import GovernanceAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+    import pandas as pd
+
+    persona = get_persona("amira")
+    gov = GovernanceAgent()
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        total_requested_weight=1.00,
+        requested_positions=[
+            RequestedPosition(ticker="BTC-USD", weight=0.50, is_hypothesized=True, hypothesis_note="50/50 split"),
+            RequestedPosition(ticker="ETH-USD", weight=0.50, is_hypothesized=True, hypothesis_note="50/50 split"),
+        ],
+    )
+
+    dummy_universe = pd.DataFrame([
+        {"ticker": "BTC-USD", "asset_class": "crypto", "sector": "Crypto asset"},
+        {"ticker": "ETH-USD", "asset_class": "crypto", "sector": "Crypto asset"},
+    ])
+
+    report = gov.evaluate(
+        persona=persona,
+        proposed_weights={"BTC-USD": 0.05, "ETH-USD": 0.05, "AAPL": 0.30},
+        universe_df=dummy_universe,
+        parsed_request=parsed_req,
+    )
+
+    crypto_alerts = [a for a in report.alerts if "crypto" in a.rule_name.lower()]
+    assert len(crypto_alerts) == 1  # Exactly 1 consolidated alert
+    alert = crypto_alerts[0]
+    assert alert.level == "attention"
+    assert "100.0%" in alert.message
+    assert "50.0% en BTC-USD, 50.0% en ETH-USD" in alert.message
+    # Must NOT contain silent 20.0% anywhere
+    assert "20.0%" not in alert.message
+    assert alert.details["total_requested_crypto"] == 1.00
+
+
+def test_issue_33_governance_robert_tsla_unspecified_weight_no_silent_20pct():
+    """Issue #33: Verify Robert TSLA without weight specified does not invent 20.0%."""
+    from alphaforge.app.agents.governance import GovernanceAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+    import pandas as pd
+
+    persona = get_persona("robert")
+    gov = GovernanceAgent()
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        requested_positions=[
+            RequestedPosition(ticker="TSLA", weight=None, company_name="Tesla", is_hypothesized=False),
+        ],
+    )
+
+    dummy_universe = pd.DataFrame([{"ticker": "TSLA", "asset_class": "equity", "sector": "Consumer Discretionary"}])
+
+    report = gov.evaluate(
+        persona=persona,
+        proposed_weights={"XBB.TO": 0.45, "ZST.TO": 0.25, "XIU.TO": 0.20},
+        universe_df=dummy_universe,
+        parsed_request=parsed_req,
+    )
+
+    tsla_alerts = [a for a in report.alerts if "tsla" in a.rule_name.lower()]
+    assert len(tsla_alerts) >= 1
+    alert = tsla_alerts[0]
+    assert alert.level == "attention"
+    assert "20.0%" not in alert.message
+    assert "pondération non précisée" in alert.message

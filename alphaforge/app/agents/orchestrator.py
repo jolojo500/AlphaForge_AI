@@ -3,15 +3,15 @@
 Coordinates the quantitative analysis pipeline and tool execution:
 - Non-decorative Agentic AI role:
     - Analyzes the parsed investor request and profile.
-    - Executes a real Amazon Bedrock Converse tool-use loop (global.anthropic.claude-sonnet-5-5)
-      over deterministic tools, with an automatic deterministic fallback (logged in trace).
-    - Exposes tools: load_market_data, compute_asset_risk, optimize_strategic_portfolio,
-      run_stress_test_2022, evaluate_asset_addition, compare_portfolios.
+    - Executes a REAL Amazon Bedrock Converse tool-use loop (global.anthropic.claude-sonnet-5-5)
+      over deterministic tools, with an automatic deterministic fallback honestly labelled in trace.
+    - Exposes tools to Bedrock: evaluate_asset_addition, compare_tickers, run_sensitivity_analysis.
 - Systematically registers every output into EvidenceRegistry with unique IDs (E1, E2, ...).
 - Provides compact summary_metrics for every evidence item (eliminating blind truncation).
 - Produces dedicated per-ticker evidence (e.g. TSLA vol 58.18%, max DD -70.88%) and side-by-side
   comparative tables (Baseline vs Requested vs Capped Alternative).
-- Ensures every tool_call event has both details.tool and details.args (and details.data).
+- Adheres to Issue #33: Never invents silent 0.20 defaults; uses parsed weights or marked exploratory hypotheses.
+- Ensures every tool_call event consistently exposes details.tool, details.args, and details.data.
 """
 
 from __future__ import annotations
@@ -36,65 +36,41 @@ logger = logging.getLogger(__name__)
 
 ORCHESTRATOR_TOOL_SPECS = [
     {
-        "name": "load_market_data",
-        "description": "Loads aligned historical prices, log returns converted to CAD, and the 31-asset universe.",
-        "inputSchema": {
-            "json": {
-                "type": "object",
-                "properties": {
-                    "base_currency": {"type": "string", "description": "Base portfolio currency (default CAD)"}
-                },
-            }
-        },
-    },
-    {
-        "name": "compute_asset_risk",
-        "description": "Calculates annualized volatility, max drawdown, CVaR 95%, and benchmark beta for universe assets.",
-        "inputSchema": {
-            "json": {
-                "type": "object",
-                "properties": {
-                    "tickers": {"type": "array", "items": {"type": "string"}, "description": "Tickers to evaluate"}
-                },
-            }
-        },
-    },
-    {
-        "name": "optimize_strategic_portfolio",
-        "description": "Performs two-level strategic sleeve optimization enforcing asset class floors, caps, and target volatility band.",
-        "inputSchema": {
-            "json": {
-                "type": "object",
-                "properties": {
-                    "persona_id": {"type": "string", "description": "Identifier of the investor persona (amira, mateo, robert)"},
-                    "capital": {"type": "number", "description": "Simulated investment capital in CAD"}
-                },
-                "required": ["persona_id"]
-            }
-        },
-    },
-    {
-        "name": "run_stress_test_2022",
-        "description": "Simulates portfolio performance against the 2022 stagflation episode (inflation spike, synchronized stock-bond decline).",
-        "inputSchema": {
-            "json": {
-                "type": "object",
-                "properties": {
-                    "weights": {"type": "object", "description": "Dictionary of ticker to portfolio weight"}
-                },
-                "required": ["weights"]
-            }
-        },
-    },
-    {
         "name": "evaluate_asset_addition",
         "description": "Evaluates the quantitative impact of adding a specific asset (e.g. TSLA, BTC-USD, ENB.TO) to the baseline portfolio. Computes individual risk metrics, simulates requested allocation, and computes a capped constructive alternative.",
         "inputSchema": {
             "json": {
                 "type": "object",
                 "properties": {
-                    "ticker": {"type": "string", "description": "Ticker symbol from universe, e.g. TSLA, BTC-USD, ENB.TO"},
-                    "requested_weight": {"type": "number", "description": "Requested allocation weight as decimal (e.g. 0.20 for 20%), or null"}
+                    "ticker": {"type": "string", "description": "Canonical ticker symbol from universe, e.g. TSLA, BTC-USD, ENB.TO"},
+                    "requested_weight": {"type": "number", "description": "Requested allocation weight as decimal (e.g. 0.20 for 20%), or null if unspecified"}
+                },
+                "required": ["ticker"]
+            }
+        },
+    },
+    {
+        "name": "compare_tickers",
+        "description": "Compares risk and return metrics (annualized volatility, max drawdown, CVaR 95%, beta) across multiple universe tickers against benchmarks.",
+        "inputSchema": {
+            "json": {
+                "type": "object",
+                "properties": {
+                    "tickers": {"type": "array", "items": {"type": "string"}, "description": "List of tickers to compare, e.g. ['TSLA', 'SPY', 'XIU.TO']"}
+                },
+                "required": ["tickers"]
+            }
+        },
+    },
+    {
+        "name": "run_sensitivity_analysis",
+        "description": "Evaluates portfolio risk sensitivity across progressive position cap levels (e.g. 1%, 3%, 5%, 10%) for a requested asset.",
+        "inputSchema": {
+            "json": {
+                "type": "object",
+                "properties": {
+                    "ticker": {"type": "string", "description": "Target ticker to test sensitivity on, e.g. TSLA"},
+                    "max_cap": {"type": "number", "description": "Maximum cap ceiling to evaluate (default: 0.10)"}
                 },
                 "required": ["ticker"]
             }
@@ -103,13 +79,14 @@ ORCHESTRATOR_TOOL_SPECS = [
 ]
 
 ORCHESTRATOR_SYSTEM_PROMPT = """Tu es l'Agent Orchestrateur d'AlphaForge AI pour le courtage direct (BNCD).
-Ton rôle est de diriger l'analyse quantitative pour éclairer la décision de l'investisseur.
-Tu as accès à des outils déterministes d'analyse de marché, de risque, d'optimisation et de test de résistance.
+Ton rôle est de piloter l'analyse quantitative pour éclairer la décision d'un investisseur.
+Tu as accès à des outils déterministes d'analyse de marché, de risque et de simulation.
 
 Directives :
-1. Examine la requête de l'investisseur et le profil fourni.
-2. Si un actif spécifique est demandé (ex: Tesla TSLA, Bitcoin, Enbridge), appelle impérativement 'evaluate_asset_addition' pour mesurer son risque individuel et simuler l'impact sur le portefeuille.
-3. Reste concis dans ta planification.
+1. Examine la requête de l'investisseur et son profil de risque.
+2. Si un actif spécifique est mentionné (ex: Tesla TSLA, Bitcoin, Enbridge), appelle impérativement 'evaluate_asset_addition' pour mesurer son risque individuel et simuler l'impact sur le portefeuille.
+3. Si pertinent, appelle 'compare_tickers' ou 'run_sensitivity_analysis' pour enrichir le dossier de décision.
+4. Reste concis dans ta planification.
 """
 
 
@@ -134,44 +111,136 @@ class OrchestratorAgent:
         registry: EvidenceRegistry | None = None,
         trace: ExecutionTrace | None = None,
     ) -> dict[str, Any]:
-        """Execute orchestrator pipeline with Bedrock tool-use loop and guaranteed deterministic core."""
+        """Execute orchestrator pipeline with a real Bedrock Sonnet tool-use loop and guaranteed core."""
         reg = registry if registry is not None else EvidenceRegistry()
         returns_cad, prices_cad, universe = self._get_data()
 
-        # Step 1: Base Deterministic Core Execution
+        # Step 1: Base Deterministic Core Execution (Guaranteed mathematical baseline)
         base_output = self._run_core_pipeline(persona, capital, reg, trace)
 
-        # Step 2: Agentic Tool Call for Requested Assets (Bedrock Loop with Fallback)
-        execution_path = "deterministic_pipeline"
+        # Step 2: Agentic Tool Call for Requested Assets (REAL Bedrock Sonnet 5.5 Tool Loop)
+        execution_path = "deterministic_baseline"
         requested_assets_results: list[dict[str, Any]] = []
 
         if parsed_request and parsed_request.requested_positions:
-            execution_path = "bedrock_agent_loop"
-            for req_pos in parsed_request.requested_positions:
-                ticker = req_pos.ticker
-                weight = req_pos.weight
+            eval_map: dict[str, dict[str, Any]] = {}
 
-                # Try Bedrock Tool Call
-                try:
-                    eval_res = self.evaluate_asset_addition(
-                        ticker=ticker,
-                        requested_weight=weight,
-                        persona=persona,
-                        baseline_weights=base_output["weights"],
-                        returns_cad=returns_cad,
-                        universe_df=universe,
-                        registry=reg,
-                        trace=trace,
-                    )
-                    requested_assets_results.append(eval_res)
-                except Exception as e:
-                    logger.warning(f"Error in evaluate_asset_addition for {ticker}: {e}")
-                    execution_path = "deterministic_fallback"
+            # Define Tool Handlers for Bedrock Converse loop
+            def handle_eval_asset(ticker: str, requested_weight: float | None = None) -> dict[str, Any]:
+                # Avoid re-evaluating if already processed in this turn
+                if ticker in eval_map:
+                    return eval_map[ticker]["comparison"]
+
+                res = self.evaluate_asset_addition(
+                    ticker=ticker,
+                    requested_weight=requested_weight,
+                    persona=persona,
+                    baseline_weights=base_output["weights"],
+                    returns_cad=returns_cad,
+                    universe_df=universe,
+                    registry=reg,
+                    trace=trace,
+                    parsed_request=parsed_request,
+                )
+                eval_map[ticker] = res
+                requested_assets_results.append(res)
+                return res["comparison"]
+
+            def handle_compare_tickers(tickers: list[str]) -> dict[str, Any]:
+                return self.compare_tickers(
+                    tickers=tickers,
+                    returns_cad=returns_cad,
+                    registry=reg,
+                    trace=trace,
+                )
+
+            def handle_sensitivity(ticker: str, max_cap: float = 0.10) -> dict[str, Any]:
+                return self.run_sensitivity_analysis(
+                    ticker=ticker,
+                    persona=persona,
+                    baseline_weights=base_output["weights"],
+                    returns_cad=returns_cad,
+                    registry=reg,
+                    trace=trace,
+                    max_cap=max_cap,
+                )
+
+            tool_handlers: dict[str, Callable[..., Any]] = {
+                "evaluate_asset_addition": handle_eval_asset,
+                "compare_tickers": handle_compare_tickers,
+                "run_sensitivity_analysis": handle_sensitivity,
+            }
+
+            # Prepare prompt for Bedrock Sonnet 5.5
+            positions_summary = ", ".join(
+                [f"{p.ticker} (poids demandé: {f'{p.weight:.1%}' if p.weight is not None else 'non précisé'})"
+                 for p in parsed_request.requested_positions]
+            )
+            orchestrator_prompt = (
+                f"L'investisseur {persona.name} ({persona.age} ans, profil : {persona.risk_profile}, "
+                f"mandat : {persona.investment_objective}) formule la demande suivante :\n"
+                f"\"{parsed_request.summary}\"\n"
+                f"Positions demandées identifiées : {positions_summary}.\n\n"
+                "En tant qu'Agent Orchestrateur, sélectionne et appelle les outils quantitatifs requis pour "
+                "éclairer cette décision (appelle en priorité 'evaluate_asset_addition' pour chaque actif demandé "
+                "afin de calculer l'impact de risque et l'alternative constructive plafonnée, "
+                "ou 'compare_tickers' pour comparer aux indices)."
+            )
+
+            if trace:
+                trace.step_start(
+                    "Orchestrateur Agentique (Bedrock Sonnet 5.5)",
+                    f"Boucle de sélection dynamique d'outils pour : {positions_summary}"
+                )
+
+            # Execute Real Bedrock Tool Loop
+            try:
+                final_text, history = self.bedrock.run_tool_loop(
+                    messages=[{"role": "user", "content": [{"text": orchestrator_prompt}]}],
+                    tool_specs=ORCHESTRATOR_TOOL_SPECS,
+                    tool_handlers=tool_handlers,
+                    registry=reg,
+                    trace=trace,
+                    system_prompt=ORCHESTRATOR_SYSTEM_PROMPT,
+                    model_id=MODEL_SONNET,
+                    max_iterations=4,
+                    max_tokens=2000,
+                )
+
+                # Check if Bedrock performed tool calls
+                if requested_assets_results or len(history) > 2:
+                    execution_path = "bedrock_agent_tool_loop"
+                else:
+                    execution_path = "bedrock_agent_completed"
+
+            except Exception as exc:
+                logger.warning(f"Bedrock tool-use loop encountered exception; switching to deterministic fallback: {exc}")
+                execution_path = "deterministic_fallback"
+
+            # Guaranteed safety net: ensure every requested position has an evaluation
+            for req_pos in parsed_request.requested_positions:
+                if req_pos.ticker not in eval_map:
+                    try:
+                        res = self.evaluate_asset_addition(
+                            ticker=req_pos.ticker,
+                            requested_weight=req_pos.weight,
+                            persona=persona,
+                            baseline_weights=base_output["weights"],
+                            returns_cad=returns_cad,
+                            universe_df=universe,
+                            registry=reg,
+                            trace=trace,
+                            parsed_request=parsed_request,
+                        )
+                        eval_map[req_pos.ticker] = res
+                        requested_assets_results.append(res)
+                    except Exception as e:
+                        logger.error(f"Fallback evaluation failed for {req_pos.ticker}: {e}")
 
         if trace:
             trace.step_start(
-                "Orchestrateur — Mode d'Exécution",
-                f"Chemin exécuté : {execution_path} | Actifs spécifiques analysés : {len(requested_assets_results)}"
+                "Orchestrateur — Mode d'Exécution Vérifié",
+                f"Chemin exécuté : '{execution_path}' | Outils spécifiques exécutés : {len(requested_assets_results)}"
             )
 
         base_output["execution_path"] = execution_path
@@ -236,13 +305,12 @@ class OrchestratorAgent:
                 "beta_xiu": round(float(beta_val), 4) if pd.notna(beta_val) else None,
             }
 
-        # Key metrics summary for explainer
         compact_risk_summary = {
             "benchmark_xiu_vol": round(float(risk_summary_dict.get("XIU.TO", {}).get("annualized_volatility", 0.1557)), 4),
             "benchmark_spy_vol": round(float(risk_summary_dict.get("SPY", {}).get("annualized_volatility", 0.2217)), 4),
             "top_assets": {
                 t: risk_summary_dict[t]
-                for t in ["TSLA", "BTC-USD", "NVDA", "ENB.TO", "ZST.TO", "XBB.TO", "GLD", "RY.TO"]
+                for t in ["TSLA", "BTC-USD", "ETH-USD", "NVDA", "ENB.TO", "ZST.TO", "XBB.TO", "GLD", "RY.TO"]
                 if t in risk_summary_dict
             },
         }
@@ -400,6 +468,7 @@ class OrchestratorAgent:
         universe_df: pd.DataFrame,
         registry: EvidenceRegistry,
         trace: ExecutionTrace | None = None,
+        parsed_request: ParsedRequest | None = None,
     ) -> dict[str, Any]:
         """Compute individual asset risk, requested portfolio, and capped constructive alternative."""
         if trace:
@@ -428,7 +497,6 @@ class OrchestratorAgent:
             "beta_xiu": asset_beta,
         }
 
-        # Register Dedicated Asset Evidence
         e_asset = registry.register(
             tool="compute_asset_risk",
             args={"ticker": ticker},
@@ -442,13 +510,32 @@ class OrchestratorAgent:
         if trace:
             trace.evidence_added(e_asset.id, "compute_asset_risk", f"{ticker} : Vol={asset_vol:.2%}, Max DD={asset_dd:.2%}")
 
-        # 2. Side-by-Side 3-Way Portfolio Comparison
-        # A: Baseline
+        # 2. Side-by-Side 3-Way Portfolio Comparison (Issue #33: No silent 0.20 default)
         m_base = portfolio_risk_metrics(baseline_weights, returns_cad)
         s_base = stress_test_2022_episode(baseline_weights, returns_cad)
 
-        # B: Requested Portfolio (default 20% if unspecified)
-        req_w = float(requested_weight) if requested_weight is not None else 0.20
+        # Resolve requested weight accurately without silent invention
+        is_hypothesized = False
+        hypothesis_note = ""
+        if requested_weight is not None:
+            req_w = float(requested_weight)
+        elif parsed_request:
+            # Check if parsed_request has this ticker
+            matching = [p for p in parsed_request.requested_positions if p.ticker == ticker]
+            if matching and matching[0].weight is not None:
+                req_w = float(matching[0].weight)
+                is_hypothesized = matching[0].is_hypothesized
+                hypothesis_note = matching[0].hypothesis_note
+            else:
+                # Unspecified weight: use illustrative exploratory satellite
+                is_hypothesized = True
+                req_w = 0.05 if persona.id in ("robert", "mateo") else 0.10
+                hypothesis_note = f"Pondération non précisée dans la requête ; simulé à titre exploratoire à {req_w:.1%}"
+        else:
+            is_hypothesized = True
+            req_w = 0.05 if persona.id in ("robert", "mateo") else 0.10
+            hypothesis_note = f"Pondération non précisée ; simulé à titre exploratoire à {req_w:.1%}"
+
         req_w = min(max(req_w, 0.01), 1.0)
         w_req = {t: round(float(w * (1.0 - req_w)), 4) for t, w in baseline_weights.items()}
         w_req[ticker] = round(float(w_req.get(ticker, 0.0) + req_w), 4)
@@ -457,7 +544,6 @@ class OrchestratorAgent:
         s_req = stress_test_2022_episode(w_req, returns_cad)
 
         # C: Constructive Capped Alternative
-        # Cap: Robert TSLA -> 0.03, Amira Crypto -> 0.10, Mateo -> 0.05
         if persona.id == "robert":
             cap_w = 0.03
         elif persona.id == "amira":
@@ -476,6 +562,8 @@ class OrchestratorAgent:
         comparison_payload = {
             "ticker": ticker,
             "target_vol_band": list(persona.constraints.target_vol_band),
+            "is_weight_hypothesized": is_hypothesized,
+            "hypothesis_note": hypothesis_note,
             "baseline": {
                 "weight": round(float(baseline_weights.get(ticker, 0.0)), 4),
                 "annualized_volatility": round(float(m_base["annualized_volatility"]), 4),
@@ -506,7 +594,7 @@ class OrchestratorAgent:
             source="Solveur et Simulateur AlphaForge (Comparaison d'Allocation)",
             date_str="2026-11-13",
             currency="CAD",
-            description=f"Comparaison d'impact : Base vs Demandé ({req_w:.0%}) vs Alternative plafonnée ({cap_w:.0%}) pour {ticker}.",
+            description=f"Comparaison d'impact : Base vs Demandé ({req_w:.1%}) vs Alternative plafonnée ({cap_w:.1%}) pour {ticker}.",
             summary_metrics={
                 "ticker": ticker,
                 "baseline_vol": comparison_payload["baseline"]["annualized_volatility"],
@@ -531,3 +619,86 @@ class OrchestratorAgent:
             "comparison": comparison_payload,
             "capped_weights": w_alt,
         }
+
+    def compare_tickers(
+        self,
+        tickers: list[str],
+        returns_cad: pd.DataFrame,
+        registry: EvidenceRegistry,
+        trace: ExecutionTrace | None = None,
+    ) -> dict[str, Any]:
+        """Tool to compare risk metrics across a specified list of tickers."""
+        if trace:
+            trace.step_start("Comparaison de Titres", f"Comparaison multi-actifs : {tickers}")
+            trace.tool_call("compare_tickers", {"tickers": tickers})
+
+        risk_df = asset_summary_metrics(returns_cad)
+        comparison: dict[str, Any] = {}
+        for t in tickers:
+            if t in risk_df.index:
+                row = risk_df.loc[t]
+                comparison[t] = {
+                    "annualized_volatility": round(float(row["annualized_volatility"]), 4),
+                    "max_drawdown": round(float(row["max_drawdown"]), 4),
+                    "cvar_95": round(float(row["cvar_95"]), 4),
+                    "beta_xiu": round(float(row.get("beta_xiu", 1.0)), 4),
+                }
+
+        e_item = registry.register(
+            tool="compare_tickers",
+            args={"tickers": tickers},
+            result=comparison,
+            source="Calculs quantitatifs AlphaForge (métriques comparatives de risque)",
+            date_str="2026-11-13",
+            currency="CAD",
+            description=f"Comparaison de risque entre {len(tickers)} actifs de l'univers.",
+            summary_metrics=comparison,
+        )
+        if trace:
+            trace.evidence_added(e_item.id, "compare_tickers", f"Comparaison générée pour {list(comparison.keys())}")
+
+        return comparison
+
+    def run_sensitivity_analysis(
+        self,
+        ticker: str,
+        persona: Persona,
+        baseline_weights: dict[str, float],
+        returns_cad: pd.DataFrame,
+        registry: EvidenceRegistry,
+        trace: ExecutionTrace | None = None,
+        max_cap: float = 0.10,
+    ) -> dict[str, Any]:
+        """Tool to test portfolio volatility across progressive cap levels."""
+        if trace:
+            trace.step_start(f"Sensibilité : {ticker}", f"Test de sensibilité pour {ticker} jusqu'à {max_cap:.0%}")
+            trace.tool_call("run_sensitivity_analysis", {"ticker": ticker, "max_cap": max_cap})
+
+        cap_levels = [0.01, 0.03, 0.05, min(max_cap, 0.10)]
+        results: list[dict[str, Any]] = []
+
+        for cap in cap_levels:
+            w_test = {t: round(float(w * (1.0 - cap)), 4) for t, w in baseline_weights.items()}
+            w_test[ticker] = round(float(w_test.get(ticker, 0.0) + cap), 4)
+            m = portfolio_risk_metrics(w_test, returns_cad)
+            results.append({
+                "cap_level": cap,
+                "annualized_volatility": round(float(m["annualized_volatility"]), 4),
+                "max_drawdown": round(float(m["max_drawdown"]), 4),
+            })
+
+        payload = {"ticker": ticker, "sensitivity_curve": results}
+        e_item = registry.register(
+            tool="run_sensitivity_analysis",
+            args={"ticker": ticker, "max_cap": max_cap},
+            result=payload,
+            source="Simulateur de sensibilité AlphaForge",
+            date_str="2026-11-13",
+            currency="CAD",
+            description=f"Courbe de sensibilité de volatilité pour {ticker}.",
+            summary_metrics={"ticker": ticker, "curve": results},
+        )
+        if trace:
+            trace.evidence_added(e_item.id, "run_sensitivity_analysis", f"Sensibilité calculée sur {len(cap_levels)} paliers.")
+
+        return payload

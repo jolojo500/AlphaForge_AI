@@ -983,3 +983,223 @@ HTTP/1.1 200 OK
 content-type: text/plain; charset=utf-8
 ```
 The application boots cleanly and exposes real-time natural language interpretation, interactive side-by-side comparative cards, and expandable evidence inspection.
+
+
+---
+
+## 10. Phase 2c — Résolution des Issues #32 et #33 (Vraie Boucle d'Outils Bedrock & Découpage Transparent des Enveloppes)
+
+### 10.1 Contexte et Objectifs des Issues #32 et #33
+
+En revue technique indépendante, deux anomalies architecturales et fonctionnelles ont été signalées sur le dépôt `jolojo500/AlphaForge_AI` :
+1. **GitHub Issue #32 (`[IA] Orchestrateur : vraie boucle d'outils Bedrock`)** :
+   - *Constat :* L'orchestrateur affichait le libellé `bedrock_agent_loop` alors que l'évaluation des actifs était calculée de manière déterministe sans appel Converse direct dans l'orchestrateur.
+   - *Exigence du jury :* Pour respecter l'évaluation des rôles agentiques (20 %), implémenter une véritable boucle d'outils multi-tours Bedrock Converse (`global.anthropic.claude-sonnet-5-5`) où le modèle sélectionne activement les outils quantitatifs requis (`evaluate_asset_addition`, `compare_tickers`, `run_sensitivity_analysis`), avec un repli déterministe tracé et un libellé `execution_path` honnête et fidèle à la réalité de l'exécution.
+2. **GitHub Issue #33 (`[IA] Poids par défaut de 20 % quand la demande n'en précise pas`)** :
+   - *Constat :* Dans des requêtes d'enveloppe globale comme celle d'Amira (*« Mets tout en crypto, 100% Bitcoin et Ethereum! »*), le système inventait silencieusement `0.20` par actif, produisant des alertes incohérentes (*« 20.0% dans BTC-USD et 20.0% dans ETH-USD »*).
+   - *Exigence :* Supprimer définitivement tout poids par défaut silencieux. L'interprète doit extraire l'enveloppe globale (`total_requested_weight: 1.00`), répartir équitablement (50/50) en marquant explicitement l'allocation comme une hypothèse (`is_hypothesized=True`, `hypothesis_note="Répartition équipondérée 50/50..."`). Lorsqu'aucun poids n'est précisé, `weight` reste `None` ou fait l'objet d'une simulation exploratoire satellite explicitement labellisée.
+
+---
+
+### 10.2 Architecture de la Vraie Boucle d'Outils Bedrock (Sonnet 5.5)
+
+L'agent `OrchestrateurAgent` a été enrichi d'une véritable boucle d'outils Bedrock Converse multi-tours :
+
+```mermaid
+flowchart TD
+    UserQuery["Requête Investisseur & Persona"] --> Interp["RequestInterpreterAgent (Claude Haiku 3.5)"]
+    Interp --> ParsedReq["ParsedRequest (Enveloppe totale & Répartition hypothétique)"]
+    ParsedReq --> BaseCore["Socle Quantitatif Déterministe Garanti (Données CAD & Optimisation Stratégique)"]
+    BaseCore --> SonnetLoop["Orchestrateur Agentique : Boucle d'Outils Bedrock (Claude Sonnet 5.5)"]
+    
+    subgraph ToolUseLoop ["Boucle Multi-Tours Converse (Max 4 itérations)"]
+        SonnetLoop -->|"toolUse (name, args)"| Dispatcher{"Sélection d'Outils Dynamique"}
+        Dispatcher -->|"evaluate_asset_addition"| ToolEval["Simulateur d'Actif (Impact & Alternative Capped)"]
+        Dispatcher -->|"compare_tickers"| ToolComp["Comparateur Multi-Actifs (Volatilité, Drawdown, Bêta)"]
+        Dispatcher -->|"run_sensitivity_analysis"| ToolSens["Courbe de Sensibilité aux Plafonds (1% à 10%)"]
+        
+        ToolEval --> EvidenceReg["EvidenceRegistry (Enregistrement Preuves E# & Métriques Clés)"]
+        ToolComp --> EvidenceReg
+        ToolSens --> EvidenceReg
+        
+        EvidenceReg -->|"trace.tool_call & trace.evidence_added"| TraceAudit["Trace d'Exécution Observable (details.tool / args)"]
+        EvidenceReg -->|"toolResult (status: success, json)"| SonnetLoop
+    end
+    
+    SonnetLoop -->|"Arrêt end_turn"| PathCheck{"Vérification du Chemin Exécuté"}
+    PathCheck -->|"Outils appelés avec succès"| PathBedrock["execution_path: 'bedrock_agent_tool_loop'"]
+    PathCheck -->|"Exception API / Timeout"| FallbackNet["Repli Déterministe de Sécurité"]
+    FallbackNet --> PathFallback["execution_path: 'deterministic_fallback'"]
+    PathCheck -->|"Aucun actif demandé"| PathBaseline["execution_path: 'deterministic_baseline'"]
+```
+
+#### Transparence Observable et Traçabilité
+- **Spécifications d'Outils Formelles :** Les outils sont exposés à Sonnet 5.5 selon le format standard Bedrock `toolSpec` avec validation de schéma JSON.
+- **Trace d'Exécution Structurée :** Chaque appel d'outil génère un événement `tool_call` contenant `details.tool` et `details.args`, ainsi qu'un événement `evidence_added` certifiant l'enregistrement dans le registre de preuves institutionnel.
+- **Libellé Honnête du Chemin :** La clé `execution_path` retourne rigoureusement :
+  - `bedrock_agent_tool_loop` : le LLM Sonnet a analysé la demande, choisi dynamiquement les outils quantitatifs et reçu les résultats sous forme de `toolResult`.
+  - `deterministic_fallback` : en cas d'indisponibilité ou d'erreur réseau Bedrock, le filet de sécurité déterministe garantit l'évaluation et trace explicitement le repli.
+  - `deterministic_baseline` : allocation de référence sans actif supplémentaire demandé.
+
+---
+
+### 10.3 Découpage Transparent des Enveloppes et Fin du Poids Silencieux
+
+#### Schémas et Interprétation
+1. **Champs Dédiés dans le Schéma :**
+   - `total_requested_weight: float | None` sur `ParsedRequest`.
+   - `is_hypothesized: bool` et `hypothesis_note: str` sur `RequestedPosition`.
+2. **Découpage Équipondéré Transparent :**
+   Pour une demande comme *« Mets tout en crypto, 100% Bitcoin et Ethereum! »* :
+   - `total_requested_weight = 1.00`
+   - `BTC-USD` : `weight = 0.50`, `is_hypothesized = True`, `hypothesis_note = "Répartition équipondérée 50/50 de l'enveloppe de 100%"`
+   - `ETH-USD` : `weight = 0.50`, `is_hypothesized = True`, `hypothesis_note = "Répartition équipondérée 50/50 de l'enveloppe de 100%"`
+3. **Aucune Invention Silencieuse :**
+   - Dans `orchestrator.py` et `governance.py`, tout remplacement inconditionnel de `weight is None` par `0.20` a été supprimé.
+   - Si le poids n'est pas spécifié (ex: *« Je veux ajouter Tesla »*), le poids est conservé à `None` et l'alerte de gouvernance indique explicitement *« (pondération non précisée) »* tout en calculant un satellite exploratoire indicatif.
+
+---
+
+### 10.4 Résultats Réels Amazon Bedrock (Live AWS us-east-1, Profil `datathon`)
+
+Les deux requêtes clés ont été exécutées en direct contre l'API Amazon Bedrock (`global.anthropic.claude-haiku-5-5`, `global.anthropic.claude-sonnet-5-5`, `global.anthropic.claude-opus-5-5`).
+
+#### Cas 1 : Robert / TSLA (*« Je veux mettre 20% de mon portefeuille dans Tesla, qu'en penses-tu ? »*)
+- **Run ID :** `run_20261114_203342_59c1ce`
+- **Chemin d'Exécution Réel :** `bedrock_agent_tool_loop` (Sonnet 5.5 a piloté la sélection d'outils)
+- **Requête Interprétée (Claude Haiku 5.5) :**
+  ```json
+  {
+    "intent": "add_position",
+    "total_requested_weight": null,
+    "requested_positions": [
+      {
+        "ticker": "TSLA",
+        "weight": 0.20,
+        "company_name": "Tesla",
+        "is_hypothesized": false,
+        "hypothesis_note": ""
+      }
+    ],
+    "summary": "L'investisseur souhaite ajouter Tesla (TSLA) à hauteur de 20 % de son portefeuille et demande un avis sur ce choix."
+  }
+  ```
+- **Évaluation Quantitative Produite :**
+  - Volatilité de base : **3,99 %** (Max DD : **-10,24 %**)
+  - Volatilité avec 20 % TSLA : **12,63 %** (Max DD : **-21,98 %**) $\rightarrow$ Dépassement net du plafond de Robert (**6,00 %**)
+  - Volatilité alternative satellite (3 % TSLA) : **4,54 %** $\rightarrow$ Respecte la bande cible [3,50 % - 6,00 %]
+- **Alerte de Gouvernance Émise :**
+  > **[ATTENTION] `incoherence_horizon_robert_tsla`**  
+  > Incohérence majeure identifiée : Robert (59 ans, horizon 3-5 ans, mandat de préservation du capital vers la retraite) demande 20.0% dans Tesla (TSLA). TSLA affiche une volatilité historique de 58.18% et une perte maximale de -70.88%. Intégrer cette position porterait la volatilité du portefeuille à 12.63% (dépassant le plafond cible de 6.00%). Alternative constructive : un satellite plafonné à 3.0% (volatilité 4.54%) permet une exposition à la croissance sans compromettre le socle obligataire défensif.
+- **Vérification Numérique Déterministe :** **100 % Validé** (36 nombres certifiés, 0 erreur, 0 hallucination).
+- **Synthèse Explicative (Claude Sonnet 5.5) :**
+  > *« Simulation éducative, sans conseil personnalisé. Une position de 20% dans Tesla est incohérente avec le mandat de Robert (préservation du capital, horizon 3 à 5 ans, risque faible à modéré). Selon les preuves, elle porterait la volatilité du portefeuille de 3.99% à 12.63%, au-dessus de la bande cible de 3.5% à 6%. Un satellite plafonné à 3% resterait dans la bande, avec une volatilité de 4.54%. »*
+
+---
+
+#### Cas 2 : Amira / 100 % Crypto (*« Je veux investir 100% de mon capital dans les cryptomonnaies »*)
+- **Run ID :** `run_20261114_203409_955786`
+- **Chemin d'Exécution Réel :** `bedrock_agent_tool_loop` (Sonnet 5.5 a piloté la sélection d'outils)
+- **Requête Interprétée (Claude Haiku 5.5) :**
+  ```json
+  {
+    "intent": "general_allocation",
+    "total_requested_weight": 1.00,
+    "requested_positions": [
+      {
+        "ticker": "BTC-USD",
+        "weight": 0.50,
+        "company_name": "Bitcoin",
+        "is_hypothesized": true,
+        "hypothesis_note": "Répartition équipondérée 50/50 de l'enveloppe de 100%"
+      },
+      {
+        "ticker": "ETH-USD",
+        "weight": 0.50,
+        "company_name": "Ethereum",
+        "is_hypothesized": true,
+        "hypothesis_note": "Répartition équipondérée 50/50 de l'enveloppe de 100%"
+      }
+    ],
+    "summary": "L'investisseur souhaite allouer 100% de son capital aux cryptomonnaies, ce qui correspond à l'univers disponible Bitcoin (BTC-USD) et Ethereum (ETH-USD) avec une répartition hypothétique 50/50."
+  }
+  ```
+- **Alerte de Gouvernance Consolidée Unique (Sans défaut 0.20 inventé) :**
+  > **[ATTENTION] `concentration_crypto_amira`**  
+  > Alerte de concentration excessive : Amira demande 100.0% dans les crypto-actifs (50.0% en BTC-USD, 50.0% en ETH-USD (répartition équipondérée 50/50)). Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de 10.0% viole le principe fondamental de diversification et expose à des pertes maximales historiques sévères (-73.31% sur BTC-USD, -77.19% sur ETH-USD). Alternative constructive : maintenir la poche crypto plafonnée à 10.0% pour participer à la croissance tout en conservant la robustesse du portefeuille.
+- **Régénération Automatique par le Vérificateur :**
+  - Première tentative : Détection de nombres non certifiés dans la synthèse libre $\rightarrow$ Déclenchement automatique de la boucle corrective d'auto-guérison.
+  - Deuxième tentative : **100 % Validé** (**46 nombres certifiés**, 0 erreur, 0 hallucination).
+- **Synthèse Explicative (Claude Sonnet 5.5) :**
+  > *« Amira demande 100% en cryptomonnaies, répartis par hypothèse 50/50 entre BTC-USD et ETH-USD. Cette concentration sort de la bande de volatilité cible de 12%-20% et expose à des pertes historiques sévères. Le portefeuille optimisé (14 actifs, 5% BTC et 5% ETH) reste dans la bande, avec une volatilité de 13.28%. Simulation éducative uniquement. »*
+
+---
+
+### 10.5 Suite de Tests Pytest Mise à Jour (46 Tests Réussis)
+
+La suite de tests unitaires et d'intégration a été complétée par 6 nouveaux tests dédiés aux exigences des Issues #32 et #33 :
+- `test_orchestrator_bedrock_tool_use_loop_mock` : Exécution multi-tours Sonnet avec `toolUse`, `toolResult`, et étiquetage `bedrock_agent_tool_loop`.
+- `test_orchestrator_deterministic_fallback_on_bedrock_failure` : Détection d'anomalie Bedrock, bascule sur filet de sécurité déterministe et étiquetage honnête `deterministic_fallback`.
+- `test_orchestrator_deterministic_baseline_without_positions` : Étiquetage `deterministic_baseline` sans appel inutile d'outils d'actifs.
+- `test_issue_33_interpreter_weight_splitting_and_no_silent_default` : Validation du découpage 100 % $\rightarrow$ 50/50 marqué comme hypothèse et absence de poids 0.20 par défaut sur poids manquant.
+- `test_issue_33_governance_amira_crypto_alert_shows_exact_total_and_no_silent_20pct` : Validation de l'alerte consolidée à 100.0 % (50.0 % / 50.0 %) sans mention de 20.0 %.
+- `test_issue_33_governance_robert_tsla_unspecified_weight_no_silent_20pct` : Validation de l'absence d'invention de 20.0 % sur requête non chiffrée.
+
+```
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/wilson-lab/Datathon-Poly/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/wilson-lab/Datathon-Poly/repo
+configfile: pytest.ini
+plugins: anyio-4.16.0, platformdirs-4.14.5
+collected 46 items
+
+alphaforge/tests/test_bedrock_live.py::test_live_bedrock_converse_connection PASSED [  2%]
+alphaforge/tests/test_bedrock_mock.py::test_bedrock_converse_basic PASSED [  4%]
+alphaforge/tests/test_bedrock_mock.py::test_bedrock_tool_use_loop_mock PASSED [  6%]
+alphaforge/tests/test_bedrock_mock.py::test_explainer_verification_and_regeneration_mock PASSED [  8%]
+alphaforge/tests/test_bedrock_mock.py::test_trace_event_serialization_excludes_cot PASSED [ 10%]
+alphaforge/tests/test_bedrock_mock.py::test_request_interpreter_parsing_and_fallback PASSED [ 13%]
+alphaforge/tests/test_bedrock_mock.py::test_governance_robert_tsla_natural_language_attention_alert PASSED [ 15%]
+alphaforge/tests/test_bedrock_mock.py::test_governance_amira_100pct_crypto_attention_alert PASSED [ 17%]
+alphaforge/tests/test_bedrock_mock.py::test_governance_mateo_enb_esg_tension_alert PASSED [ 19%]
+alphaforge/tests/test_bedrock_mock.py::test_tool_call_trace_data_consistency PASSED [ 21%]
+alphaforge/tests/test_bedrock_mock.py::test_orchestrator_bedrock_tool_use_loop_mock PASSED [ 23%]
+alphaforge/tests/test_bedrock_mock.py::test_orchestrator_deterministic_fallback_on_bedrock_failure PASSED [ 26%]
+alphaforge/tests/test_bedrock_mock.py::test_orchestrator_deterministic_baseline_without_positions PASSED [ 28%]
+alphaforge/tests/test_bedrock_mock.py::test_issue_33_interpreter_weight_splitting_and_no_silent_default PASSED [ 30%]
+alphaforge/tests/test_bedrock_mock.py::test_issue_33_governance_amira_crypto_alert_shows_exact_total_and_no_silent_20pct PASSED [ 32%]
+alphaforge/tests/test_bedrock_mock.py::test_issue_33_governance_robert_tsla_unspecified_weight_no_silent_20pct PASSED [ 34%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_persona_volatility_ordering PASSED [ 36%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_amira_pipeline PASSED [ 39%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_mateo_pipeline PASSED [ 41%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_robert_baseline_pipeline PASSED [ 43%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_robert_reality_check_governance_block PASSED [ 45%]
+alphaforge/tests/test_personas.py::TestPersonasEndToEnd::test_robert_capped_alternative_pipeline PASSED [ 47%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_load_starter_data PASSED [ 50%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_calendar_union PASSED [ 52%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_cad_conversion PASSED [ 54%]
+alphaforge/tests/test_tools.py::TestPricesTool::test_data_quality_report PASSED [ 56%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_annualized_volatility PASSED [ 58%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_max_drawdown PASSED   [ 60%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_cvar95 PASSED         [ 63%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_beta_vs_benchmark PASSED [ 65%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_portfolio_risk_metrics PASSED [ 67%]
+alphaforge/tests/test_tools.py::TestRiskTool::test_risk_contributions_sum_to_one PASSED [ 69%]
+alphaforge/tests/test_tools.py::TestOptimizeTool::test_min_variance_basic PASSED [ 71%]
+alphaforge/tests/test_tools.py::TestOptimizeTool::test_min_variance_sector_and_class_constraints PASSED [ 73%]
+alphaforge/tests/test_tools.py::TestOptimizeTool::test_risk_parity_equal_risk PASSED [ 76%]
+alphaforge/tests/test_tools.py::TestStressTool::test_stress_test_2022_episode PASSED [ 78%]
+alphaforge/tests/test_tools.py::TestStressTool::test_rolling_risk_windows PASSED [ 80%]
+alphaforge/tests/test_tools.py::TestStressTool::test_2022_drawdown_window_isolation PASSED [ 82%]
+alphaforge/tests/test_tools.py::TestStressTool::test_sensitivity_to_asset_cap PASSED [ 84%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_number_extraction PASSED [ 86%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_percentage_and_sign_equivalence PASSED [ 89%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_valid_explanation_passes PASSED [ 91%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_non_existent_evidence_id PASSED [ 93%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_hallucinated_number PASSED [ 95%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_number_without_evidence_citation PASSED [ 97%]
+alphaforge/tests/test_verifier.py::TestVerifier::test_deliberate_error_wrong_evidence_cited PASSED [100%]
+
+============================= 46 passed in 15.87s ==============================
+```
