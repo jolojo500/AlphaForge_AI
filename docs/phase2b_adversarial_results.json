@@ -1,0 +1,4533 @@
+{
+  "robert": {
+    "run_id": "run_20261114_201723_a99aa9",
+    "persona": {
+      "id": "robert",
+      "name": "Robert",
+      "age": 59,
+      "profession": "Healthcare professional",
+      "family_status": "Married, adult children, approaching retirement",
+      "investment_experience": "Advanced",
+      "investment_objective": "Preserve capital while maintaining some growth potential",
+      "horizon_label": "3 to 5 years",
+      "horizon_years_min": 3,
+      "horizon_years_max": 5,
+      "risk_profile": "low_to_moderate",
+      "case_preferences": [
+        "Prefers established companies and investments whose business models he understands",
+        "Values stability and company quality and has little interest in crypto assets",
+        "Follows markets actively and is interested in new opportunities",
+        "May be tempted by a highly publicized company even when it is riskier than he would normally prefer"
+      ],
+      "reality_test": "Can the system challenge a request that conflicts with the investor's profile? It should identify the tension between Robert's immediate interest and his objectives, explain the risks, and avoid simply agreeing.",
+      "team_assumptions": {
+        "strategic_sleeves": "Bonds 65% / Equity 30% / Gold 5% / Crypto 0% for imminent retirement capital preservation.",
+        "bond_duration_mix": "Combines ultra short-term bonds (ZST.TO) and aggregate bonds (XBB.TO, AGG) to mitigate interest rate duration risk as observed in 2022.",
+        "crypto_prohibition": "Cryptoassets strictly 0% (blocking rule) due to short horizon and capital preservation mandate.",
+        "tsla_hyped_asset_policy": "When Robert requests TSLA, system issues Incoherence Warning and proposes a capped satellite alternative of at most 3.0% (10% of equity sleeve), preserving 65% bonds.",
+        "target_volatility_band": "Target volatility band 3.5% to 6.0% annualized."
+      },
+      "constraints": {
+        "target_vol_band": [
+          0.035,
+          0.06
+        ],
+        "single_asset_cap": 0.08,
+        "bond_floor": 0.55,
+        "crypto_cap": 0.0,
+        "sector_caps": {},
+        "sector_floors": {},
+        "class_caps": {
+          "crypto": 0.0
+        },
+        "class_floors": {
+          "etf_bond": 0.55,
+          "equity": 0.25
+        },
+        "per_asset_caps": {
+          "ZST.TO": 0.35,
+          "XBB.TO": 0.35,
+          "AGG": 0.35,
+          "TSLA": 0.03
+        },
+        "per_asset_floors": {},
+        "exclusions": [
+          "BTC-USD",
+          "ETH-USD",
+          "TSLA"
+        ],
+        "preferred_tickers": [
+          "ZST.TO",
+          "XBB.TO",
+          "AGG",
+          "RY.TO",
+          "TD.TO",
+          "JNJ",
+          "PG",
+          "FTS.TO",
+          "XIU.TO"
+        ],
+        "strategic_sleeves": [
+          {
+            "name": "bonds",
+            "target_weight": 0.65,
+            "weight_band": [
+              0.55,
+              0.75
+            ],
+            "asset_classes": [
+              "etf_bond"
+            ],
+            "single_asset_cap": 0.55,
+            "per_asset_caps": 0.55,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": null,
+            "rationale": "Heavy capital preservation anchor protecting imminent retirement capital."
+          },
+          {
+            "name": "equity",
+            "target_weight": 0.3,
+            "weight_band": [
+              0.25,
+              0.35
+            ],
+            "asset_classes": [
+              "equity",
+              "etf_equity"
+            ],
+            "single_asset_cap": 0.25,
+            "per_asset_caps": 0.25,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": [
+              "TSLA"
+            ],
+            "fixed_allocations": null,
+            "rationale": "Defensive high-quality dividend equities generating modest growth without severe drawdowns."
+          },
+          {
+            "name": "gold_cash",
+            "target_weight": 0.05,
+            "weight_band": [
+              0.0,
+              0.05
+            ],
+            "asset_classes": [
+              "etf_commodity"
+            ],
+            "single_asset_cap": null,
+            "per_asset_caps": null,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": {
+              "GLD": 1.0
+            },
+            "rationale": "Safe-haven store of value."
+          }
+        ],
+        "provisional_esg_exclusions": []
+      }
+    },
+    "persona_name": "Robert",
+    "capital": 100000.0,
+    "parsed_request": {
+      "intent": "add_position",
+      "requested_positions": [
+        {
+          "ticker": "TSLA",
+          "weight": 0.2,
+          "company_name": "Tesla"
+        }
+      ],
+      "requested_exclusions": [],
+      "constraint_changes": {},
+      "out_of_scope": false,
+      "unknown_entities": [],
+      "language": "fr",
+      "summary": "L'investisseur souhaite ajouter une position de 20 % de son portefeuille en Tesla (TSLA) et demande une opinion sur ce choix, que ce système ne peut pas fournir."
+    },
+    "execution_path": "bedrock_agent_loop",
+    "requested_evaluations": [
+      {
+        "asset_evidence_id": "E6",
+        "comparison_evidence_id": "E7",
+        "asset_metrics": {
+          "ticker": "TSLA",
+          "annualized_volatility": 0.5818,
+          "max_drawdown": -0.7088,
+          "cvar_95": 0.084,
+          "beta_xiu": 1.7207
+        },
+        "comparison": {
+          "ticker": "TSLA",
+          "target_vol_band": [
+            0.035,
+            0.06
+          ],
+          "baseline": {
+            "weight": 0.0,
+            "annualized_volatility": 0.0399,
+            "max_drawdown": -0.0573,
+            "stress_2022_max_dd": -0.0573,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.1263,
+            "max_drawdown": -0.2261,
+            "stress_2022_max_dd": -0.2255,
+            "target_band_respected": false
+          },
+          "capped_alternative": {
+            "weight": 0.03,
+            "annualized_volatility": 0.0454,
+            "max_drawdown": -0.0682,
+            "stress_2022_max_dd": -0.0682,
+            "target_band_respected": true
+          }
+        },
+        "capped_weights": {
+          "AGG": 0.1063,
+          "XBB.TO": 0.1774,
+          "ZST.TO": 0.3468,
+          "ATD.TO": 0.0016,
+          "CNQ.TO": 0.004,
+          "CSU.TO": 0.0016,
+          "ENB.TO": 0.011,
+          "FTS.TO": 0.0727,
+          "GOOGL": 0.0043,
+          "JNJ": 0.0404,
+          "MSFT": 0.0145,
+          "PG": 0.0232,
+          "QQQ": 0.0049,
+          "RY.TO": 0.0331,
+          "TD.TO": 0.0208,
+          "XIU.TO": 0.0384,
+          "XOM": 0.0204,
+          "GLD": 0.0485,
+          "TSLA": 0.03
+        }
+      }
+    ],
+    "allocation": {
+      "AGG": 0.1096,
+      "XBB.TO": 0.1829,
+      "ZST.TO": 0.3575,
+      "ATD.TO": 0.0017,
+      "CNQ.TO": 0.0041,
+      "CSU.TO": 0.0017,
+      "ENB.TO": 0.0113,
+      "FTS.TO": 0.075,
+      "GOOGL": 0.0044,
+      "JNJ": 0.0417,
+      "MSFT": 0.015,
+      "PG": 0.0239,
+      "QQQ": 0.0051,
+      "RY.TO": 0.0341,
+      "TD.TO": 0.0214,
+      "XIU.TO": 0.0396,
+      "XOM": 0.021,
+      "GLD": 0.05
+    },
+    "dollar_amounts": {
+      "AGG": 10960.0,
+      "XBB.TO": 18290.0,
+      "ZST.TO": 35750.0,
+      "ATD.TO": 170.0,
+      "CNQ.TO": 410.0,
+      "CSU.TO": 170.0,
+      "ENB.TO": 1130.0,
+      "FTS.TO": 7500.0,
+      "GOOGL": 440.0,
+      "JNJ": 4170.0,
+      "MSFT": 1500.0,
+      "PG": 2390.0,
+      "QQQ": 510.0,
+      "RY.TO": 3410.0,
+      "TD.TO": 2140.0,
+      "XIU.TO": 3960.0,
+      "XOM": 2100.0,
+      "GLD": 5000.0
+    },
+    "metrics": {
+      "annualized_volatility": 0.0399,
+      "realized_annual_return": 0.0671,
+      "max_drawdown": -0.0573,
+      "cvar_95": 0.0055,
+      "beta_vs_benchmark": 0.1936,
+      "active_assets_count": 18
+    },
+    "stress_test": {
+      "period": "2022-01-01 to 2022-12-31",
+      "episode": "2022 Stagflation / Rate-Hike Shock",
+      "historical_lesson": "During 2022, Canadian aggregate bonds (XBB.TO) fell alongside equities. Ultra short-term bonds (ZST.TO) and cash equivalents preserved capital substantially better.",
+      "portfolio": {
+        "max_drawdown": -0.0573,
+        "cumulative_return": -0.0181,
+        "annualized_volatility": 0.0478
+      },
+      "benchmarks": {
+        "benchmark_60_40": {
+          "max_drawdown": -0.1301,
+          "cumulative_return": -0.0851
+        },
+        "XIU_TO": {
+          "max_drawdown": -0.1636,
+          "cumulative_return": -0.0635
+        },
+        "SPY": {
+          "max_drawdown": -0.2165,
+          "cumulative_return": -0.1259
+        }
+      }
+    },
+    "evidence": {
+      "E1": {
+        "id": "E1",
+        "tool": "request_interpreter",
+        "args": {
+          "question": "Je veux mettre 20% de mon portefeuille dans Tesla, qu'en penses-tu ?"
+        },
+        "result": {
+          "intent": "add_position",
+          "requested_positions": [
+            {
+              "ticker": "TSLA",
+              "weight": 0.2,
+              "company_name": "Tesla"
+            }
+          ],
+          "requested_exclusions": [],
+          "constraint_changes": {},
+          "out_of_scope": false,
+          "unknown_entities": [],
+          "language": "fr",
+          "summary": "L'investisseur souhaite ajouter une position de 20 % de son portefeuille en Tesla (TSLA) et demande une opinion sur ce choix, que ce système ne peut pas fournir."
+        },
+        "source": "Agent Interpréteur AlphaForge (Claude Haiku 3.5 & Cartographie de l'Univers)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Interprétation sémantique et structurée de la demande investisseur.",
+        "summary_metrics": {}
+      },
+      "E2": {
+        "id": "E2",
+        "tool": "load_market_data",
+        "args": {
+          "base_currency": "CAD"
+        },
+        "result": {
+          "start_date": "2021-11-12",
+          "end_date": "2026-11-12",
+          "total_trading_days": 1282,
+          "universe_assets_count": 31,
+          "base_currency": "CAD",
+          "tickers": [
+            "AAPL",
+            "AGG",
+            "AMZN",
+            "ATD.TO",
+            "BTC-USD",
+            "CNQ.TO",
+            "CNR.TO",
+            "CSU.TO",
+            "ENB.TO",
+            "ESGV",
+            "ETH-USD",
+            "FTS.TO",
+            "GLD",
+            "GOOGL",
+            "JNJ",
+            "JPM",
+            "MFC.TO",
+            "MSFT",
+            "NVDA",
+            "PG",
+            "QQQ",
+            "RY.TO",
+            "SHOP.TO",
+            "SPY",
+            "TD.TO",
+            "TLT",
+            "TSLA",
+            "XBB.TO",
+            "XIU.TO",
+            "XOM",
+            "ZST.TO"
+          ]
+        },
+        "source": "PolyFinances Starter Pack / Yahoo Finance & BoC Valet",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Univers d'actifs 2021-2026 avec prix ajustés et rendements convertis en CAD.",
+        "summary_metrics": {
+          "start_date": "2021-11-12",
+          "end_date": "2026-11-12",
+          "total_trading_days": 1282,
+          "universe_count": 31,
+          "base_currency": "CAD"
+        }
+      },
+      "E3": {
+        "id": "E3",
+        "tool": "compute_asset_risk",
+        "args": {
+          "universe_size": 31
+        },
+        "result": {
+          "AAPL": {
+            "annualized_volatility": 0.2746,
+            "max_drawdown": -0.3424,
+            "cvar_95": 0.0395,
+            "beta_xiu": 0.9168
+          },
+          "AGG": {
+            "annualized_volatility": 0.0731,
+            "max_drawdown": -0.1275,
+            "cvar_95": 0.0099,
+            "beta_xiu": -0.0331
+          },
+          "AMZN": {
+            "annualized_volatility": 0.3594,
+            "max_drawdown": -0.5239,
+            "cvar_95": 0.0507,
+            "beta_xiu": 1.205
+          },
+          "ATD.TO": {
+            "annualized_volatility": 0.237,
+            "max_drawdown": -0.2216,
+            "cvar_95": 0.0307,
+            "beta_xiu": 0.7498
+          },
+          "BTC-USD": {
+            "annualized_volatility": 0.504,
+            "max_drawdown": -0.7331,
+            "cvar_95": 0.0734,
+            "beta_xiu": 1.2044
+          },
+          "CNQ.TO": {
+            "annualized_volatility": 0.3046,
+            "max_drawdown": -0.3311,
+            "cvar_95": 0.0469,
+            "beta_xiu": 1.0077
+          },
+          "CNR.TO": {
+            "annualized_volatility": 0.1969,
+            "max_drawdown": -0.2725,
+            "cvar_95": 0.0294,
+            "beta_xiu": 0.8403
+          },
+          "CSU.TO": {
+            "annualized_volatility": 0.3022,
+            "max_drawdown": -0.5638,
+            "cvar_95": 0.0443,
+            "beta_xiu": 0.9746
+          },
+          "ENB.TO": {
+            "annualized_volatility": 0.1596,
+            "max_drawdown": -0.2138,
+            "cvar_95": 0.0245,
+            "beta_xiu": 0.5973
+          },
+          "ESGV": {
+            "annualized_volatility": 0.1784,
+            "max_drawdown": -0.2686,
+            "cvar_95": 0.0262,
+            "beta_xiu": 0.9282
+          },
+          "ETH-USD": {
+            "annualized_volatility": 0.6735,
+            "max_drawdown": -0.7719,
+            "cvar_95": 0.0979,
+            "beta_xiu": 1.7544
+          },
+          "FTS.TO": {
+            "annualized_volatility": 0.1455,
+            "max_drawdown": -0.2401,
+            "cvar_95": 0.0193,
+            "beta_xiu": 0.2291
+          },
+          "GLD": {
+            "annualized_volatility": 0.1829,
+            "max_drawdown": -0.26,
+            "cvar_95": 0.0272,
+            "beta_xiu": 0.3459
+          },
+          "GOOGL": {
+            "annualized_volatility": 0.3199,
+            "max_drawdown": -0.3947,
+            "cvar_95": 0.0463,
+            "beta_xiu": 0.881
+          },
+          "JNJ": {
+            "annualized_volatility": 0.1817,
+            "max_drawdown": -0.1555,
+            "cvar_95": 0.0242,
+            "beta_xiu": 0.0994
+          },
+          "JPM": {
+            "annualized_volatility": 0.2357,
+            "max_drawdown": -0.3224,
+            "cvar_95": 0.0347,
+            "beta_xiu": 0.9467
+          },
+          "MFC.TO": {
+            "annualized_volatility": 0.2147,
+            "max_drawdown": -0.2105,
+            "cvar_95": 0.0316,
+            "beta_xiu": 1.1106
+          },
+          "MSFT": {
+            "annualized_volatility": 0.2768,
+            "max_drawdown": -0.3431,
+            "cvar_95": 0.0385,
+            "beta_xiu": 0.7818
+          },
+          "NVDA": {
+            "annualized_volatility": 0.5024,
+            "max_drawdown": -0.6346,
+            "cvar_95": 0.0689,
+            "beta_xiu": 1.6301
+          },
+          "PG": {
+            "annualized_volatility": 0.1863,
+            "max_drawdown": -0.2347,
+            "cvar_95": 0.0264,
+            "beta_xiu": 0.195
+          },
+          "QQQ": {
+            "annualized_volatility": 0.2252,
+            "max_drawdown": -0.3205,
+            "cvar_95": 0.033,
+            "beta_xiu": 1.0293
+          },
+          "RY.TO": {
+            "annualized_volatility": 0.1532,
+            "max_drawdown": -0.2121,
+            "cvar_95": 0.0225,
+            "beta_xiu": 0.8599
+          },
+          "SHOP.TO": {
+            "annualized_volatility": 0.6347,
+            "max_drawdown": -0.8347,
+            "cvar_95": 0.0926,
+            "beta_xiu": 2.6823
+          },
+          "SPY": {
+            "annualized_volatility": 0.1648,
+            "max_drawdown": -0.2225,
+            "cvar_95": 0.0241,
+            "beta_xiu": 0.8718
+          },
+          "TD.TO": {
+            "annualized_volatility": 0.1757,
+            "max_drawdown": -0.2606,
+            "cvar_95": 0.0269,
+            "beta_xiu": 0.842
+          },
+          "TLT": {
+            "annualized_volatility": 0.1588,
+            "max_drawdown": -0.3973,
+            "cvar_95": 0.0219,
+            "beta_xiu": 0.0156
+          },
+          "TSLA": {
+            "annualized_volatility": 0.5818,
+            "max_drawdown": -0.7088,
+            "cvar_95": 0.084,
+            "beta_xiu": 1.7207
+          },
+          "XBB.TO": {
+            "annualized_volatility": 0.0657,
+            "max_drawdown": -0.1548,
+            "cvar_95": 0.009,
+            "beta_xiu": 0.0989
+          },
+          "XIU.TO": {
+            "annualized_volatility": 0.1293,
+            "max_drawdown": -0.1636,
+            "cvar_95": 0.0188,
+            "beta_xiu": 1.0
+          },
+          "XOM": {
+            "annualized_volatility": 0.2575,
+            "max_drawdown": -0.1908,
+            "cvar_95": 0.0378,
+            "beta_xiu": 0.5678
+          },
+          "ZST.TO": {
+            "annualized_volatility": 0.0055,
+            "max_drawdown": -0.0043,
+            "cvar_95": 0.0006,
+            "beta_xiu": 0.0066
+          }
+        },
+        "source": "Calculs quantitatifs AlphaForge (formules mathématiques standard)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'univers de 31 actifs.",
+        "summary_metrics": {
+          "benchmark_xiu_vol": 0.1293,
+          "benchmark_spy_vol": 0.1648,
+          "top_assets": {
+            "TSLA": {
+              "annualized_volatility": 0.5818,
+              "max_drawdown": -0.7088,
+              "cvar_95": 0.084,
+              "beta_xiu": 1.7207
+            },
+            "BTC-USD": {
+              "annualized_volatility": 0.504,
+              "max_drawdown": -0.7331,
+              "cvar_95": 0.0734,
+              "beta_xiu": 1.2044
+            },
+            "NVDA": {
+              "annualized_volatility": 0.5024,
+              "max_drawdown": -0.6346,
+              "cvar_95": 0.0689,
+              "beta_xiu": 1.6301
+            },
+            "ENB.TO": {
+              "annualized_volatility": 0.1596,
+              "max_drawdown": -0.2138,
+              "cvar_95": 0.0245,
+              "beta_xiu": 0.5973
+            },
+            "ZST.TO": {
+              "annualized_volatility": 0.0055,
+              "max_drawdown": -0.0043,
+              "cvar_95": 0.0006,
+              "beta_xiu": 0.0066
+            },
+            "XBB.TO": {
+              "annualized_volatility": 0.0657,
+              "max_drawdown": -0.1548,
+              "cvar_95": 0.009,
+              "beta_xiu": 0.0989
+            },
+            "GLD": {
+              "annualized_volatility": 0.1829,
+              "max_drawdown": -0.26,
+              "cvar_95": 0.0272,
+              "beta_xiu": 0.3459
+            },
+            "RY.TO": {
+              "annualized_volatility": 0.1532,
+              "max_drawdown": -0.2121,
+              "cvar_95": 0.0225,
+              "beta_xiu": 0.8599
+            }
+          }
+        }
+      },
+      "E4": {
+        "id": "E4",
+        "tool": "optimize_strategic_portfolio",
+        "args": {
+          "persona": "robert",
+          "target_vol_band": [
+            0.035,
+            0.06
+          ]
+        },
+        "result": {
+          "persona": "robert",
+          "weights": {
+            "AGG": 0.1096,
+            "XBB.TO": 0.1829,
+            "ZST.TO": 0.3575,
+            "ATD.TO": 0.0017,
+            "CNQ.TO": 0.0041,
+            "CSU.TO": 0.0017,
+            "ENB.TO": 0.0113,
+            "FTS.TO": 0.075,
+            "GOOGL": 0.0044,
+            "JNJ": 0.0417,
+            "MSFT": 0.015,
+            "PG": 0.0239,
+            "QQQ": 0.0051,
+            "RY.TO": 0.0341,
+            "TD.TO": 0.0214,
+            "XIU.TO": 0.0396,
+            "XOM": 0.021,
+            "GLD": 0.05
+          },
+          "dollar_amounts_cad": {
+            "AGG": 10960.0,
+            "XBB.TO": 18290.0,
+            "ZST.TO": 35750.0,
+            "ATD.TO": 170.0,
+            "CNQ.TO": 410.0,
+            "CSU.TO": 170.0,
+            "ENB.TO": 1130.0,
+            "FTS.TO": 7500.0,
+            "GOOGL": 440.0,
+            "JNJ": 4170.0,
+            "MSFT": 1500.0,
+            "PG": 2390.0,
+            "QQQ": 510.0,
+            "RY.TO": 3410.0,
+            "TD.TO": 2140.0,
+            "XIU.TO": 3960.0,
+            "XOM": 2100.0,
+            "GLD": 5000.0
+          },
+          "metrics": {
+            "annualized_volatility": 0.0399,
+            "realized_annual_return": 0.0671,
+            "max_drawdown": -0.0573,
+            "cvar_95": 0.0055,
+            "beta_vs_benchmark": 0.1936,
+            "active_assets_count": 18
+          },
+          "target_vol_band": [
+            0.035,
+            0.06
+          ],
+          "solver_status": "optimal",
+          "active_assets": 18,
+          "constraints_summary": {
+            "sleeves": [
+              {
+                "name": "bonds",
+                "target_weight": 0.65,
+                "weight_band": [
+                  0.55,
+                  0.75
+                ],
+                "asset_classes": [
+                  "etf_bond"
+                ],
+                "single_asset_cap": 0.55,
+                "per_asset_caps": 0.55,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": null,
+                "rationale": "Heavy capital preservation anchor protecting imminent retirement capital."
+              },
+              {
+                "name": "equity",
+                "target_weight": 0.3,
+                "weight_band": [
+                  0.25,
+                  0.35
+                ],
+                "asset_classes": [
+                  "equity",
+                  "etf_equity"
+                ],
+                "single_asset_cap": 0.25,
+                "per_asset_caps": 0.25,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": [
+                  "TSLA"
+                ],
+                "fixed_allocations": null,
+                "rationale": "Defensive high-quality dividend equities generating modest growth without severe drawdowns."
+              },
+              {
+                "name": "gold_cash",
+                "target_weight": 0.05,
+                "weight_band": [
+                  0.0,
+                  0.05
+                ],
+                "asset_classes": [
+                  "etf_commodity"
+                ],
+                "single_asset_cap": null,
+                "per_asset_caps": null,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": {
+                  "GLD": 1.0
+                },
+                "rationale": "Safe-haven store of value."
+              }
+            ],
+            "sleeve_breakdown": {
+              "bonds": {
+                "intra_weights": {
+                  "AGG": 0.1686,
+                  "XBB.TO": 0.2814,
+                  "ZST.TO": 0.55
+                },
+                "sleeve_weight": 0.65,
+                "method": "constrained_min_variance",
+                "status": "optimal"
+              },
+              "equity": {
+                "intra_weights": {
+                  "ATD.TO": 0.0057,
+                  "CNQ.TO": 0.0137,
+                  "CSU.TO": 0.0058,
+                  "ENB.TO": 0.0378,
+                  "FTS.TO": 0.25,
+                  "GOOGL": 0.0147,
+                  "JNJ": 0.1389,
+                  "MSFT": 0.0499,
+                  "PG": 0.0796,
+                  "QQQ": 0.017,
+                  "RY.TO": 0.1137,
+                  "TD.TO": 0.0712,
+                  "XIU.TO": 0.1319,
+                  "XOM": 0.0701
+                },
+                "sleeve_weight": 0.3,
+                "method": "constrained_min_variance",
+                "status": "optimal"
+              },
+              "gold_cash": {
+                "intra_weights": {
+                  "GLD": 1.0
+                },
+                "sleeve_weight": 0.05,
+                "method": "fixed_allocation"
+              }
+            },
+            "target_vol_band": [
+              0.035,
+              0.06
+            ],
+            "within_target_vol_band": true
+          }
+        },
+        "source": "Solveur CVXPY (Quadratique sous contraintes de poches stratégiques)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Portefeuille stratégique et pondérations optimales pour Robert.",
+        "summary_metrics": {
+          "annualized_volatility": 0.0399,
+          "realized_annual_return": 0.0671,
+          "max_drawdown": -0.0573,
+          "target_vol_band": [
+            0.035,
+            0.06
+          ],
+          "active_assets_count": 18,
+          "weights": {
+            "AGG": 0.1096,
+            "XBB.TO": 0.1829,
+            "ZST.TO": 0.3575,
+            "ATD.TO": 0.0017,
+            "CNQ.TO": 0.0041,
+            "CSU.TO": 0.0017,
+            "ENB.TO": 0.0113,
+            "FTS.TO": 0.075,
+            "GOOGL": 0.0044,
+            "JNJ": 0.0417,
+            "MSFT": 0.015,
+            "PG": 0.0239,
+            "QQQ": 0.0051,
+            "RY.TO": 0.0341,
+            "TD.TO": 0.0214,
+            "XIU.TO": 0.0396,
+            "XOM": 0.021,
+            "GLD": 0.05
+          }
+        }
+      },
+      "E5": {
+        "id": "E5",
+        "tool": "run_stress_test_2022",
+        "args": {
+          "weights": {
+            "AGG": 0.1096,
+            "XBB.TO": 0.1829,
+            "ZST.TO": 0.3575,
+            "ATD.TO": 0.0017,
+            "CNQ.TO": 0.0041,
+            "CSU.TO": 0.0017,
+            "ENB.TO": 0.0113,
+            "FTS.TO": 0.075,
+            "GOOGL": 0.0044,
+            "JNJ": 0.0417,
+            "MSFT": 0.015,
+            "PG": 0.0239,
+            "QQQ": 0.0051,
+            "RY.TO": 0.0341,
+            "TD.TO": 0.0214,
+            "XIU.TO": 0.0396,
+            "XOM": 0.021,
+            "GLD": 0.05
+          }
+        },
+        "result": {
+          "period": "2022-01-01 to 2022-12-31",
+          "episode": "2022 Stagflation / Rate-Hike Shock",
+          "historical_lesson": "During 2022, Canadian aggregate bonds (XBB.TO) fell alongside equities. Ultra short-term bonds (ZST.TO) and cash equivalents preserved capital substantially better.",
+          "portfolio": {
+            "max_drawdown": -0.0573,
+            "cumulative_return": -0.0181,
+            "annualized_volatility": 0.0478
+          },
+          "benchmarks": {
+            "benchmark_60_40": {
+              "max_drawdown": -0.1301,
+              "cumulative_return": -0.0851
+            },
+            "XIU_TO": {
+              "max_drawdown": -0.1636,
+              "cumulative_return": -0.0635
+            },
+            "SPY": {
+              "max_drawdown": -0.2165,
+              "cumulative_return": -0.1259
+            }
+          }
+        },
+        "source": "Simulation historique AlphaForge (épisode 2022-01-01 au 2022-12-31)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Test de résistance historique 2022 comparé à un portefeuille 60/40 et aux indices XIU/SPY.",
+        "summary_metrics": {
+          "portfolio_max_drawdown": -0.0573,
+          "portfolio_cumulative_return": -0.0181,
+          "benchmark_60_40_max_dd": -0.1301,
+          "xiu_max_dd": -0.1636,
+          "spy_max_dd": -0.2165
+        }
+      },
+      "E6": {
+        "id": "E6",
+        "tool": "compute_asset_risk",
+        "args": {
+          "ticker": "TSLA"
+        },
+        "result": {
+          "ticker": "TSLA",
+          "annualized_volatility": 0.5818,
+          "max_drawdown": -0.7088,
+          "cvar_95": 0.084,
+          "beta_xiu": 1.7207
+        },
+        "source": "Calculs quantitatifs AlphaForge (série historique ajustée en CAD)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'actif TSLA.",
+        "summary_metrics": {
+          "ticker": "TSLA",
+          "annualized_volatility": 0.5818,
+          "max_drawdown": -0.7088,
+          "cvar_95": 0.084,
+          "beta_xiu": 1.7207
+        }
+      },
+      "E7": {
+        "id": "E7",
+        "tool": "compare_portfolios",
+        "args": {
+          "ticker": "TSLA",
+          "requested_weight": 0.2,
+          "capped_weight": 0.03
+        },
+        "result": {
+          "ticker": "TSLA",
+          "target_vol_band": [
+            0.035,
+            0.06
+          ],
+          "baseline": {
+            "weight": 0.0,
+            "annualized_volatility": 0.0399,
+            "max_drawdown": -0.0573,
+            "stress_2022_max_dd": -0.0573,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.1263,
+            "max_drawdown": -0.2261,
+            "stress_2022_max_dd": -0.2255,
+            "target_band_respected": false
+          },
+          "capped_alternative": {
+            "weight": 0.03,
+            "annualized_volatility": 0.0454,
+            "max_drawdown": -0.0682,
+            "stress_2022_max_dd": -0.0682,
+            "target_band_respected": true
+          }
+        },
+        "source": "Solveur et Simulateur AlphaForge (Comparaison d'Allocation)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Comparaison d'impact : Base vs Demandé (20%) vs Alternative plafonnée (3%) pour TSLA.",
+        "summary_metrics": {
+          "ticker": "TSLA",
+          "baseline_vol": 0.0399,
+          "requested_vol": 0.1263,
+          "capped_alt_vol": 0.0454,
+          "requested_weight": 0.2,
+          "capped_weight": 0.03,
+          "requested_respects_band": false
+        }
+      }
+    },
+    "explanation": {
+      "resume": "Dans cette simulation éducative, une position de 20% en Tesla est jugée incompatible avec le mandat de préservation du capital de Robert. Elle porterait la volatilité du portefeuille de 3.99% à 12.63%, bien au-dessus de la bande cible de 3.5% à 6%. Un satellite plafonné à 3% resterait dans la bande, avec une volatilité de 4.54%.",
+      "quelles_donnees": [
+        {
+          "claim": "FAIT : TSLA affiche une volatilité annualisée de 58.18%, un max drawdown de -70.88%, un CVaR 95% de 8.40% et un bêta de 1.7207 par rapport au XIU.",
+          "evidence_ids": [
+            "E6"
+          ]
+        },
+        {
+          "claim": "FAIT : Le portefeuille stratégique de base affiche une volatilité de 3.99%, un rendement réalisé de 6.71% et un max drawdown de -5.73%, pour une bande cible de volatilité de 3.5% à 6%.",
+          "evidence_ids": [
+            "E4"
+          ]
+        },
+        {
+          "claim": "FAIT : Lors du stress test 2022, le portefeuille de base a connu un max drawdown de -5.73%, contre -13.01% pour le 60/40, -16.36% pour le XIU et -21.65% pour le SPY.",
+          "evidence_ids": [
+            "E5"
+          ]
+        }
+      ],
+      "pourquoi_ce_choix": [
+        {
+          "claim": "SCÉNARIO FICTIF : Avec 20% de TSLA, la volatilité simulée du portefeuille passerait de 3.99% à 12.63%. Elle sortirait de la bande cible, qui va de 3.5% à 6%.",
+          "evidence_ids": [
+            "E7",
+            "E4"
+          ]
+        },
+        {
+          "claim": "SCÉNARIO FICTIF : Un satellite TSLA plafonné à 3% donnerait une volatilité simulée de 4.54%, soit dans la bande cible de 3.5% à 6%. Robert garderait ainsi une exposition à la croissance sans compromettre le socle défensif.",
+          "evidence_ids": [
+            "E7",
+            "E4"
+          ]
+        },
+        {
+          "claim": "FAIT : TSLA a subi un drawdown historique de -70.88%, alors que le portefeuille de base a limité sa baisse à -5.73% lors du stress test 2022. Cet écart est difficile à concilier avec un mandat de préservation du capital.",
+          "evidence_ids": [
+            "E6",
+            "E5"
+          ]
+        }
+      ],
+      "limites": [
+        {
+          "text": "Les métriques reposent sur l'historique de marché disponible (31 actifs, en CAD). Elles ne garantissent pas les résultats futurs, y compris le rendement réalisé du portefeuille de base.",
+          "type": "donnee"
+        },
+        {
+          "text": "Les volatilités de 12.63% et de 4.54% sont des résultats de simulation comparative, pas des observations réelles. Le plafond de 3% est une hypothèse de l'équipe, pas une recommandation personnalisée.",
+          "type": "hypothese"
+        },
+        {
+          "text": "Le stress test ne couvre qu'un seul épisode de marché (stagflation 2022). Il ne représente pas tous les scénarios défavorables possibles.",
+          "type": "methode"
+        }
+      ],
+      "ce_qui_changerait_la_reponse": [
+        "Un allongement de l'horizon de placement ou une hausse de la tolérance au risque de Robert, avec un mandat orienté vers la croissance.",
+        "Un changement significatif du profil de risque de TSLA (volatilité ou drawdown) ou de la bande cible de volatilité du portefeuille.",
+        "Une demande de Robert d'accepter explicitement une volatilité plus élevée, ce qui exigerait une nouvelle validation de gouvernance."
+      ],
+      "alertes_gouvernance": [
+        {
+          "niveau": "info",
+          "message": "Simulation éducative uniquement : aucune transaction n'est exécutée et aucun conseil financier personnalisé n'est fourni.",
+          "evidence_ids": [
+            "E4"
+          ]
+        },
+        {
+          "niveau": "attention",
+          "message": "Incohérence entre la demande (20% en TSLA) et le profil de Robert : la volatilité simulée de 12.63% dépasse la bande cible, alors qu'un plafond de 3% donne 4.54%.",
+          "evidence_ids": [
+            "E6",
+            "E7",
+            "E4"
+          ]
+        }
+      ]
+    },
+    "alerts": [
+      {
+        "rule_name": "simulation_boundary_notice",
+        "level": "info",
+        "message": "Mandatory Boundary: Simulation only. This output is an educational decision-support aid. No live transactions are executed and no personalized financial advice is provided.",
+        "details": {},
+        "suggested_action": null,
+        "evidence_ids": []
+      },
+      {
+        "rule_name": "incoherence_horizon_robert_tsla",
+        "level": "attention",
+        "message": "Incohérence majeure identifiée : Robert (59 ans, horizon 3-5 ans, mandat de préservation du capital vers la retraite) demande 20.0% dans Tesla (TSLA). TSLA affiche une volatilité historique de 58.18% et une perte maximale de -70.88%. Intégrer 20.0% porterait la volatilité du portefeuille à 12.63% (dépassant le plafond cible de 6.00%). Alternative constructive : un satellite plafonné à 3.0% (volatilité 4.54%) permet une exposition à la croissance sans compromettre le socle obligataire défensif.",
+        "details": {
+          "ticker": "TSLA",
+          "requested_weight": 0.2,
+          "capped_weight": 0.03,
+          "tsla_volatility": 0.5818,
+          "tsla_max_dd": -0.7088,
+          "requested_portfolio_vol": 0.1263,
+          "capped_alternative_vol": 0.0454
+        },
+        "suggested_action": "Plafonner TSLA à 3.0% (satellite) dans le volet actions plutôt que l'allocation demandée.",
+        "evidence_ids": [
+          "E6",
+          "E7"
+        ]
+      }
+    ],
+    "trace": [
+      {
+        "timestamp": "2026-11-14T20:17:23.092099",
+        "event_type": "step_start",
+        "step_name": "0. Interprétation du Langage Naturel",
+        "details": {
+          "description": "Analyse sémantique de la demande : 'Je veux mettre 20% de mon portefeuille dans Tesla, qu'en pen...'"
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.377246",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E1",
+          "tool": "request_interpreter",
+          "summary": "Intention : add_position | Actifs demandés : ['TSLA']",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.493239",
+        "event_type": "step_start",
+        "step_name": "1. Chargement & Alignement des Données",
+        "details": {
+          "description": "Prix quotidiens ajustés en CAD et univers d'actifs."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.493251",
+        "event_type": "tool_call",
+        "step_name": "load_market_data",
+        "details": {
+          "tool": "load_market_data",
+          "args": {
+            "base_currency": "CAD"
+          },
+          "data": {
+            "tool": "load_market_data",
+            "args": {
+              "base_currency": "CAD"
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.493364",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E2",
+          "tool": "load_market_data",
+          "summary": "31 actifs alignés en CAD sur calendrier TSX.",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.493369",
+        "event_type": "step_start",
+        "step_name": "2. Analyse du Risque par Actif",
+        "details": {
+          "description": "Volatilité, perte maximale historique et CVaR 95 %."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.493373",
+        "event_type": "tool_call",
+        "step_name": "compute_asset_risk",
+        "details": {
+          "tool": "compute_asset_risk",
+          "args": {
+            "universe_count": 31
+          },
+          "data": {
+            "tool": "compute_asset_risk",
+            "args": {
+              "universe_count": 31
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.527552",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E3",
+          "tool": "compute_asset_risk",
+          "summary": "Volatilités et pertes maximales calculées pour l'univers.",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.527561",
+        "event_type": "step_start",
+        "step_name": "3. Optimisation Stratégique à Deux Niveaux",
+        "details": {
+          "description": "Allocation optimisée pour le profil Robert."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.527565",
+        "event_type": "tool_call",
+        "step_name": "optimize_strategic_portfolio",
+        "details": {
+          "tool": "optimize_strategic_portfolio",
+          "args": {
+            "persona_id": "robert",
+            "capital": 100000.0
+          },
+          "data": {
+            "tool": "optimize_strategic_portfolio",
+            "args": {
+              "persona_id": "robert",
+              "capital": 100000.0
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.564388",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E4",
+          "tool": "optimize_strategic_portfolio",
+          "summary": "Allocation optimale générée : Vol=3.99%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.564397",
+        "event_type": "step_start",
+        "step_name": "4. Test de Résistance (Stagflation 2022)",
+        "details": {
+          "description": "Simulation de la performance durant l'épisode inflationniste 2022."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.564401",
+        "event_type": "tool_call",
+        "step_name": "run_stress_test_2022",
+        "details": {
+          "tool": "run_stress_test_2022",
+          "args": {
+            "weights_count": 18
+          },
+          "data": {
+            "tool": "run_stress_test_2022",
+            "args": {
+              "weights_count": 18
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.570266",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E5",
+          "tool": "run_stress_test_2022",
+          "summary": "Max DD 2022 : -5.73% vs 60/40 : -13.01%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.570285",
+        "event_type": "step_start",
+        "step_name": "Évaluation Spécifique : TSLA",
+        "details": {
+          "description": "Simulation de l'impact de l'actif demandé TSLA."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.570289",
+        "event_type": "tool_call",
+        "step_name": "evaluate_asset_addition",
+        "details": {
+          "tool": "evaluate_asset_addition",
+          "args": {
+            "ticker": "TSLA",
+            "requested_weight": 0.2
+          },
+          "data": {
+            "tool": "evaluate_asset_addition",
+            "args": {
+              "ticker": "TSLA",
+              "requested_weight": 0.2
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.602140",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E6",
+          "tool": "compute_asset_risk",
+          "summary": "TSLA : Vol=58.18%, Max DD=-70.88%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.628036",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E7",
+          "tool": "compare_portfolios",
+          "summary": "Comparaison TSLA : Base Vol=3.99% | Demandé Vol=12.63% | Plafonné Vol=4.54%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.628091",
+        "event_type": "step_start",
+        "step_name": "Orchestrateur — Mode d'Exécution",
+        "details": {
+          "description": "Chemin exécuté : bedrock_agent_loop | Actifs spécifiques analysés : 1"
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.628096",
+        "event_type": "step_start",
+        "step_name": "5. Contrôle de Gouvernance & Conformité",
+        "details": {
+          "description": "Validation des politiques d'adéquation et détection de risques."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.630285",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "info",
+          "rule_id": "simulation_boundary_notice",
+          "message": "Mandatory Boundary: Simulation only. This output is an educational decision-support aid. No live transactions are executed and no personalized financial advice is provided."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.630292",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "attention",
+          "rule_id": "incoherence_horizon_robert_tsla",
+          "message": "Incohérence majeure identifiée : Robert (59 ans, horizon 3-5 ans, mandat de préservation du capital vers la retraite) demande 20.0% dans Tesla (TSLA). TSLA affiche une volatilité historique de 58.18% et une perte maximale de -70.88%. Intégrer 20.0% porterait la volatilité du portefeuille à 12.63% (dépassant le plafond cible de 6.00%). Alternative constructive : un satellite plafonné à 3.0% (volatilité 4.54%) permet une exposition à la croissance sans compromettre le socle obligataire défensif."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:25.630302",
+        "event_type": "step_start",
+        "step_name": "5. Génération de l'Explication Explicable",
+        "details": {
+          "description": "Synthèse factuelle fondée exclusivement sur les preuves E#."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:40.149826",
+        "event_type": "verification_result",
+        "step_name": "DeterministicVerifier",
+        "details": {
+          "is_valid": false,
+          "numbers_verified": 33,
+          "errors": [
+            {
+              "section": "pourquoi_ce_choix",
+              "claim": "FAIT : Un actif ayant subi un drawdown historique de -70.88% est difficile à concilier avec un horizon de 3 à 5 ans et un mandat de préservation du capital. Le portefeuille de base a limité sa baisse à -5.73% lors du stress 2022.",
+              "missing_value": "3",
+              "cited_ids": [
+                "E6",
+                "E5"
+              ],
+              "reason": "Number '3' in claim not supported by cited evidence (E6, E5)."
+            }
+          ]
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:40.150194",
+        "event_type": "step_start",
+        "step_name": "5b. Régénération Corrective de l'Explication",
+        "details": {
+          "description": "Correction des écarts numériques signalés par le vérificateur."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:53.804361",
+        "event_type": "verification_result",
+        "step_name": "DeterministicVerifier",
+        "details": {
+          "is_valid": true,
+          "numbers_verified": 33,
+          "errors": []
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:53.804453",
+        "event_type": "done",
+        "step_name": "Pipeline",
+        "details": {
+          "summary": "Analyse terminée avec succès pour Robert. Fidélité numérique vérifiée : True.",
+          "total_events": 27
+        }
+      }
+    ],
+    "verification": {
+      "is_valid": true,
+      "errors": [],
+      "total_claims_checked": 8,
+      "total_numbers_verified": 33,
+      "missing_evidence_ids": []
+    }
+  },
+  "amira": {
+    "run_id": "run_20261114_201753_b8346f",
+    "persona": {
+      "id": "amira",
+      "name": "Amira",
+      "age": 26,
+      "profession": "Software engineer",
+      "family_status": "Single, no children",
+      "investment_experience": "Intermediate",
+      "investment_objective": "Long-term capital growth",
+      "horizon_label": "15 years or more",
+      "horizon_years_min": 15,
+      "horizon_years_max": 30,
+      "risk_profile": "high",
+      "case_preferences": [
+        "Very interested in artificial intelligence and emerging technologies",
+        "Open to high-growth companies and significant volatility",
+        "Interested in crypto assets",
+        "Still wants some diversification and does not want to invest exclusively in technology"
+      ],
+      "reality_test": "How much risk will the system accept? It should account for an aggressive profile without interpreting 'high risk' as 'anything goes,' while respecting Amira's desire for diversification.",
+      "team_assumptions": {
+        "strategic_sleeves": "Equity 80% / Crypto 10% / Bonds 5% / Gold 5% based on 15+ yr aggressive horizon.",
+        "tech_ai_floor": "Tech sector floor set at 45% of equity (36% total portfolio), with NVDA floor >= 4.8% to guarantee observable AI exposure as tested by case.",
+        "single_asset_cap": "Individual equities capped at 12.5% of equity sleeve (<= 10% total portfolio) to enforce diversification.",
+        "crypto_allocation": "10% strategic allocation split equally between Bitcoin and Ether (5% BTC, 5% ETH) to capture growth without exceeding 15% ceiling.",
+        "target_volatility_band": "Target volatility band 12.0% to 20.0% annualized."
+      },
+      "constraints": {
+        "target_vol_band": [
+          0.12,
+          0.2
+        ],
+        "single_asset_cap": 0.1,
+        "bond_floor": 0.05,
+        "crypto_cap": 0.1,
+        "sector_caps": {
+          "Information Technology": 0.4
+        },
+        "sector_floors": {
+          "Information Technology": 0.3
+        },
+        "class_caps": {
+          "crypto": 0.1,
+          "etf_bond": 0.1
+        },
+        "class_floors": {
+          "crypto": 0.05,
+          "equity": 0.75
+        },
+        "per_asset_caps": {
+          "NVDA": 0.1,
+          "AAPL": 0.1,
+          "MSFT": 0.1,
+          "BTC-USD": 0.05,
+          "ETH-USD": 0.05
+        },
+        "per_asset_floors": {
+          "NVDA": 0.04
+        },
+        "exclusions": [],
+        "preferred_tickers": [
+          "NVDA",
+          "AAPL",
+          "MSFT",
+          "SHOP.TO",
+          "CSU.TO",
+          "BTC-USD",
+          "ETH-USD"
+        ],
+        "strategic_sleeves": [
+          {
+            "name": "equity",
+            "target_weight": 0.8,
+            "weight_band": [
+              0.75,
+              0.85
+            ],
+            "asset_classes": [
+              "equity",
+              "etf_equity"
+            ],
+            "single_asset_cap": 0.125,
+            "per_asset_caps": 0.125,
+            "per_asset_floors": {
+              "NVDA": 0.06,
+              "MSFT": 0.06,
+              "AAPL": 0.06
+            },
+            "sector_caps": {
+              "Information Technology": 0.5
+            },
+            "sector_floors": {
+              "Information Technology": 0.45
+            },
+            "exclusions": [],
+            "fixed_allocations": null,
+            "rationale": "Aggressive equity core with direct exposure to AI leaders (NVDA, MSFT, AAPL, CSU.TO, SHOP.TO) while maintaining non-tech diversification."
+          },
+          {
+            "name": "crypto",
+            "target_weight": 0.1,
+            "weight_band": [
+              0.05,
+              0.1
+            ],
+            "asset_classes": [
+              "crypto"
+            ],
+            "single_asset_cap": null,
+            "per_asset_caps": null,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": {
+              "BTC-USD": 0.5,
+              "ETH-USD": 0.5
+            },
+            "rationale": "Captures cryptoasset upside aligned with high risk tolerance and 15+ yr horizon, capped at 10% to prevent catastrophic drawdown."
+          },
+          {
+            "name": "bonds",
+            "target_weight": 0.05,
+            "weight_band": [
+              0.05,
+              0.1
+            ],
+            "asset_classes": [
+              "etf_bond"
+            ],
+            "single_asset_cap": null,
+            "per_asset_caps": null,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": {
+              "ZST.TO": 1.0
+            },
+            "rationale": "Minimal ultra short-term bond cushion for liquidity."
+          },
+          {
+            "name": "gold_cash",
+            "target_weight": 0.05,
+            "weight_band": [
+              0.0,
+              0.05
+            ],
+            "asset_classes": [
+              "etf_commodity"
+            ],
+            "single_asset_cap": null,
+            "per_asset_caps": null,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": {
+              "GLD": 1.0
+            },
+            "rationale": "Non-correlated commodity buffer."
+          }
+        ],
+        "provisional_esg_exclusions": []
+      }
+    },
+    "persona_name": "Amira",
+    "capital": 100000.0,
+    "parsed_request": {
+      "intent": "general_allocation",
+      "requested_positions": [
+        {
+          "ticker": "BTC-USD",
+          "weight": null,
+          "company_name": "Bitcoin"
+        },
+        {
+          "ticker": "ETH-USD",
+          "weight": null,
+          "company_name": "Ethereum"
+        }
+      ],
+      "requested_exclusions": [],
+      "constraint_changes": {
+        "total_allocation_weight": 1.0,
+        "asset_class": "cryptomonnaies"
+      },
+      "out_of_scope": false,
+      "unknown_entities": [],
+      "language": "fr",
+      "summary": "L'investisseur souhaite allouer 100 % de son capital aux cryptomonnaies, sans répartition précisée entre les actifs de l'univers (BTC-USD et/ou ETH-USD)."
+    },
+    "execution_path": "bedrock_agent_loop",
+    "requested_evaluations": [
+      {
+        "asset_evidence_id": "E6",
+        "comparison_evidence_id": "E7",
+        "asset_metrics": {
+          "ticker": "BTC-USD",
+          "annualized_volatility": 0.504,
+          "max_drawdown": -0.7331,
+          "cvar_95": 0.0734,
+          "beta_xiu": 1.2044
+        },
+        "comparison": {
+          "ticker": "BTC-USD",
+          "target_vol_band": [
+            0.12,
+            0.2
+          ],
+          "baseline": {
+            "weight": 0.05,
+            "annualized_volatility": 0.1328,
+            "max_drawdown": -0.1988,
+            "stress_2022_max_dd": -0.1988,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.1885,
+            "max_drawdown": -0.3282,
+            "stress_2022_max_dd": -0.3071,
+            "target_band_respected": true
+          },
+          "capped_alternative": {
+            "weight": 0.1,
+            "annualized_volatility": 0.1573,
+            "max_drawdown": -0.2567,
+            "stress_2022_max_dd": -0.2493,
+            "target_band_respected": true
+          }
+        },
+        "capped_weights": {
+          "AAPL": 0.0899,
+          "CSU.TO": 0.09,
+          "ENB.TO": 0.09,
+          "FTS.TO": 0.09,
+          "JNJ": 0.09,
+          "MSFT": 0.09,
+          "NVDA": 0.054,
+          "PG": 0.044,
+          "TD.TO": 0.0355,
+          "XOM": 0.0466,
+          "BTC-USD": 0.145,
+          "ETH-USD": 0.045,
+          "ZST.TO": 0.045,
+          "GLD": 0.045
+        }
+      },
+      {
+        "asset_evidence_id": "E8",
+        "comparison_evidence_id": "E9",
+        "asset_metrics": {
+          "ticker": "ETH-USD",
+          "annualized_volatility": 0.6735,
+          "max_drawdown": -0.7719,
+          "cvar_95": 0.0979,
+          "beta_xiu": 1.7544
+        },
+        "comparison": {
+          "ticker": "ETH-USD",
+          "target_vol_band": [
+            0.12,
+            0.2
+          ],
+          "baseline": {
+            "weight": 0.05,
+            "annualized_volatility": 0.1328,
+            "max_drawdown": -0.1988,
+            "stress_2022_max_dd": -0.1988,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.2209,
+            "max_drawdown": -0.3547,
+            "stress_2022_max_dd": -0.3385,
+            "target_band_respected": false
+          },
+          "capped_alternative": {
+            "weight": 0.1,
+            "annualized_volatility": 0.1724,
+            "max_drawdown": -0.2793,
+            "stress_2022_max_dd": -0.2682,
+            "target_band_respected": true
+          }
+        },
+        "capped_weights": {
+          "AAPL": 0.0899,
+          "CSU.TO": 0.09,
+          "ENB.TO": 0.09,
+          "FTS.TO": 0.09,
+          "JNJ": 0.09,
+          "MSFT": 0.09,
+          "NVDA": 0.054,
+          "PG": 0.044,
+          "TD.TO": 0.0355,
+          "XOM": 0.0466,
+          "BTC-USD": 0.045,
+          "ETH-USD": 0.145,
+          "ZST.TO": 0.045,
+          "GLD": 0.045
+        }
+      }
+    ],
+    "allocation": {
+      "AAPL": 0.0999,
+      "CSU.TO": 0.1,
+      "ENB.TO": 0.1,
+      "FTS.TO": 0.1,
+      "JNJ": 0.1,
+      "MSFT": 0.1,
+      "NVDA": 0.06,
+      "PG": 0.0489,
+      "TD.TO": 0.0394,
+      "XOM": 0.0518,
+      "BTC-USD": 0.05,
+      "ETH-USD": 0.05,
+      "ZST.TO": 0.05,
+      "GLD": 0.05
+    },
+    "dollar_amounts": {
+      "AAPL": 9990.0,
+      "CSU.TO": 10000.0,
+      "ENB.TO": 10000.0,
+      "FTS.TO": 10000.0,
+      "JNJ": 10000.0,
+      "MSFT": 10000.0,
+      "NVDA": 6000.0,
+      "PG": 4890.0,
+      "TD.TO": 3940.0,
+      "XOM": 5180.0,
+      "BTC-USD": 5000.0,
+      "ETH-USD": 5000.0,
+      "ZST.TO": 5000.0,
+      "GLD": 5000.0
+    },
+    "metrics": {
+      "annualized_volatility": 0.1328,
+      "realized_annual_return": 0.1307,
+      "max_drawdown": -0.1988,
+      "cvar_95": 0.0195,
+      "beta_vs_benchmark": 0.6953,
+      "active_assets_count": 14
+    },
+    "stress_test": {
+      "period": "2022-01-01 to 2022-12-31",
+      "episode": "2022 Stagflation / Rate-Hike Shock",
+      "historical_lesson": "During 2022, Canadian aggregate bonds (XBB.TO) fell alongside equities. Ultra short-term bonds (ZST.TO) and cash equivalents preserved capital substantially better.",
+      "portfolio": {
+        "max_drawdown": -0.1988,
+        "cumulative_return": -0.1343,
+        "annualized_volatility": 0.1914
+      },
+      "benchmarks": {
+        "benchmark_60_40": {
+          "max_drawdown": -0.1301,
+          "cumulative_return": -0.0851
+        },
+        "XIU_TO": {
+          "max_drawdown": -0.1636,
+          "cumulative_return": -0.0635
+        },
+        "SPY": {
+          "max_drawdown": -0.2165,
+          "cumulative_return": -0.1259
+        }
+      }
+    },
+    "evidence": {
+      "E1": {
+        "id": "E1",
+        "tool": "request_interpreter",
+        "args": {
+          "question": "Je veux investir 100% de mon capital dans les cryptomonnaies"
+        },
+        "result": {
+          "intent": "general_allocation",
+          "requested_positions": [
+            {
+              "ticker": "BTC-USD",
+              "weight": null,
+              "company_name": "Bitcoin"
+            },
+            {
+              "ticker": "ETH-USD",
+              "weight": null,
+              "company_name": "Ethereum"
+            }
+          ],
+          "requested_exclusions": [],
+          "constraint_changes": {
+            "total_allocation_weight": 1.0,
+            "asset_class": "cryptomonnaies"
+          },
+          "out_of_scope": false,
+          "unknown_entities": [],
+          "language": "fr",
+          "summary": "L'investisseur souhaite allouer 100 % de son capital aux cryptomonnaies, sans répartition précisée entre les actifs de l'univers (BTC-USD et/ou ETH-USD)."
+        },
+        "source": "Agent Interpréteur AlphaForge (Claude Haiku 3.5 & Cartographie de l'Univers)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Interprétation sémantique et structurée de la demande investisseur.",
+        "summary_metrics": {}
+      },
+      "E2": {
+        "id": "E2",
+        "tool": "load_market_data",
+        "args": {
+          "base_currency": "CAD"
+        },
+        "result": {
+          "start_date": "2021-11-12",
+          "end_date": "2026-11-12",
+          "total_trading_days": 1282,
+          "universe_assets_count": 31,
+          "base_currency": "CAD",
+          "tickers": [
+            "AAPL",
+            "AGG",
+            "AMZN",
+            "ATD.TO",
+            "BTC-USD",
+            "CNQ.TO",
+            "CNR.TO",
+            "CSU.TO",
+            "ENB.TO",
+            "ESGV",
+            "ETH-USD",
+            "FTS.TO",
+            "GLD",
+            "GOOGL",
+            "JNJ",
+            "JPM",
+            "MFC.TO",
+            "MSFT",
+            "NVDA",
+            "PG",
+            "QQQ",
+            "RY.TO",
+            "SHOP.TO",
+            "SPY",
+            "TD.TO",
+            "TLT",
+            "TSLA",
+            "XBB.TO",
+            "XIU.TO",
+            "XOM",
+            "ZST.TO"
+          ]
+        },
+        "source": "PolyFinances Starter Pack / Yahoo Finance & BoC Valet",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Univers d'actifs 2021-2026 avec prix ajustés et rendements convertis en CAD.",
+        "summary_metrics": {
+          "start_date": "2021-11-12",
+          "end_date": "2026-11-12",
+          "total_trading_days": 1282,
+          "universe_count": 31,
+          "base_currency": "CAD"
+        }
+      },
+      "E3": {
+        "id": "E3",
+        "tool": "compute_asset_risk",
+        "args": {
+          "universe_size": 31
+        },
+        "result": {
+          "AAPL": {
+            "annualized_volatility": 0.2746,
+            "max_drawdown": -0.3424,
+            "cvar_95": 0.0395,
+            "beta_xiu": 0.9168
+          },
+          "AGG": {
+            "annualized_volatility": 0.0731,
+            "max_drawdown": -0.1275,
+            "cvar_95": 0.0099,
+            "beta_xiu": -0.0331
+          },
+          "AMZN": {
+            "annualized_volatility": 0.3594,
+            "max_drawdown": -0.5239,
+            "cvar_95": 0.0507,
+            "beta_xiu": 1.205
+          },
+          "ATD.TO": {
+            "annualized_volatility": 0.237,
+            "max_drawdown": -0.2216,
+            "cvar_95": 0.0307,
+            "beta_xiu": 0.7498
+          },
+          "BTC-USD": {
+            "annualized_volatility": 0.504,
+            "max_drawdown": -0.7331,
+            "cvar_95": 0.0734,
+            "beta_xiu": 1.2044
+          },
+          "CNQ.TO": {
+            "annualized_volatility": 0.3046,
+            "max_drawdown": -0.3311,
+            "cvar_95": 0.0469,
+            "beta_xiu": 1.0077
+          },
+          "CNR.TO": {
+            "annualized_volatility": 0.1969,
+            "max_drawdown": -0.2725,
+            "cvar_95": 0.0294,
+            "beta_xiu": 0.8403
+          },
+          "CSU.TO": {
+            "annualized_volatility": 0.3022,
+            "max_drawdown": -0.5638,
+            "cvar_95": 0.0443,
+            "beta_xiu": 0.9746
+          },
+          "ENB.TO": {
+            "annualized_volatility": 0.1596,
+            "max_drawdown": -0.2138,
+            "cvar_95": 0.0245,
+            "beta_xiu": 0.5973
+          },
+          "ESGV": {
+            "annualized_volatility": 0.1784,
+            "max_drawdown": -0.2686,
+            "cvar_95": 0.0262,
+            "beta_xiu": 0.9282
+          },
+          "ETH-USD": {
+            "annualized_volatility": 0.6735,
+            "max_drawdown": -0.7719,
+            "cvar_95": 0.0979,
+            "beta_xiu": 1.7544
+          },
+          "FTS.TO": {
+            "annualized_volatility": 0.1455,
+            "max_drawdown": -0.2401,
+            "cvar_95": 0.0193,
+            "beta_xiu": 0.2291
+          },
+          "GLD": {
+            "annualized_volatility": 0.1829,
+            "max_drawdown": -0.26,
+            "cvar_95": 0.0272,
+            "beta_xiu": 0.3459
+          },
+          "GOOGL": {
+            "annualized_volatility": 0.3199,
+            "max_drawdown": -0.3947,
+            "cvar_95": 0.0463,
+            "beta_xiu": 0.881
+          },
+          "JNJ": {
+            "annualized_volatility": 0.1817,
+            "max_drawdown": -0.1555,
+            "cvar_95": 0.0242,
+            "beta_xiu": 0.0994
+          },
+          "JPM": {
+            "annualized_volatility": 0.2357,
+            "max_drawdown": -0.3224,
+            "cvar_95": 0.0347,
+            "beta_xiu": 0.9467
+          },
+          "MFC.TO": {
+            "annualized_volatility": 0.2147,
+            "max_drawdown": -0.2105,
+            "cvar_95": 0.0316,
+            "beta_xiu": 1.1106
+          },
+          "MSFT": {
+            "annualized_volatility": 0.2768,
+            "max_drawdown": -0.3431,
+            "cvar_95": 0.0385,
+            "beta_xiu": 0.7818
+          },
+          "NVDA": {
+            "annualized_volatility": 0.5024,
+            "max_drawdown": -0.6346,
+            "cvar_95": 0.0689,
+            "beta_xiu": 1.6301
+          },
+          "PG": {
+            "annualized_volatility": 0.1863,
+            "max_drawdown": -0.2347,
+            "cvar_95": 0.0264,
+            "beta_xiu": 0.195
+          },
+          "QQQ": {
+            "annualized_volatility": 0.2252,
+            "max_drawdown": -0.3205,
+            "cvar_95": 0.033,
+            "beta_xiu": 1.0293
+          },
+          "RY.TO": {
+            "annualized_volatility": 0.1532,
+            "max_drawdown": -0.2121,
+            "cvar_95": 0.0225,
+            "beta_xiu": 0.8599
+          },
+          "SHOP.TO": {
+            "annualized_volatility": 0.6347,
+            "max_drawdown": -0.8347,
+            "cvar_95": 0.0926,
+            "beta_xiu": 2.6823
+          },
+          "SPY": {
+            "annualized_volatility": 0.1648,
+            "max_drawdown": -0.2225,
+            "cvar_95": 0.0241,
+            "beta_xiu": 0.8718
+          },
+          "TD.TO": {
+            "annualized_volatility": 0.1757,
+            "max_drawdown": -0.2606,
+            "cvar_95": 0.0269,
+            "beta_xiu": 0.842
+          },
+          "TLT": {
+            "annualized_volatility": 0.1588,
+            "max_drawdown": -0.3973,
+            "cvar_95": 0.0219,
+            "beta_xiu": 0.0156
+          },
+          "TSLA": {
+            "annualized_volatility": 0.5818,
+            "max_drawdown": -0.7088,
+            "cvar_95": 0.084,
+            "beta_xiu": 1.7207
+          },
+          "XBB.TO": {
+            "annualized_volatility": 0.0657,
+            "max_drawdown": -0.1548,
+            "cvar_95": 0.009,
+            "beta_xiu": 0.0989
+          },
+          "XIU.TO": {
+            "annualized_volatility": 0.1293,
+            "max_drawdown": -0.1636,
+            "cvar_95": 0.0188,
+            "beta_xiu": 1.0
+          },
+          "XOM": {
+            "annualized_volatility": 0.2575,
+            "max_drawdown": -0.1908,
+            "cvar_95": 0.0378,
+            "beta_xiu": 0.5678
+          },
+          "ZST.TO": {
+            "annualized_volatility": 0.0055,
+            "max_drawdown": -0.0043,
+            "cvar_95": 0.0006,
+            "beta_xiu": 0.0066
+          }
+        },
+        "source": "Calculs quantitatifs AlphaForge (formules mathématiques standard)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'univers de 31 actifs.",
+        "summary_metrics": {
+          "benchmark_xiu_vol": 0.1293,
+          "benchmark_spy_vol": 0.1648,
+          "top_assets": {
+            "TSLA": {
+              "annualized_volatility": 0.5818,
+              "max_drawdown": -0.7088,
+              "cvar_95": 0.084,
+              "beta_xiu": 1.7207
+            },
+            "BTC-USD": {
+              "annualized_volatility": 0.504,
+              "max_drawdown": -0.7331,
+              "cvar_95": 0.0734,
+              "beta_xiu": 1.2044
+            },
+            "NVDA": {
+              "annualized_volatility": 0.5024,
+              "max_drawdown": -0.6346,
+              "cvar_95": 0.0689,
+              "beta_xiu": 1.6301
+            },
+            "ENB.TO": {
+              "annualized_volatility": 0.1596,
+              "max_drawdown": -0.2138,
+              "cvar_95": 0.0245,
+              "beta_xiu": 0.5973
+            },
+            "ZST.TO": {
+              "annualized_volatility": 0.0055,
+              "max_drawdown": -0.0043,
+              "cvar_95": 0.0006,
+              "beta_xiu": 0.0066
+            },
+            "XBB.TO": {
+              "annualized_volatility": 0.0657,
+              "max_drawdown": -0.1548,
+              "cvar_95": 0.009,
+              "beta_xiu": 0.0989
+            },
+            "GLD": {
+              "annualized_volatility": 0.1829,
+              "max_drawdown": -0.26,
+              "cvar_95": 0.0272,
+              "beta_xiu": 0.3459
+            },
+            "RY.TO": {
+              "annualized_volatility": 0.1532,
+              "max_drawdown": -0.2121,
+              "cvar_95": 0.0225,
+              "beta_xiu": 0.8599
+            }
+          }
+        }
+      },
+      "E4": {
+        "id": "E4",
+        "tool": "optimize_strategic_portfolio",
+        "args": {
+          "persona": "amira",
+          "target_vol_band": [
+            0.12,
+            0.2
+          ]
+        },
+        "result": {
+          "persona": "amira",
+          "weights": {
+            "AAPL": 0.0999,
+            "CSU.TO": 0.1,
+            "ENB.TO": 0.1,
+            "FTS.TO": 0.1,
+            "JNJ": 0.1,
+            "MSFT": 0.1,
+            "NVDA": 0.06,
+            "PG": 0.0489,
+            "TD.TO": 0.0394,
+            "XOM": 0.0518,
+            "BTC-USD": 0.05,
+            "ETH-USD": 0.05,
+            "ZST.TO": 0.05,
+            "GLD": 0.05
+          },
+          "dollar_amounts_cad": {
+            "AAPL": 9990.0,
+            "CSU.TO": 10000.0,
+            "ENB.TO": 10000.0,
+            "FTS.TO": 10000.0,
+            "JNJ": 10000.0,
+            "MSFT": 10000.0,
+            "NVDA": 6000.0,
+            "PG": 4890.0,
+            "TD.TO": 3940.0,
+            "XOM": 5180.0,
+            "BTC-USD": 5000.0,
+            "ETH-USD": 5000.0,
+            "ZST.TO": 5000.0,
+            "GLD": 5000.0
+          },
+          "metrics": {
+            "annualized_volatility": 0.1328,
+            "realized_annual_return": 0.1307,
+            "max_drawdown": -0.1988,
+            "cvar_95": 0.0195,
+            "beta_vs_benchmark": 0.6953,
+            "active_assets_count": 14
+          },
+          "target_vol_band": [
+            0.12,
+            0.2
+          ],
+          "solver_status": "optimal",
+          "active_assets": 14,
+          "constraints_summary": {
+            "sleeves": [
+              {
+                "name": "equity",
+                "target_weight": 0.8,
+                "weight_band": [
+                  0.75,
+                  0.85
+                ],
+                "asset_classes": [
+                  "equity",
+                  "etf_equity"
+                ],
+                "single_asset_cap": 0.125,
+                "per_asset_caps": 0.125,
+                "per_asset_floors": {
+                  "NVDA": 0.06,
+                  "MSFT": 0.06,
+                  "AAPL": 0.06
+                },
+                "sector_caps": {
+                  "Information Technology": 0.5
+                },
+                "sector_floors": {
+                  "Information Technology": 0.45
+                },
+                "exclusions": [],
+                "fixed_allocations": null,
+                "rationale": "Aggressive equity core with direct exposure to AI leaders (NVDA, MSFT, AAPL, CSU.TO, SHOP.TO) while maintaining non-tech diversification."
+              },
+              {
+                "name": "crypto",
+                "target_weight": 0.1,
+                "weight_band": [
+                  0.05,
+                  0.1
+                ],
+                "asset_classes": [
+                  "crypto"
+                ],
+                "single_asset_cap": null,
+                "per_asset_caps": null,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": {
+                  "BTC-USD": 0.5,
+                  "ETH-USD": 0.5
+                },
+                "rationale": "Captures cryptoasset upside aligned with high risk tolerance and 15+ yr horizon, capped at 10% to prevent catastrophic drawdown."
+              },
+              {
+                "name": "bonds",
+                "target_weight": 0.05,
+                "weight_band": [
+                  0.05,
+                  0.1
+                ],
+                "asset_classes": [
+                  "etf_bond"
+                ],
+                "single_asset_cap": null,
+                "per_asset_caps": null,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": {
+                  "ZST.TO": 1.0
+                },
+                "rationale": "Minimal ultra short-term bond cushion for liquidity."
+              },
+              {
+                "name": "gold_cash",
+                "target_weight": 0.05,
+                "weight_band": [
+                  0.0,
+                  0.05
+                ],
+                "asset_classes": [
+                  "etf_commodity"
+                ],
+                "single_asset_cap": null,
+                "per_asset_caps": null,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": {
+                  "GLD": 1.0
+                },
+                "rationale": "Non-correlated commodity buffer."
+              }
+            ],
+            "sleeve_breakdown": {
+              "equity": {
+                "intra_weights": {
+                  "AAPL": 0.125,
+                  "CSU.TO": 0.125,
+                  "ENB.TO": 0.125,
+                  "FTS.TO": 0.125,
+                  "JNJ": 0.125,
+                  "MSFT": 0.125,
+                  "NVDA": 0.075,
+                  "PG": 0.0611,
+                  "TD.TO": 0.0492,
+                  "XOM": 0.0647
+                },
+                "sleeve_weight": 0.8,
+                "method": "constrained_min_variance",
+                "status": "optimal"
+              },
+              "crypto": {
+                "intra_weights": {
+                  "BTC-USD": 0.5,
+                  "ETH-USD": 0.5
+                },
+                "sleeve_weight": 0.1,
+                "method": "fixed_allocation"
+              },
+              "bonds": {
+                "intra_weights": {
+                  "ZST.TO": 1.0
+                },
+                "sleeve_weight": 0.05,
+                "method": "fixed_allocation"
+              },
+              "gold_cash": {
+                "intra_weights": {
+                  "GLD": 1.0
+                },
+                "sleeve_weight": 0.05,
+                "method": "fixed_allocation"
+              }
+            },
+            "target_vol_band": [
+              0.12,
+              0.2
+            ],
+            "within_target_vol_band": true
+          }
+        },
+        "source": "Solveur CVXPY (Quadratique sous contraintes de poches stratégiques)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Portefeuille stratégique et pondérations optimales pour Amira.",
+        "summary_metrics": {
+          "annualized_volatility": 0.1328,
+          "realized_annual_return": 0.1307,
+          "max_drawdown": -0.1988,
+          "target_vol_band": [
+            0.12,
+            0.2
+          ],
+          "active_assets_count": 14,
+          "weights": {
+            "AAPL": 0.0999,
+            "CSU.TO": 0.1,
+            "ENB.TO": 0.1,
+            "FTS.TO": 0.1,
+            "JNJ": 0.1,
+            "MSFT": 0.1,
+            "NVDA": 0.06,
+            "PG": 0.0489,
+            "TD.TO": 0.0394,
+            "XOM": 0.0518,
+            "BTC-USD": 0.05,
+            "ETH-USD": 0.05,
+            "ZST.TO": 0.05,
+            "GLD": 0.05
+          }
+        }
+      },
+      "E5": {
+        "id": "E5",
+        "tool": "run_stress_test_2022",
+        "args": {
+          "weights": {
+            "AAPL": 0.0999,
+            "CSU.TO": 0.1,
+            "ENB.TO": 0.1,
+            "FTS.TO": 0.1,
+            "JNJ": 0.1,
+            "MSFT": 0.1,
+            "NVDA": 0.06,
+            "PG": 0.0489,
+            "TD.TO": 0.0394,
+            "XOM": 0.0518,
+            "BTC-USD": 0.05,
+            "ETH-USD": 0.05,
+            "ZST.TO": 0.05,
+            "GLD": 0.05
+          }
+        },
+        "result": {
+          "period": "2022-01-01 to 2022-12-31",
+          "episode": "2022 Stagflation / Rate-Hike Shock",
+          "historical_lesson": "During 2022, Canadian aggregate bonds (XBB.TO) fell alongside equities. Ultra short-term bonds (ZST.TO) and cash equivalents preserved capital substantially better.",
+          "portfolio": {
+            "max_drawdown": -0.1988,
+            "cumulative_return": -0.1343,
+            "annualized_volatility": 0.1914
+          },
+          "benchmarks": {
+            "benchmark_60_40": {
+              "max_drawdown": -0.1301,
+              "cumulative_return": -0.0851
+            },
+            "XIU_TO": {
+              "max_drawdown": -0.1636,
+              "cumulative_return": -0.0635
+            },
+            "SPY": {
+              "max_drawdown": -0.2165,
+              "cumulative_return": -0.1259
+            }
+          }
+        },
+        "source": "Simulation historique AlphaForge (épisode 2022-01-01 au 2022-12-31)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Test de résistance historique 2022 comparé à un portefeuille 60/40 et aux indices XIU/SPY.",
+        "summary_metrics": {
+          "portfolio_max_drawdown": -0.1988,
+          "portfolio_cumulative_return": -0.1343,
+          "benchmark_60_40_max_dd": -0.1301,
+          "xiu_max_dd": -0.1636,
+          "spy_max_dd": -0.2165
+        }
+      },
+      "E6": {
+        "id": "E6",
+        "tool": "compute_asset_risk",
+        "args": {
+          "ticker": "BTC-USD"
+        },
+        "result": {
+          "ticker": "BTC-USD",
+          "annualized_volatility": 0.504,
+          "max_drawdown": -0.7331,
+          "cvar_95": 0.0734,
+          "beta_xiu": 1.2044
+        },
+        "source": "Calculs quantitatifs AlphaForge (série historique ajustée en CAD)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'actif BTC-USD.",
+        "summary_metrics": {
+          "ticker": "BTC-USD",
+          "annualized_volatility": 0.504,
+          "max_drawdown": -0.7331,
+          "cvar_95": 0.0734,
+          "beta_xiu": 1.2044
+        }
+      },
+      "E7": {
+        "id": "E7",
+        "tool": "compare_portfolios",
+        "args": {
+          "ticker": "BTC-USD",
+          "requested_weight": 0.2,
+          "capped_weight": 0.1
+        },
+        "result": {
+          "ticker": "BTC-USD",
+          "target_vol_band": [
+            0.12,
+            0.2
+          ],
+          "baseline": {
+            "weight": 0.05,
+            "annualized_volatility": 0.1328,
+            "max_drawdown": -0.1988,
+            "stress_2022_max_dd": -0.1988,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.1885,
+            "max_drawdown": -0.3282,
+            "stress_2022_max_dd": -0.3071,
+            "target_band_respected": true
+          },
+          "capped_alternative": {
+            "weight": 0.1,
+            "annualized_volatility": 0.1573,
+            "max_drawdown": -0.2567,
+            "stress_2022_max_dd": -0.2493,
+            "target_band_respected": true
+          }
+        },
+        "source": "Solveur et Simulateur AlphaForge (Comparaison d'Allocation)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Comparaison d'impact : Base vs Demandé (20%) vs Alternative plafonnée (10%) pour BTC-USD.",
+        "summary_metrics": {
+          "ticker": "BTC-USD",
+          "baseline_vol": 0.1328,
+          "requested_vol": 0.1885,
+          "capped_alt_vol": 0.1573,
+          "requested_weight": 0.2,
+          "capped_weight": 0.1,
+          "requested_respects_band": true
+        }
+      },
+      "E8": {
+        "id": "E8",
+        "tool": "compute_asset_risk",
+        "args": {
+          "ticker": "ETH-USD"
+        },
+        "result": {
+          "ticker": "ETH-USD",
+          "annualized_volatility": 0.6735,
+          "max_drawdown": -0.7719,
+          "cvar_95": 0.0979,
+          "beta_xiu": 1.7544
+        },
+        "source": "Calculs quantitatifs AlphaForge (série historique ajustée en CAD)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'actif ETH-USD.",
+        "summary_metrics": {
+          "ticker": "ETH-USD",
+          "annualized_volatility": 0.6735,
+          "max_drawdown": -0.7719,
+          "cvar_95": 0.0979,
+          "beta_xiu": 1.7544
+        }
+      },
+      "E9": {
+        "id": "E9",
+        "tool": "compare_portfolios",
+        "args": {
+          "ticker": "ETH-USD",
+          "requested_weight": 0.2,
+          "capped_weight": 0.1
+        },
+        "result": {
+          "ticker": "ETH-USD",
+          "target_vol_band": [
+            0.12,
+            0.2
+          ],
+          "baseline": {
+            "weight": 0.05,
+            "annualized_volatility": 0.1328,
+            "max_drawdown": -0.1988,
+            "stress_2022_max_dd": -0.1988,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.2209,
+            "max_drawdown": -0.3547,
+            "stress_2022_max_dd": -0.3385,
+            "target_band_respected": false
+          },
+          "capped_alternative": {
+            "weight": 0.1,
+            "annualized_volatility": 0.1724,
+            "max_drawdown": -0.2793,
+            "stress_2022_max_dd": -0.2682,
+            "target_band_respected": true
+          }
+        },
+        "source": "Solveur et Simulateur AlphaForge (Comparaison d'Allocation)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Comparaison d'impact : Base vs Demandé (20%) vs Alternative plafonnée (10%) pour ETH-USD.",
+        "summary_metrics": {
+          "ticker": "ETH-USD",
+          "baseline_vol": 0.1328,
+          "requested_vol": 0.2209,
+          "capped_alt_vol": 0.1724,
+          "requested_weight": 0.2,
+          "capped_weight": 0.1,
+          "requested_respects_band": false
+        }
+      }
+    },
+    "explanation": {
+      "resume": "Amira souhaite investir 100 % de son capital fictif en cryptomonnaies. Aucune simulation ne chiffre ce scénario, et il dépasse le plafond de concentration de 10 %. Le portefeuille optimisé retient 5.0 % en BTC-USD et 5.0 % en ETH-USD, pour une volatilité de 13.28 %. Les max drawdowns historiques sont de -73.31 % (BTC-USD) et -77.19 % (ETH-USD). Simulation éducative uniquement, sans conseil personnalisé.",
+      "quelles_donnees": [
+        {
+          "claim": "FAIT : la demande est une allocation de 100 % en cryptomonnaies, sans répartition précisée entre BTC-USD et ETH-USD.",
+          "evidence_ids": [
+            "E1"
+          ]
+        },
+        {
+          "claim": "FAIT : sur 2021-11-12 à 2026-11-12, BTC-USD affiche une volatilité annualisée de 50.4 %, un max drawdown de -73.31 % et un bêta de 1.2044 vs XIU.",
+          "evidence_ids": [
+            "E6"
+          ]
+        },
+        {
+          "claim": "FAIT : sur la même période, ETH-USD affiche une volatilité annualisée de 67.35 %, un max drawdown de -77.19 % et un bêta de 1.7544 vs XIU.",
+          "evidence_ids": [
+            "E8"
+          ]
+        },
+        {
+          "claim": "SCÉNARIO FICTIF : à 20 % de poids, la volatilité du portefeuille passerait de 13.28 % à 18.85 % avec BTC-USD et à 22.09 % avec ETH-USD. Ce dernier cas sort de la bande cible de 12 % à 20 %.",
+          "evidence_ids": [
+            "E7",
+            "E9",
+            "E4"
+          ]
+        }
+      ],
+      "pourquoi_ce_choix": [
+        {
+          "claim": "Le portefeuille optimisé répartit le capital sur 14 actifs, dont 5.0 % en BTC-USD et 5.0 % en ETH-USD. Il affiche une volatilité de 13.28 % et un rendement réalisé de 13.07 %. La croissance reste ainsi accessible sans concentration extrême.",
+          "evidence_ids": [
+            "E4"
+          ]
+        },
+        {
+          "claim": "SCÉNARIO FICTIF : plafonner une position crypto à 10 % donnerait une volatilité de 15.73 % pour BTC-USD et de 17.24 % pour ETH-USD. Ces niveaux restent inférieurs à ceux du scénario à 20 % (18.85 % et 22.09 %).",
+          "evidence_ids": [
+            "E7",
+            "E9"
+          ]
+        },
+        {
+          "claim": "Lors du stress test 2022, le portefeuille optimisé a subi un max drawdown de -19.88 %, contre -13.01 % pour le 60/40, -16.36 % pour XIU et -21.65 % pour SPY.",
+          "evidence_ids": [
+            "E5"
+          ]
+        }
+      ],
+      "limites": [
+        {
+          "text": "Aucune simulation ne porte sur un portefeuille 100 % crypto. Sa volatilité et son drawdown ne sont pas disponibles et ne doivent pas être extrapolés.",
+          "type": "methode"
+        },
+        {
+          "text": "Les comparaisons testent 20 % par actif crypto, pas la demande réelle de 100 %. Le plafond de 10 % y est aussi appliqué par actif, ce qui diffère d'un plafond total.",
+          "type": "methode"
+        },
+        {
+          "text": "Les métriques reposent sur une période historique de cinq ans. Elles ne garantissent pas les performances futures, et cette période comporte peu de cycles complets pour les cryptomonnaies.",
+          "type": "donnee"
+        },
+        {
+          "text": "HYPOTHÈSE d'équipe : la tolérance au risque élevée et l'horizon long ne justifient pas à eux seuls une concentration dépassant le plafond.",
+          "type": "hypothese"
+        }
+      ],
+      "ce_qui_changerait_la_reponse": [
+        "Une révision du plafond de concentration crypto par le comité de gouvernance.",
+        "Un profil de risque ou un horizon différent, ou un capital total plus élevé avec un coussin non crypto distinct.",
+        "Une simulation dédiée d'un portefeuille à forte exposition crypto, avec stress test, pour mesurer concrètement l'écart avec la demande."
+      ],
+      "alertes_gouvernance": [
+        {
+          "niveau": "attention",
+          "message": "Concentration excessive en BTC-USD : le scénario à 20 % dépasse le plafond de 10 %. Le max drawdown historique de BTC-USD est de -73.31 %. Action suggérée : maintenir l'exposition crypto plafonnée à 10 %.",
+          "evidence_ids": [
+            "E7",
+            "E6"
+          ]
+        },
+        {
+          "niveau": "attention",
+          "message": "Concentration excessive en ETH-USD : le scénario à 20 % dépasse le plafond de 10 % et fait sortir la volatilité de la bande cible (22.09 % contre 20 % maximum). Le max drawdown historique d'ETH-USD est de -77.19 %. Action suggérée : maintenir l'exposition crypto plafonnée à 10 %.",
+          "evidence_ids": [
+            "E9",
+            "E8",
+            "E4"
+          ]
+        },
+        {
+          "niveau": "info",
+          "message": "Simulation uniquement : outil éducatif d'aide à la décision, sans transaction réelle ni conseil financier personnalisé.",
+          "evidence_ids": [
+            "E4"
+          ]
+        }
+      ]
+    },
+    "alerts": [
+      {
+        "rule_name": "simulation_boundary_notice",
+        "level": "info",
+        "message": "Mandatory Boundary: Simulation only. This output is an educational decision-support aid. No live transactions are executed and no personalized financial advice is provided.",
+        "details": {},
+        "suggested_action": null,
+        "evidence_ids": []
+      },
+      {
+        "rule_name": "concentration_crypto_amira",
+        "level": "attention",
+        "message": "Alerte de concentration excessive : Amira demande 20.0% dans les crypto-actifs (BTC-USD). Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de 10.0% viole le principe fondamental de diversification et expose à des drawdowns > 70%. Alternative constructive : maintenir la poche crypto plafonnée à 10.0% pour participer à la croissance tout en conservant la robustesse du portefeuille.",
+        "details": {
+          "ticker": "BTC-USD",
+          "requested_weight": 0.2,
+          "cap": 0.1
+        },
+        "suggested_action": "Maintenir l'exposition crypto totale plafonnée à 10.0%.",
+        "evidence_ids": [
+          "E7"
+        ]
+      },
+      {
+        "rule_name": "concentration_crypto_amira",
+        "level": "attention",
+        "message": "Alerte de concentration excessive : Amira demande 20.0% dans les crypto-actifs (ETH-USD). Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de 10.0% viole le principe fondamental de diversification et expose à des drawdowns > 70%. Alternative constructive : maintenir la poche crypto plafonnée à 10.0% pour participer à la croissance tout en conservant la robustesse du portefeuille.",
+        "details": {
+          "ticker": "ETH-USD",
+          "requested_weight": 0.2,
+          "cap": 0.1
+        },
+        "suggested_action": "Maintenir l'exposition crypto totale plafonnée à 10.0%.",
+        "evidence_ids": [
+          "E9"
+        ]
+      }
+    ],
+    "trace": [
+      {
+        "timestamp": "2026-11-14T20:17:53.861488",
+        "event_type": "step_start",
+        "step_name": "0. Interprétation du Langage Naturel",
+        "details": {
+          "description": "Analyse sémantique de la demande : 'Je veux investir 100% de mon capital dans les cryptomonnaies...'"
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.378749",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E1",
+          "tool": "request_interpreter",
+          "summary": "Intention : general_allocation | Actifs demandés : ['BTC-USD', 'ETH-USD']",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.453731",
+        "event_type": "step_start",
+        "step_name": "1. Chargement & Alignement des Données",
+        "details": {
+          "description": "Prix quotidiens ajustés en CAD et univers d'actifs."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.453742",
+        "event_type": "tool_call",
+        "step_name": "load_market_data",
+        "details": {
+          "tool": "load_market_data",
+          "args": {
+            "base_currency": "CAD"
+          },
+          "data": {
+            "tool": "load_market_data",
+            "args": {
+              "base_currency": "CAD"
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.453848",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E2",
+          "tool": "load_market_data",
+          "summary": "31 actifs alignés en CAD sur calendrier TSX.",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.453854",
+        "event_type": "step_start",
+        "step_name": "2. Analyse du Risque par Actif",
+        "details": {
+          "description": "Volatilité, perte maximale historique et CVaR 95 %."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.453857",
+        "event_type": "tool_call",
+        "step_name": "compute_asset_risk",
+        "details": {
+          "tool": "compute_asset_risk",
+          "args": {
+            "universe_count": 31
+          },
+          "data": {
+            "tool": "compute_asset_risk",
+            "args": {
+              "universe_count": 31
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.494265",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E3",
+          "tool": "compute_asset_risk",
+          "summary": "Volatilités et pertes maximales calculées pour l'univers.",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.494273",
+        "event_type": "step_start",
+        "step_name": "3. Optimisation Stratégique à Deux Niveaux",
+        "details": {
+          "description": "Allocation optimisée pour le profil Amira."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.494278",
+        "event_type": "tool_call",
+        "step_name": "optimize_strategic_portfolio",
+        "details": {
+          "tool": "optimize_strategic_portfolio",
+          "args": {
+            "persona_id": "amira",
+            "capital": 100000.0
+          },
+          "data": {
+            "tool": "optimize_strategic_portfolio",
+            "args": {
+              "persona_id": "amira",
+              "capital": 100000.0
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.520972",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E4",
+          "tool": "optimize_strategic_portfolio",
+          "summary": "Allocation optimale générée : Vol=13.28%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.520980",
+        "event_type": "step_start",
+        "step_name": "4. Test de Résistance (Stagflation 2022)",
+        "details": {
+          "description": "Simulation de la performance durant l'épisode inflationniste 2022."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.520984",
+        "event_type": "tool_call",
+        "step_name": "run_stress_test_2022",
+        "details": {
+          "tool": "run_stress_test_2022",
+          "args": {
+            "weights_count": 14
+          },
+          "data": {
+            "tool": "run_stress_test_2022",
+            "args": {
+              "weights_count": 14
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.526669",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E5",
+          "tool": "run_stress_test_2022",
+          "summary": "Max DD 2022 : -19.88% vs 60/40 : -13.01%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.526687",
+        "event_type": "step_start",
+        "step_name": "Évaluation Spécifique : BTC-USD",
+        "details": {
+          "description": "Simulation de l'impact de l'actif demandé BTC-USD."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.526691",
+        "event_type": "tool_call",
+        "step_name": "evaluate_asset_addition",
+        "details": {
+          "tool": "evaluate_asset_addition",
+          "args": {
+            "ticker": "BTC-USD",
+            "requested_weight": null
+          },
+          "data": {
+            "tool": "evaluate_asset_addition",
+            "args": {
+              "ticker": "BTC-USD",
+              "requested_weight": null
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.557757",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E6",
+          "tool": "compute_asset_risk",
+          "summary": "BTC-USD : Vol=50.40%, Max DD=-73.31%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.582316",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E7",
+          "tool": "compare_portfolios",
+          "summary": "Comparaison BTC-USD : Base Vol=13.28% | Demandé Vol=18.85% | Plafonné Vol=15.73%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.582342",
+        "event_type": "step_start",
+        "step_name": "Évaluation Spécifique : ETH-USD",
+        "details": {
+          "description": "Simulation de l'impact de l'actif demandé ETH-USD."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.582346",
+        "event_type": "tool_call",
+        "step_name": "evaluate_asset_addition",
+        "details": {
+          "tool": "evaluate_asset_addition",
+          "args": {
+            "ticker": "ETH-USD",
+            "requested_weight": null
+          },
+          "data": {
+            "tool": "evaluate_asset_addition",
+            "args": {
+              "ticker": "ETH-USD",
+              "requested_weight": null
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.613717",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E8",
+          "tool": "compute_asset_risk",
+          "summary": "ETH-USD : Vol=67.35%, Max DD=-77.19%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.638446",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E9",
+          "tool": "compare_portfolios",
+          "summary": "Comparaison ETH-USD : Base Vol=13.28% | Demandé Vol=22.09% | Plafonné Vol=17.24%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.638469",
+        "event_type": "step_start",
+        "step_name": "Orchestrateur — Mode d'Exécution",
+        "details": {
+          "description": "Chemin exécuté : bedrock_agent_loop | Actifs spécifiques analysés : 2"
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.638474",
+        "event_type": "step_start",
+        "step_name": "5. Contrôle de Gouvernance & Conformité",
+        "details": {
+          "description": "Validation des politiques d'adéquation et détection de risques."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.640566",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "info",
+          "rule_id": "simulation_boundary_notice",
+          "message": "Mandatory Boundary: Simulation only. This output is an educational decision-support aid. No live transactions are executed and no personalized financial advice is provided."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.640572",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "attention",
+          "rule_id": "concentration_crypto_amira",
+          "message": "Alerte de concentration excessive : Amira demande 20.0% dans les crypto-actifs (BTC-USD). Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de 10.0% viole le principe fondamental de diversification et expose à des drawdowns > 70%. Alternative constructive : maintenir la poche crypto plafonnée à 10.0% pour participer à la croissance tout en conservant la robustesse du portefeuille."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.640575",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "attention",
+          "rule_id": "concentration_crypto_amira",
+          "message": "Alerte de concentration excessive : Amira demande 20.0% dans les crypto-actifs (ETH-USD). Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de 10.0% viole le principe fondamental de diversification et expose à des drawdowns > 70%. Alternative constructive : maintenir la poche crypto plafonnée à 10.0% pour participer à la croissance tout en conservant la robustesse du portefeuille."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:17:57.640583",
+        "event_type": "step_start",
+        "step_name": "5. Génération de l'Explication Explicable",
+        "details": {
+          "description": "Synthèse factuelle fondée exclusivement sur les preuves E#."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:17.083985",
+        "event_type": "verification_result",
+        "step_name": "DeterministicVerifier",
+        "details": {
+          "is_valid": false,
+          "numbers_verified": 37,
+          "errors": [
+            {
+              "section": "alertes_gouvernance",
+              "claim": "Concentration excessive en BTC-USD : le scénario à 20 % dépasse le plafond de 10 %. Les drawdowns historiques dépassent 70 %. Action suggérée : maintenir l'exposition crypto plafonnée à 10 %.",
+              "missing_value": "70",
+              "cited_ids": [
+                "E7",
+                "E6"
+              ],
+              "reason": "Number '70' in claim not supported by cited evidence (E7, E6)."
+            }
+          ]
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:17.084108",
+        "event_type": "step_start",
+        "step_name": "5b. Régénération Corrective de l'Explication",
+        "details": {
+          "description": "Correction des écarts numériques signalés par le vérificateur."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:31.975242",
+        "event_type": "verification_result",
+        "step_name": "DeterministicVerifier",
+        "details": {
+          "is_valid": true,
+          "numbers_verified": 43,
+          "errors": []
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:31.975275",
+        "event_type": "done",
+        "step_name": "Pipeline",
+        "details": {
+          "summary": "Analyse terminée avec succès pour Amira. Fidélité numérique vérifiée : True.",
+          "total_events": 32
+        }
+      }
+    ],
+    "verification": {
+      "is_valid": true,
+      "errors": [],
+      "total_claims_checked": 10,
+      "total_numbers_verified": 43,
+      "missing_evidence_ids": []
+    }
+  },
+  "mateo": {
+    "run_id": "run_20261114_201831_16cba6",
+    "persona": {
+      "id": "mateo",
+      "name": "Mateo",
+      "age": 41,
+      "profession": "Operations manager",
+      "family_status": "Partner and two children",
+      "investment_experience": "Intermediate",
+      "investment_objective": "Balanced capital growth over medium and long term",
+      "horizon_label": "8 to 12 years",
+      "horizon_years_min": 8,
+      "horizon_years_max": 12,
+      "risk_profile": "moderate",
+      "case_preferences": [
+        "Places high importance on Environmental, Social, and Governance (ESG) factors",
+        "Wants to avoid companies involved in significant environmental or social controversies",
+        "Seeks a balance between growth potential and stability",
+        "Open to emerging technologies when they fit his risk profile, but has little interest in highly speculative investments"
+      ],
+      "reality_test": "Can the system incorporate more than return and risk? It should consider financial factors and personal preferences, rather than selecting solely for potential return.",
+      "team_assumptions": {
+        "strategic_sleeves": "Equity 60% / Bonds 35% / Gold 5% / Crypto 0% for 8-12 yr balanced family growth.",
+        "provisional_esg_exclusions": "Oil sands, pipelines, and fossil fuels (CNQ.TO, ENB.TO, XOM) excluded under provisional team hypothesis pending dedicated ESG dataset (ref GitHub issue #4).",
+        "esg_core_holding": "Vanguard ESG U.S. Stock ETF (ESGV) allocated as core holding at >= 25% of equity (>= 15% total portfolio).",
+        "speculative_crypto_exclusion": "Cryptoassets (BTC-USD, ETH-USD) strictly 0% per case preference to avoid speculative instruments.",
+        "target_volatility_band": "Target volatility band 6.0% to 11.0% annualized."
+      },
+      "constraints": {
+        "target_vol_band": [
+          0.06,
+          0.11
+        ],
+        "single_asset_cap": 0.1,
+        "bond_floor": 0.3,
+        "crypto_cap": 0.0,
+        "sector_caps": {
+          "Energy": 0.0
+        },
+        "sector_floors": {},
+        "class_caps": {
+          "crypto": 0.0,
+          "etf_bond": 0.4
+        },
+        "class_floors": {
+          "etf_bond": 0.3,
+          "equity": 0.55
+        },
+        "per_asset_caps": {
+          "ESGV": 0.25
+        },
+        "per_asset_floors": {
+          "ESGV": 0.15
+        },
+        "exclusions": [
+          "BTC-USD",
+          "ETH-USD",
+          "CNQ.TO",
+          "ENB.TO",
+          "XOM"
+        ],
+        "preferred_tickers": [
+          "ESGV",
+          "XIU.TO",
+          "XBB.TO",
+          "ZST.TO",
+          "AGG",
+          "CNR.TO",
+          "FTS.TO"
+        ],
+        "strategic_sleeves": [
+          {
+            "name": "equity",
+            "target_weight": 0.6,
+            "weight_band": [
+              0.55,
+              0.65
+            ],
+            "asset_classes": [
+              "equity",
+              "etf_equity"
+            ],
+            "single_asset_cap": 0.166,
+            "per_asset_caps": {
+              "ESGV": 0.35
+            },
+            "per_asset_floors": {
+              "ESGV": 0.25
+            },
+            "sector_caps": {
+              "Energy": 0.0
+            },
+            "sector_floors": null,
+            "exclusions": [
+              "CNQ.TO",
+              "ENB.TO",
+              "XOM"
+            ],
+            "fixed_allocations": null,
+            "rationale": "Balanced equity core anchored by ESG-screened US equity (ESGV) and non-fossil Canadian/US dividend companies."
+          },
+          {
+            "name": "bonds",
+            "target_weight": 0.35,
+            "weight_band": [
+              0.3,
+              0.4
+            ],
+            "asset_classes": [
+              "etf_bond"
+            ],
+            "single_asset_cap": null,
+            "per_asset_caps": 0.5,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": null,
+            "rationale": "Fixed income stability sleeve (ZST.TO, XBB.TO, AGG) providing capital preservation across 8-12 yr horizon."
+          },
+          {
+            "name": "gold_cash",
+            "target_weight": 0.05,
+            "weight_band": [
+              0.0,
+              0.05
+            ],
+            "asset_classes": [
+              "etf_commodity"
+            ],
+            "single_asset_cap": null,
+            "per_asset_caps": null,
+            "per_asset_floors": null,
+            "sector_caps": null,
+            "sector_floors": null,
+            "exclusions": null,
+            "fixed_allocations": {
+              "GLD": 1.0
+            },
+            "rationale": "Commodity hedge against stagflation / inflation."
+          }
+        ],
+        "provisional_esg_exclusions": [
+          {
+            "ticker": "CNQ.TO",
+            "reason": "Oil sands exploration and production",
+            "source": "hypothese_equipe — à remplacer par source ESG"
+          },
+          {
+            "ticker": "ENB.TO",
+            "reason": "Crude oil and liquids pipeline transmission",
+            "source": "hypothese_equipe — à remplacer par source ESG"
+          },
+          {
+            "ticker": "XOM",
+            "reason": "Integrated fossil fuel oil and gas exploration",
+            "source": "hypothese_equipe — à remplacer par source ESG"
+          }
+        ]
+      }
+    },
+    "persona_name": "Mateo",
+    "capital": 100000.0,
+    "parsed_request": {
+      "intent": "add_position",
+      "requested_positions": [
+        {
+          "ticker": "ENB.TO",
+          "weight": null,
+          "company_name": "Enbridge"
+        }
+      ],
+      "requested_exclusions": [],
+      "constraint_changes": {},
+      "out_of_scope": false,
+      "unknown_entities": [],
+      "language": "fr",
+      "summary": "L'investisseur souhaite ajouter Enbridge (ENB.TO) à son portefeuille, pour son dividende, sans pondération précisée."
+    },
+    "execution_path": "bedrock_agent_loop",
+    "requested_evaluations": [
+      {
+        "asset_evidence_id": "E6",
+        "comparison_evidence_id": "E7",
+        "asset_metrics": {
+          "ticker": "ENB.TO",
+          "annualized_volatility": 0.1596,
+          "max_drawdown": -0.2138,
+          "cvar_95": 0.0245,
+          "beta_xiu": 0.5973
+        },
+        "comparison": {
+          "ticker": "ENB.TO",
+          "target_vol_band": [
+            0.06,
+            0.11
+          ],
+          "baseline": {
+            "weight": 0.0,
+            "annualized_volatility": 0.067,
+            "max_drawdown": -0.1042,
+            "stress_2022_max_dd": -0.0995,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.0725,
+            "max_drawdown": -0.0985,
+            "stress_2022_max_dd": -0.0985,
+            "target_band_respected": true
+          },
+          "capped_alternative": {
+            "weight": 0.1,
+            "annualized_volatility": 0.0683,
+            "max_drawdown": -0.0939,
+            "stress_2022_max_dd": -0.0939,
+            "target_band_respected": true
+          }
+        },
+        "capped_weights": {
+          "ATD.TO": 0.0041,
+          "ESGV": 0.135,
+          "FTS.TO": 0.0896,
+          "JNJ": 0.0896,
+          "PG": 0.0495,
+          "RY.TO": 0.0547,
+          "TD.TO": 0.039,
+          "XIU.TO": 0.0784,
+          "AGG": 0.0586,
+          "XBB.TO": 0.0989,
+          "ZST.TO": 0.1575,
+          "GLD": 0.045,
+          "ENB.TO": 0.1
+        }
+      }
+    ],
+    "allocation": {
+      "ATD.TO": 0.0046,
+      "ESGV": 0.15,
+      "FTS.TO": 0.0996,
+      "JNJ": 0.0996,
+      "PG": 0.055,
+      "RY.TO": 0.0608,
+      "TD.TO": 0.0433,
+      "XIU.TO": 0.0871,
+      "AGG": 0.0651,
+      "XBB.TO": 0.1099,
+      "ZST.TO": 0.175,
+      "GLD": 0.05
+    },
+    "dollar_amounts": {
+      "ATD.TO": 460.0,
+      "ESGV": 15000.0,
+      "FTS.TO": 9960.0,
+      "JNJ": 9960.0,
+      "PG": 5500.0,
+      "RY.TO": 6080.0,
+      "TD.TO": 4330.0,
+      "XIU.TO": 8710.0,
+      "AGG": 6510.0,
+      "XBB.TO": 10990.0,
+      "ZST.TO": 17500.0,
+      "GLD": 5000.0
+    },
+    "metrics": {
+      "annualized_volatility": 0.067,
+      "realized_annual_return": 0.0959,
+      "max_drawdown": -0.1042,
+      "cvar_95": 0.0093,
+      "beta_vs_benchmark": 0.3891,
+      "active_assets_count": 12
+    },
+    "stress_test": {
+      "period": "2022-01-01 to 2022-12-31",
+      "episode": "2022 Stagflation / Rate-Hike Shock",
+      "historical_lesson": "During 2022, Canadian aggregate bonds (XBB.TO) fell alongside equities. Ultra short-term bonds (ZST.TO) and cash equivalents preserved capital substantially better.",
+      "portfolio": {
+        "max_drawdown": -0.0995,
+        "cumulative_return": -0.0473,
+        "annualized_volatility": 0.0836
+      },
+      "benchmarks": {
+        "benchmark_60_40": {
+          "max_drawdown": -0.1301,
+          "cumulative_return": -0.0851
+        },
+        "XIU_TO": {
+          "max_drawdown": -0.1636,
+          "cumulative_return": -0.0635
+        },
+        "SPY": {
+          "max_drawdown": -0.2165,
+          "cumulative_return": -0.1259
+        }
+      }
+    },
+    "evidence": {
+      "E1": {
+        "id": "E1",
+        "tool": "request_interpreter",
+        "args": {
+          "question": "Est-ce que je peux ajouter Enbridge (ENB) pour son dividende ?"
+        },
+        "result": {
+          "intent": "add_position",
+          "requested_positions": [
+            {
+              "ticker": "ENB.TO",
+              "weight": null,
+              "company_name": "Enbridge"
+            }
+          ],
+          "requested_exclusions": [],
+          "constraint_changes": {},
+          "out_of_scope": false,
+          "unknown_entities": [],
+          "language": "fr",
+          "summary": "L'investisseur souhaite ajouter Enbridge (ENB.TO) à son portefeuille, pour son dividende, sans pondération précisée."
+        },
+        "source": "Agent Interpréteur AlphaForge (Claude Haiku 3.5 & Cartographie de l'Univers)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Interprétation sémantique et structurée de la demande investisseur.",
+        "summary_metrics": {}
+      },
+      "E2": {
+        "id": "E2",
+        "tool": "load_market_data",
+        "args": {
+          "base_currency": "CAD"
+        },
+        "result": {
+          "start_date": "2021-11-12",
+          "end_date": "2026-11-12",
+          "total_trading_days": 1282,
+          "universe_assets_count": 31,
+          "base_currency": "CAD",
+          "tickers": [
+            "AAPL",
+            "AGG",
+            "AMZN",
+            "ATD.TO",
+            "BTC-USD",
+            "CNQ.TO",
+            "CNR.TO",
+            "CSU.TO",
+            "ENB.TO",
+            "ESGV",
+            "ETH-USD",
+            "FTS.TO",
+            "GLD",
+            "GOOGL",
+            "JNJ",
+            "JPM",
+            "MFC.TO",
+            "MSFT",
+            "NVDA",
+            "PG",
+            "QQQ",
+            "RY.TO",
+            "SHOP.TO",
+            "SPY",
+            "TD.TO",
+            "TLT",
+            "TSLA",
+            "XBB.TO",
+            "XIU.TO",
+            "XOM",
+            "ZST.TO"
+          ]
+        },
+        "source": "PolyFinances Starter Pack / Yahoo Finance & BoC Valet",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Univers d'actifs 2021-2026 avec prix ajustés et rendements convertis en CAD.",
+        "summary_metrics": {
+          "start_date": "2021-11-12",
+          "end_date": "2026-11-12",
+          "total_trading_days": 1282,
+          "universe_count": 31,
+          "base_currency": "CAD"
+        }
+      },
+      "E3": {
+        "id": "E3",
+        "tool": "compute_asset_risk",
+        "args": {
+          "universe_size": 31
+        },
+        "result": {
+          "AAPL": {
+            "annualized_volatility": 0.2746,
+            "max_drawdown": -0.3424,
+            "cvar_95": 0.0395,
+            "beta_xiu": 0.9168
+          },
+          "AGG": {
+            "annualized_volatility": 0.0731,
+            "max_drawdown": -0.1275,
+            "cvar_95": 0.0099,
+            "beta_xiu": -0.0331
+          },
+          "AMZN": {
+            "annualized_volatility": 0.3594,
+            "max_drawdown": -0.5239,
+            "cvar_95": 0.0507,
+            "beta_xiu": 1.205
+          },
+          "ATD.TO": {
+            "annualized_volatility": 0.237,
+            "max_drawdown": -0.2216,
+            "cvar_95": 0.0307,
+            "beta_xiu": 0.7498
+          },
+          "BTC-USD": {
+            "annualized_volatility": 0.504,
+            "max_drawdown": -0.7331,
+            "cvar_95": 0.0734,
+            "beta_xiu": 1.2044
+          },
+          "CNQ.TO": {
+            "annualized_volatility": 0.3046,
+            "max_drawdown": -0.3311,
+            "cvar_95": 0.0469,
+            "beta_xiu": 1.0077
+          },
+          "CNR.TO": {
+            "annualized_volatility": 0.1969,
+            "max_drawdown": -0.2725,
+            "cvar_95": 0.0294,
+            "beta_xiu": 0.8403
+          },
+          "CSU.TO": {
+            "annualized_volatility": 0.3022,
+            "max_drawdown": -0.5638,
+            "cvar_95": 0.0443,
+            "beta_xiu": 0.9746
+          },
+          "ENB.TO": {
+            "annualized_volatility": 0.1596,
+            "max_drawdown": -0.2138,
+            "cvar_95": 0.0245,
+            "beta_xiu": 0.5973
+          },
+          "ESGV": {
+            "annualized_volatility": 0.1784,
+            "max_drawdown": -0.2686,
+            "cvar_95": 0.0262,
+            "beta_xiu": 0.9282
+          },
+          "ETH-USD": {
+            "annualized_volatility": 0.6735,
+            "max_drawdown": -0.7719,
+            "cvar_95": 0.0979,
+            "beta_xiu": 1.7544
+          },
+          "FTS.TO": {
+            "annualized_volatility": 0.1455,
+            "max_drawdown": -0.2401,
+            "cvar_95": 0.0193,
+            "beta_xiu": 0.2291
+          },
+          "GLD": {
+            "annualized_volatility": 0.1829,
+            "max_drawdown": -0.26,
+            "cvar_95": 0.0272,
+            "beta_xiu": 0.3459
+          },
+          "GOOGL": {
+            "annualized_volatility": 0.3199,
+            "max_drawdown": -0.3947,
+            "cvar_95": 0.0463,
+            "beta_xiu": 0.881
+          },
+          "JNJ": {
+            "annualized_volatility": 0.1817,
+            "max_drawdown": -0.1555,
+            "cvar_95": 0.0242,
+            "beta_xiu": 0.0994
+          },
+          "JPM": {
+            "annualized_volatility": 0.2357,
+            "max_drawdown": -0.3224,
+            "cvar_95": 0.0347,
+            "beta_xiu": 0.9467
+          },
+          "MFC.TO": {
+            "annualized_volatility": 0.2147,
+            "max_drawdown": -0.2105,
+            "cvar_95": 0.0316,
+            "beta_xiu": 1.1106
+          },
+          "MSFT": {
+            "annualized_volatility": 0.2768,
+            "max_drawdown": -0.3431,
+            "cvar_95": 0.0385,
+            "beta_xiu": 0.7818
+          },
+          "NVDA": {
+            "annualized_volatility": 0.5024,
+            "max_drawdown": -0.6346,
+            "cvar_95": 0.0689,
+            "beta_xiu": 1.6301
+          },
+          "PG": {
+            "annualized_volatility": 0.1863,
+            "max_drawdown": -0.2347,
+            "cvar_95": 0.0264,
+            "beta_xiu": 0.195
+          },
+          "QQQ": {
+            "annualized_volatility": 0.2252,
+            "max_drawdown": -0.3205,
+            "cvar_95": 0.033,
+            "beta_xiu": 1.0293
+          },
+          "RY.TO": {
+            "annualized_volatility": 0.1532,
+            "max_drawdown": -0.2121,
+            "cvar_95": 0.0225,
+            "beta_xiu": 0.8599
+          },
+          "SHOP.TO": {
+            "annualized_volatility": 0.6347,
+            "max_drawdown": -0.8347,
+            "cvar_95": 0.0926,
+            "beta_xiu": 2.6823
+          },
+          "SPY": {
+            "annualized_volatility": 0.1648,
+            "max_drawdown": -0.2225,
+            "cvar_95": 0.0241,
+            "beta_xiu": 0.8718
+          },
+          "TD.TO": {
+            "annualized_volatility": 0.1757,
+            "max_drawdown": -0.2606,
+            "cvar_95": 0.0269,
+            "beta_xiu": 0.842
+          },
+          "TLT": {
+            "annualized_volatility": 0.1588,
+            "max_drawdown": -0.3973,
+            "cvar_95": 0.0219,
+            "beta_xiu": 0.0156
+          },
+          "TSLA": {
+            "annualized_volatility": 0.5818,
+            "max_drawdown": -0.7088,
+            "cvar_95": 0.084,
+            "beta_xiu": 1.7207
+          },
+          "XBB.TO": {
+            "annualized_volatility": 0.0657,
+            "max_drawdown": -0.1548,
+            "cvar_95": 0.009,
+            "beta_xiu": 0.0989
+          },
+          "XIU.TO": {
+            "annualized_volatility": 0.1293,
+            "max_drawdown": -0.1636,
+            "cvar_95": 0.0188,
+            "beta_xiu": 1.0
+          },
+          "XOM": {
+            "annualized_volatility": 0.2575,
+            "max_drawdown": -0.1908,
+            "cvar_95": 0.0378,
+            "beta_xiu": 0.5678
+          },
+          "ZST.TO": {
+            "annualized_volatility": 0.0055,
+            "max_drawdown": -0.0043,
+            "cvar_95": 0.0006,
+            "beta_xiu": 0.0066
+          }
+        },
+        "source": "Calculs quantitatifs AlphaForge (formules mathématiques standard)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'univers de 31 actifs.",
+        "summary_metrics": {
+          "benchmark_xiu_vol": 0.1293,
+          "benchmark_spy_vol": 0.1648,
+          "top_assets": {
+            "TSLA": {
+              "annualized_volatility": 0.5818,
+              "max_drawdown": -0.7088,
+              "cvar_95": 0.084,
+              "beta_xiu": 1.7207
+            },
+            "BTC-USD": {
+              "annualized_volatility": 0.504,
+              "max_drawdown": -0.7331,
+              "cvar_95": 0.0734,
+              "beta_xiu": 1.2044
+            },
+            "NVDA": {
+              "annualized_volatility": 0.5024,
+              "max_drawdown": -0.6346,
+              "cvar_95": 0.0689,
+              "beta_xiu": 1.6301
+            },
+            "ENB.TO": {
+              "annualized_volatility": 0.1596,
+              "max_drawdown": -0.2138,
+              "cvar_95": 0.0245,
+              "beta_xiu": 0.5973
+            },
+            "ZST.TO": {
+              "annualized_volatility": 0.0055,
+              "max_drawdown": -0.0043,
+              "cvar_95": 0.0006,
+              "beta_xiu": 0.0066
+            },
+            "XBB.TO": {
+              "annualized_volatility": 0.0657,
+              "max_drawdown": -0.1548,
+              "cvar_95": 0.009,
+              "beta_xiu": 0.0989
+            },
+            "GLD": {
+              "annualized_volatility": 0.1829,
+              "max_drawdown": -0.26,
+              "cvar_95": 0.0272,
+              "beta_xiu": 0.3459
+            },
+            "RY.TO": {
+              "annualized_volatility": 0.1532,
+              "max_drawdown": -0.2121,
+              "cvar_95": 0.0225,
+              "beta_xiu": 0.8599
+            }
+          }
+        }
+      },
+      "E4": {
+        "id": "E4",
+        "tool": "optimize_strategic_portfolio",
+        "args": {
+          "persona": "mateo",
+          "target_vol_band": [
+            0.06,
+            0.11
+          ]
+        },
+        "result": {
+          "persona": "mateo",
+          "weights": {
+            "ATD.TO": 0.0046,
+            "ESGV": 0.15,
+            "FTS.TO": 0.0996,
+            "JNJ": 0.0996,
+            "PG": 0.055,
+            "RY.TO": 0.0608,
+            "TD.TO": 0.0433,
+            "XIU.TO": 0.0871,
+            "AGG": 0.0651,
+            "XBB.TO": 0.1099,
+            "ZST.TO": 0.175,
+            "GLD": 0.05
+          },
+          "dollar_amounts_cad": {
+            "ATD.TO": 460.0,
+            "ESGV": 15000.0,
+            "FTS.TO": 9960.0,
+            "JNJ": 9960.0,
+            "PG": 5500.0,
+            "RY.TO": 6080.0,
+            "TD.TO": 4330.0,
+            "XIU.TO": 8710.0,
+            "AGG": 6510.0,
+            "XBB.TO": 10990.0,
+            "ZST.TO": 17500.0,
+            "GLD": 5000.0
+          },
+          "metrics": {
+            "annualized_volatility": 0.067,
+            "realized_annual_return": 0.0959,
+            "max_drawdown": -0.1042,
+            "cvar_95": 0.0093,
+            "beta_vs_benchmark": 0.3891,
+            "active_assets_count": 12
+          },
+          "target_vol_band": [
+            0.06,
+            0.11
+          ],
+          "solver_status": "optimal",
+          "active_assets": 12,
+          "constraints_summary": {
+            "sleeves": [
+              {
+                "name": "equity",
+                "target_weight": 0.6,
+                "weight_band": [
+                  0.55,
+                  0.65
+                ],
+                "asset_classes": [
+                  "equity",
+                  "etf_equity"
+                ],
+                "single_asset_cap": 0.166,
+                "per_asset_caps": {
+                  "ESGV": 0.35
+                },
+                "per_asset_floors": {
+                  "ESGV": 0.25
+                },
+                "sector_caps": {
+                  "Energy": 0.0
+                },
+                "sector_floors": null,
+                "exclusions": [
+                  "CNQ.TO",
+                  "ENB.TO",
+                  "XOM"
+                ],
+                "fixed_allocations": null,
+                "rationale": "Balanced equity core anchored by ESG-screened US equity (ESGV) and non-fossil Canadian/US dividend companies."
+              },
+              {
+                "name": "bonds",
+                "target_weight": 0.35,
+                "weight_band": [
+                  0.3,
+                  0.4
+                ],
+                "asset_classes": [
+                  "etf_bond"
+                ],
+                "single_asset_cap": null,
+                "per_asset_caps": 0.5,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": null,
+                "rationale": "Fixed income stability sleeve (ZST.TO, XBB.TO, AGG) providing capital preservation across 8-12 yr horizon."
+              },
+              {
+                "name": "gold_cash",
+                "target_weight": 0.05,
+                "weight_band": [
+                  0.0,
+                  0.05
+                ],
+                "asset_classes": [
+                  "etf_commodity"
+                ],
+                "single_asset_cap": null,
+                "per_asset_caps": null,
+                "per_asset_floors": null,
+                "sector_caps": null,
+                "sector_floors": null,
+                "exclusions": null,
+                "fixed_allocations": {
+                  "GLD": 1.0
+                },
+                "rationale": "Commodity hedge against stagflation / inflation."
+              }
+            ],
+            "sleeve_breakdown": {
+              "equity": {
+                "intra_weights": {
+                  "ATD.TO": 0.0077,
+                  "ESGV": 0.25,
+                  "FTS.TO": 0.166,
+                  "JNJ": 0.166,
+                  "PG": 0.0916,
+                  "RY.TO": 0.1013,
+                  "TD.TO": 0.0722,
+                  "XIU.TO": 0.1452
+                },
+                "sleeve_weight": 0.6,
+                "method": "constrained_min_variance",
+                "status": "optimal"
+              },
+              "bonds": {
+                "intra_weights": {
+                  "AGG": 0.1859,
+                  "XBB.TO": 0.3141,
+                  "ZST.TO": 0.5
+                },
+                "sleeve_weight": 0.35,
+                "method": "constrained_min_variance",
+                "status": "optimal"
+              },
+              "gold_cash": {
+                "intra_weights": {
+                  "GLD": 1.0
+                },
+                "sleeve_weight": 0.05,
+                "method": "fixed_allocation"
+              }
+            },
+            "target_vol_band": [
+              0.06,
+              0.11
+            ],
+            "within_target_vol_band": true
+          }
+        },
+        "source": "Solveur CVXPY (Quadratique sous contraintes de poches stratégiques)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Portefeuille stratégique et pondérations optimales pour Mateo.",
+        "summary_metrics": {
+          "annualized_volatility": 0.067,
+          "realized_annual_return": 0.0959,
+          "max_drawdown": -0.1042,
+          "target_vol_band": [
+            0.06,
+            0.11
+          ],
+          "active_assets_count": 12,
+          "weights": {
+            "ATD.TO": 0.0046,
+            "ESGV": 0.15,
+            "FTS.TO": 0.0996,
+            "JNJ": 0.0996,
+            "PG": 0.055,
+            "RY.TO": 0.0608,
+            "TD.TO": 0.0433,
+            "XIU.TO": 0.0871,
+            "AGG": 0.0651,
+            "XBB.TO": 0.1099,
+            "ZST.TO": 0.175,
+            "GLD": 0.05
+          }
+        }
+      },
+      "E5": {
+        "id": "E5",
+        "tool": "run_stress_test_2022",
+        "args": {
+          "weights": {
+            "ATD.TO": 0.0046,
+            "ESGV": 0.15,
+            "FTS.TO": 0.0996,
+            "JNJ": 0.0996,
+            "PG": 0.055,
+            "RY.TO": 0.0608,
+            "TD.TO": 0.0433,
+            "XIU.TO": 0.0871,
+            "AGG": 0.0651,
+            "XBB.TO": 0.1099,
+            "ZST.TO": 0.175,
+            "GLD": 0.05
+          }
+        },
+        "result": {
+          "period": "2022-01-01 to 2022-12-31",
+          "episode": "2022 Stagflation / Rate-Hike Shock",
+          "historical_lesson": "During 2022, Canadian aggregate bonds (XBB.TO) fell alongside equities. Ultra short-term bonds (ZST.TO) and cash equivalents preserved capital substantially better.",
+          "portfolio": {
+            "max_drawdown": -0.0995,
+            "cumulative_return": -0.0473,
+            "annualized_volatility": 0.0836
+          },
+          "benchmarks": {
+            "benchmark_60_40": {
+              "max_drawdown": -0.1301,
+              "cumulative_return": -0.0851
+            },
+            "XIU_TO": {
+              "max_drawdown": -0.1636,
+              "cumulative_return": -0.0635
+            },
+            "SPY": {
+              "max_drawdown": -0.2165,
+              "cumulative_return": -0.1259
+            }
+          }
+        },
+        "source": "Simulation historique AlphaForge (épisode 2022-01-01 au 2022-12-31)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Test de résistance historique 2022 comparé à un portefeuille 60/40 et aux indices XIU/SPY.",
+        "summary_metrics": {
+          "portfolio_max_drawdown": -0.0995,
+          "portfolio_cumulative_return": -0.0473,
+          "benchmark_60_40_max_dd": -0.1301,
+          "xiu_max_dd": -0.1636,
+          "spy_max_dd": -0.2165
+        }
+      },
+      "E6": {
+        "id": "E6",
+        "tool": "compute_asset_risk",
+        "args": {
+          "ticker": "ENB.TO"
+        },
+        "result": {
+          "ticker": "ENB.TO",
+          "annualized_volatility": 0.1596,
+          "max_drawdown": -0.2138,
+          "cvar_95": 0.0245,
+          "beta_xiu": 0.5973
+        },
+        "source": "Calculs quantitatifs AlphaForge (série historique ajustée en CAD)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Métriques individuelles de risque pour l'actif ENB.TO.",
+        "summary_metrics": {
+          "ticker": "ENB.TO",
+          "annualized_volatility": 0.1596,
+          "max_drawdown": -0.2138,
+          "cvar_95": 0.0245,
+          "beta_xiu": 0.5973
+        }
+      },
+      "E7": {
+        "id": "E7",
+        "tool": "compare_portfolios",
+        "args": {
+          "ticker": "ENB.TO",
+          "requested_weight": 0.2,
+          "capped_weight": 0.1
+        },
+        "result": {
+          "ticker": "ENB.TO",
+          "target_vol_band": [
+            0.06,
+            0.11
+          ],
+          "baseline": {
+            "weight": 0.0,
+            "annualized_volatility": 0.067,
+            "max_drawdown": -0.1042,
+            "stress_2022_max_dd": -0.0995,
+            "target_band_respected": true
+          },
+          "requested": {
+            "weight": 0.2,
+            "annualized_volatility": 0.0725,
+            "max_drawdown": -0.0985,
+            "stress_2022_max_dd": -0.0985,
+            "target_band_respected": true
+          },
+          "capped_alternative": {
+            "weight": 0.1,
+            "annualized_volatility": 0.0683,
+            "max_drawdown": -0.0939,
+            "stress_2022_max_dd": -0.0939,
+            "target_band_respected": true
+          }
+        },
+        "source": "Solveur et Simulateur AlphaForge (Comparaison d'Allocation)",
+        "date": "2026-11-13",
+        "currency": "CAD",
+        "description": "Comparaison d'impact : Base vs Demandé (20%) vs Alternative plafonnée (10%) pour ENB.TO.",
+        "summary_metrics": {
+          "ticker": "ENB.TO",
+          "baseline_vol": 0.067,
+          "requested_vol": 0.0725,
+          "capped_alt_vol": 0.0683,
+          "requested_weight": 0.2,
+          "capped_weight": 0.1,
+          "requested_respects_band": true
+        }
+      }
+    },
+    "explanation": {
+      "resume": "Mateo demande d'ajouter Enbridge (ENB.TO) pour son dividende. Sur le plan du risque, l'ajout resterait dans la bande de volatilité cible (0.06 à 0.11), même à 20%. Mais ENB.TO fait l'objet d'une exclusion ESG provisoire, qui repose sur une hypothèse d'équipe non validée. Le rendement du dividende n'est pas disponible dans les preuves. Simulation éducative uniquement.",
+      "quelles_donnees": [
+        {
+          "claim": "FAIT : ENB.TO affiche une volatilité annualisée de 0.1596, un max drawdown de -0.2138, une CVaR 95 de 0.0245 et un bêta de 0.5973 par rapport au XIU.",
+          "evidence_ids": [
+            "E6"
+          ]
+        },
+        {
+          "claim": "FAIT : le portefeuille de base a une volatilité de 0.067 (bande cible 0.06 à 0.11), un rendement réalisé de 0.0959 et un max drawdown de -0.1042. ENB.TO ne figure pas parmi ses 12 actifs.",
+          "evidence_ids": [
+            "E4"
+          ]
+        },
+        {
+          "claim": "FAIT (scénario simulé) : avec ENB.TO à 20%, la volatilité passerait de 0.067 à 0.0725. Avec un plafond de 10%, elle serait de 0.0683. Le scénario demandé respecte la bande cible.",
+          "evidence_ids": [
+            "E7"
+          ]
+        },
+        {
+          "claim": "FAIT : la demande de Mateo ne précise aucune pondération. Le rendement du dividende d'ENB.TO n'est pas quantifié : donnée non disponible.",
+          "evidence_ids": [
+            "E1"
+          ]
+        }
+      ],
+      "pourquoi_ce_choix": [
+        {
+          "claim": "Un plafond à 10% est l'option la plus mesurée : elle ajoute environ 0.0013 de volatilité (0.0683 contre 0.067), contre environ 0.0055 à 20% (0.0725). Le poids de 20% est un scénario de simulation, et non un choix de Mateo.",
+          "evidence_ids": [
+            "E7"
+          ]
+        },
+        {
+          "claim": "Le bêta d'ENB.TO (0.5973) est inférieur à celui de RY.TO (0.8599). Son max drawdown de -0.2138 est cependant nettement plus profond que celui du portefeuille de base (-0.1042), ce qui accroît le risque de baisse.",
+          "evidence_ids": [
+            "E6",
+            "E3",
+            "E4"
+          ]
+        },
+        {
+          "claim": "HYPOTHÈSE D'ÉQUIPE : ENB.TO est exclu à titre provisoire pour des raisons ESG, sans source validée. L'alternative suggérée consiste à renforcer des dividendes de moindre intensité carbone, comme FTS.TO déjà présent à 0.0996, ou ESGV (0.15).",
+          "evidence_ids": [
+            "E4"
+          ]
+        }
+      ],
+      "limites": [
+        {
+          "text": "Le rendement du dividende d'ENB.TO et son rendement total attendu ne figurent pas dans les preuves : donnée non disponible.",
+          "type": "donnee"
+        },
+        {
+          "text": "Le test de résistance historique de 2022 porte sur le portefeuille de base sans ENB.TO. Il ne mesure pas l'effet d'un ajout.",
+          "type": "methode"
+        },
+        {
+          "text": "L'exclusion ESG d'ENB.TO est une hypothèse d'équipe provisoire, non validée par une source ESG. Mateo n'a formulé aucune exclusion explicite.",
+          "type": "hypothese"
+        }
+      ],
+      "ce_qui_changerait_la_reponse": [
+        "Une source ESG validée confirmant ou levant l'exclusion des pipelines, ou une confirmation explicite des préférences éthiques de Mateo.",
+        "Des données de rendement du dividende d'ENB.TO permettant de comparer sa contribution à celle de FTS.TO ou des banques.",
+        "Une pondération précise demandée par Mateo, ou une modification de la bande de volatilité cible."
+      ],
+      "alertes_gouvernance": [
+        {
+          "niveau": "attention",
+          "message": "Tension ESG : l'ajout d'ENB.TO (scénario à 20%) contredit l'exclusion provisoire des pipelines, fondée sur une hypothèse d'équipe non validée. Privilégier l'exclusion, ou un plafond de 10% après validation du profil ESG.",
+          "evidence_ids": [
+            "E7"
+          ]
+        },
+        {
+          "niveau": "info",
+          "message": "Simulation éducative uniquement : aucune transaction n'est exécutée et aucun conseil financier personnalisé n'est fourni.",
+          "evidence_ids": [
+            "E4"
+          ]
+        }
+      ]
+    },
+    "alerts": [
+      {
+        "rule_name": "provisional_esg_screening_mateo",
+        "level": "info",
+        "message": "Provisional ESG Screening Notice: Oil sands, pipelines, and fossil fuel assets (CNQ.TO, ENB.TO, XOM) are excluded based on provisional team assumptions (source: 'hypothese_equipe — à remplacer par source ESG'; ref GitHub issue #4). Vanguard ESG U.S. Stock ETF (ESGV) is utilized as the primary ESG-screened equity vehicle.",
+        "details": {
+          "provisional_exclusions": [
+            "CNQ.TO",
+            "ENB.TO",
+            "XOM"
+          ],
+          "source": "hypothese_equipe — à remplacer par source ESG",
+          "issue_reference": "GitHub issue #4",
+          "esg_core_vehicle": "ESGV"
+        },
+        "suggested_action": null,
+        "evidence_ids": []
+      },
+      {
+        "rule_name": "simulation_boundary_notice",
+        "level": "info",
+        "message": "Mandatory Boundary: Simulation only. This output is an educational decision-support aid. No live transactions are executed and no personalized financial advice is provided.",
+        "details": {},
+        "suggested_action": null,
+        "evidence_ids": []
+      },
+      {
+        "rule_name": "tension_esg_mateo_enbridge",
+        "level": "attention",
+        "message": "Tension d'objectifs ESG : Mateo demande l'intégration d'Enbridge (ENB.TO) pour son rendement de dividende. Or, Enbridge est un exploitant majeur d'infrastructures de transport d'hydrocarbures et de sables bitumineux, ce qui entre en contradiction directe avec les préférences d'exclusion ESG de Mateo. Alternative constructive : privilégier des titres de dividendes de qualité à plus faible intensité carbone (ex: Fortis FTS.TO, banques canadiennes) ou le FNB ESG (ESGV) pour maintenir la conformité éthique.",
+        "details": {
+          "ticker": "ENB.TO",
+          "requested_weight": 0.2,
+          "esg_status": "provisional_exclusion"
+        },
+        "suggested_action": "Exclure ENB.TO au profit d'actifs de dividende conformes aux critères ESG (ex: FTS.TO, ESGV).",
+        "evidence_ids": []
+      }
+    ],
+    "trace": [
+      {
+        "timestamp": "2026-11-14T20:18:32.079474",
+        "event_type": "step_start",
+        "step_name": "0. Interprétation du Langage Naturel",
+        "details": {
+          "description": "Analyse sémantique de la demande : 'Est-ce que je peux ajouter Enbridge (ENB) pour son dividende...'"
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.571320",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E1",
+          "tool": "request_interpreter",
+          "summary": "Intention : add_position | Actifs demandés : ['ENB.TO']",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.676264",
+        "event_type": "step_start",
+        "step_name": "1. Chargement & Alignement des Données",
+        "details": {
+          "description": "Prix quotidiens ajustés en CAD et univers d'actifs."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.676274",
+        "event_type": "tool_call",
+        "step_name": "load_market_data",
+        "details": {
+          "tool": "load_market_data",
+          "args": {
+            "base_currency": "CAD"
+          },
+          "data": {
+            "tool": "load_market_data",
+            "args": {
+              "base_currency": "CAD"
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.676382",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E2",
+          "tool": "load_market_data",
+          "summary": "31 actifs alignés en CAD sur calendrier TSX.",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.676387",
+        "event_type": "step_start",
+        "step_name": "2. Analyse du Risque par Actif",
+        "details": {
+          "description": "Volatilité, perte maximale historique et CVaR 95 %."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.676390",
+        "event_type": "tool_call",
+        "step_name": "compute_asset_risk",
+        "details": {
+          "tool": "compute_asset_risk",
+          "args": {
+            "universe_count": 31
+          },
+          "data": {
+            "tool": "compute_asset_risk",
+            "args": {
+              "universe_count": 31
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.709689",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E3",
+          "tool": "compute_asset_risk",
+          "summary": "Volatilités et pertes maximales calculées pour l'univers.",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.709697",
+        "event_type": "step_start",
+        "step_name": "3. Optimisation Stratégique à Deux Niveaux",
+        "details": {
+          "description": "Allocation optimisée pour le profil Mateo."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.709701",
+        "event_type": "tool_call",
+        "step_name": "optimize_strategic_portfolio",
+        "details": {
+          "tool": "optimize_strategic_portfolio",
+          "args": {
+            "persona_id": "mateo",
+            "capital": 100000.0
+          },
+          "data": {
+            "tool": "optimize_strategic_portfolio",
+            "args": {
+              "persona_id": "mateo",
+              "capital": 100000.0
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.740308",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E4",
+          "tool": "optimize_strategic_portfolio",
+          "summary": "Allocation optimale générée : Vol=6.70%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.740316",
+        "event_type": "step_start",
+        "step_name": "4. Test de Résistance (Stagflation 2022)",
+        "details": {
+          "description": "Simulation de la performance durant l'épisode inflationniste 2022."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.740320",
+        "event_type": "tool_call",
+        "step_name": "run_stress_test_2022",
+        "details": {
+          "tool": "run_stress_test_2022",
+          "args": {
+            "weights_count": 12
+          },
+          "data": {
+            "tool": "run_stress_test_2022",
+            "args": {
+              "weights_count": 12
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.746285",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E5",
+          "tool": "run_stress_test_2022",
+          "summary": "Max DD 2022 : -9.95% vs 60/40 : -13.01%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.746301",
+        "event_type": "step_start",
+        "step_name": "Évaluation Spécifique : ENB.TO",
+        "details": {
+          "description": "Simulation de l'impact de l'actif demandé ENB.TO."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.746305",
+        "event_type": "tool_call",
+        "step_name": "evaluate_asset_addition",
+        "details": {
+          "tool": "evaluate_asset_addition",
+          "args": {
+            "ticker": "ENB.TO",
+            "requested_weight": null
+          },
+          "data": {
+            "tool": "evaluate_asset_addition",
+            "args": {
+              "ticker": "ENB.TO",
+              "requested_weight": null
+            }
+          },
+          "description": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.778657",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E6",
+          "tool": "compute_asset_risk",
+          "summary": "ENB.TO : Vol=15.96%, Max DD=-21.38%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.803490",
+        "event_type": "evidence_added",
+        "step_name": "EvidenceRegistry",
+        "details": {
+          "evidence_id": "E7",
+          "tool": "compare_portfolios",
+          "summary": "Comparaison ENB.TO : Base Vol=6.70% | Demandé Vol=7.25% | Plafonné Vol=6.83%",
+          "date": "",
+          "currency": ""
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.803513",
+        "event_type": "step_start",
+        "step_name": "Orchestrateur — Mode d'Exécution",
+        "details": {
+          "description": "Chemin exécuté : bedrock_agent_loop | Actifs spécifiques analysés : 1"
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.803518",
+        "event_type": "step_start",
+        "step_name": "5. Contrôle de Gouvernance & Conformité",
+        "details": {
+          "description": "Validation des politiques d'adéquation et détection de risques."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.804659",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "info",
+          "rule_id": "provisional_esg_screening_mateo",
+          "message": "Provisional ESG Screening Notice: Oil sands, pipelines, and fossil fuel assets (CNQ.TO, ENB.TO, XOM) are excluded based on provisional team assumptions (source: 'hypothese_equipe — à remplacer par source ESG'; ref GitHub issue #4). Vanguard ESG U.S. Stock ETF (ESGV) is utilized as the primary ESG-screened equity vehicle."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.804665",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "info",
+          "rule_id": "simulation_boundary_notice",
+          "message": "Mandatory Boundary: Simulation only. This output is an educational decision-support aid. No live transactions are executed and no personalized financial advice is provided."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.804668",
+        "event_type": "governance_alert",
+        "step_name": "GovernanceEngine",
+        "details": {
+          "level": "attention",
+          "rule_id": "tension_esg_mateo_enbridge",
+          "message": "Tension d'objectifs ESG : Mateo demande l'intégration d'Enbridge (ENB.TO) pour son rendement de dividende. Or, Enbridge est un exploitant majeur d'infrastructures de transport d'hydrocarbures et de sables bitumineux, ce qui entre en contradiction directe avec les préférences d'exclusion ESG de Mateo. Alternative constructive : privilégier des titres de dividendes de qualité à plus faible intensité carbone (ex: Fortis FTS.TO, banques canadiennes) ou le FNB ESG (ESGV) pour maintenir la conformité éthique."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:34.804675",
+        "event_type": "step_start",
+        "step_name": "5. Génération de l'Explication Explicable",
+        "details": {
+          "description": "Synthèse factuelle fondée exclusivement sur les preuves E#."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:49.095207",
+        "event_type": "verification_result",
+        "step_name": "DeterministicVerifier",
+        "details": {
+          "is_valid": false,
+          "numbers_verified": 32,
+          "errors": [
+            {
+              "section": "pourquoi_ce_choix",
+              "claim": "HYPOTHÈSE D'ÉQUIPE : ENB.TO est exclu à titre provisoire pour des raisons ESG (source à remplacer, issue #4). L'alternative suggérée consiste à renforcer des dividendes de moindre intensité carbone, comme FTS.TO déjà présent à 0.0996, ou à utiliser ESGV (0.15).",
+              "missing_value": "4",
+              "cited_ids": [
+                "E4"
+              ],
+              "reason": "Number '4' in claim not supported by cited evidence (E4)."
+            }
+          ]
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:18:49.095347",
+        "event_type": "step_start",
+        "step_name": "5b. Régénération Corrective de l'Explication",
+        "details": {
+          "description": "Correction des écarts numériques signalés par le vérificateur."
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:19:02.963083",
+        "event_type": "verification_result",
+        "step_name": "DeterministicVerifier",
+        "details": {
+          "is_valid": true,
+          "numbers_verified": 32,
+          "errors": []
+        }
+      },
+      {
+        "timestamp": "2026-11-14T20:19:02.963177",
+        "event_type": "done",
+        "step_name": "Pipeline",
+        "details": {
+          "summary": "Analyse terminée avec succès pour Mateo. Fidélité numérique vérifiée : True.",
+          "total_events": 28
+        }
+      }
+    ],
+    "verification": {
+      "is_valid": true,
+      "errors": [],
+      "total_claims_checked": 9,
+      "total_numbers_verified": 32,
+      "missing_evidence_ids": []
+    }
+  }
+}

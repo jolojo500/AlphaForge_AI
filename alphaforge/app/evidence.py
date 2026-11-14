@@ -24,6 +24,7 @@ class EvidenceItem:
     date: str
     currency: str
     description: str
+    summary_metrics: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -47,6 +48,7 @@ class EvidenceRegistry:
         date_str: str | None = None,
         currency: str | None = None,
         description: str = "",
+        summary_metrics: dict[str, Any] | None = None,
     ) -> EvidenceItem:
         """Register a new deterministic tool execution as an evidence record."""
         eid = f"E{self._counter}"
@@ -61,6 +63,7 @@ class EvidenceRegistry:
             date=date_str or "2026-11-13",
             currency=currency or self.default_currency,
             description=description,
+            summary_metrics=summary_metrics or {},
         )
         self._items[eid] = item
         return item

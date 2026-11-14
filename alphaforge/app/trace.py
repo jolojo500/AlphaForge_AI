@@ -74,7 +74,12 @@ class ExecutionTrace:
         return self._emit(
             event_type="tool_call",
             step_name=tool,
-            details={"tool": tool, "args": args, "description": description},
+            details={
+                "tool": tool,
+                "args": args,
+                "data": {"tool": tool, "args": args},
+                "description": description,
+            },
         )
 
     def evidence_added(

@@ -16,6 +16,7 @@ from typing import Any, Callable
 
 from alphaforge.app.agents.explainer import ExplainerAgent
 from alphaforge.app.agents.governance import GovernanceAgent
+from alphaforge.app.agents.interpreter import RequestInterpreterAgent
 from alphaforge.app.agents.orchestrator import OrchestratorAgent
 from alphaforge.app.bedrock import BedrockConverseClient
 from alphaforge.app.evidence import EvidenceRegistry
@@ -112,20 +113,28 @@ def run_analysis(
     user_requests = [question] if question.strip() else []
 
     # 2. Instantiate Agents
+    interpreter = RequestInterpreterAgent(bedrock_client=client)
     orchestrator = OrchestratorAgent(bedrock_client=client)
     governance = GovernanceAgent(bedrock_client=client)
     explainer = ExplainerAgent(bedrock_client=client)
 
-    # 3. Quantitative Orchestration
-    orchestrator_output = orchestrator.run_deterministic_pipeline(
-        persona=persona,
-        capital=capital,
-        user_question=question,
+    # 3. Interpret Natural Language Request
+    parsed_request = interpreter.interpret(
+        question=question,
         registry=registry,
         trace=trace,
     )
 
-    # 4. Governance Evaluation
+    # 4. Quantitative Orchestration (Bedrock Tool Loop & Core Pipeline)
+    orchestrator_output = orchestrator.run(
+        persona=persona,
+        capital=capital,
+        parsed_request=parsed_request,
+        registry=registry,
+        trace=trace,
+    )
+
+    # 5. Governance Evaluation (Natural Language Adequation + Rules + Opus)
     if trace:
         trace.step_start("5. Contrôle de Gouvernance & Conformité", "Validation des politiques d'adéquation et détection de risques.")
 
@@ -135,12 +144,15 @@ def run_analysis(
         universe_df=orchestrator_output["universe_df"],
         risk_summary_df=orchestrator_output["risk_summary_df"],
         user_requests=user_requests,
+        parsed_request=parsed_request,
+        orchestrator_output=orchestrator_output,
+        registry=registry,
         trace=trace,
         force_opus=force_opus,
         is_free_text=is_free_text,
     )
 
-    # 5. Explainer Generation with Verifier Loop
+    # 6. Explainer Generation with Verifier Loop
     explanation_payload, verif_report = explainer.generate_explanation(
         persona=persona,
         capital=capital,
@@ -158,6 +170,9 @@ def run_analysis(
         "persona": asdict(persona),
         "persona_name": persona.name,
         "capital": capital,
+        "parsed_request": parsed_request.model_dump(),
+        "execution_path": orchestrator_output.get("execution_path", "deterministic"),
+        "requested_evaluations": orchestrator_output.get("requested_evaluations", []),
         "allocation": orchestrator_output["weights"],
         "dollar_amounts": orchestrator_output["dollar_amounts"],
         "metrics": orchestrator_output["metrics"],

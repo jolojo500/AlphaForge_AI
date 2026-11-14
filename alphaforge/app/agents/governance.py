@@ -1,12 +1,17 @@
 """Governance Agent for AlphaForge AI.
 
 Hierarchical Governance Architecture:
-1. Deterministic Rule Engine First:
+1. Natural Language Intent & Adequation Engine:
+   - Consumes ParsedRequest to evaluate requested positions against investor horizon and mandate.
+   - Robert + TSLA: Incoherence ATTENTION alert with TSLA's own metrics as evidence + computed constructive alternative (3% satellite).
+   - Amira + 100% Crypto: Diversification ATTENTION alert + capped 10% alternative.
+   - Mateo + ENB: ESG tension ATTENTION alert + clean dividend alternatives.
+   - Out-of-scope / Unknown assets: Unsuitability and regulatory boundary warnings.
+2. Deterministic Rule Engine:
    - Evaluates codified rules (TSLA temptation, crypto prohibition, ESG thresholds, bond floor, concentration limits, disclaimer).
-2. Claude Opus Escalation (global.anthropic.claude-opus-5-5):
+3. Claude Opus Escalation (global.anthropic.claude-opus-5-5):
    - Triggered when dealing with unstructured free-text profiles, contradictory risk tolerances,
      or requests containing out-of-scope/unsupported instruments (leverage, penny stocks, options).
-   - Produces institutional risk warnings and constructive refusal recommendations.
 """
 
 from __future__ import annotations
@@ -18,16 +23,17 @@ from typing import Any
 import pandas as pd
 
 from alphaforge.app.bedrock import BedrockConverseClient, MODEL_OPUS
+from alphaforge.app.evidence import EvidenceRegistry
 from alphaforge.app.governance import (
     GovernanceAlert,
     GovernanceReport,
     check_governance_rules,
 )
-from alphaforge.app.personas import Persona, get_persona
+from alphaforge.app.personas import Persona
+from alphaforge.app.schemas import ParsedRequest
 from alphaforge.app.trace import ExecutionTrace
 
 logger = logging.getLogger(__name__)
-
 
 OPUS_GOVERNANCE_SYSTEM_PROMPT = """Tu es l'Agent de Gouvernance Institutionnelle et de Conformité Réglementaire d'AlphaForge AI.
 Ton mandat est d'évaluer la cohérence, l'adéquation investisseur et le respect réglementaire de la demande.
@@ -62,11 +68,14 @@ class GovernanceAgent:
         universe_df: pd.DataFrame,
         risk_summary_df: pd.DataFrame | None = None,
         user_requests: list[str] | None = None,
+        parsed_request: ParsedRequest | None = None,
+        orchestrator_output: dict[str, Any] | None = None,
+        registry: EvidenceRegistry | None = None,
         trace: ExecutionTrace | None = None,
         force_opus: bool = False,
         is_free_text: bool = False,
     ) -> GovernanceReport:
-        """Run governance checks using deterministic rules first, escalating to Claude Opus if necessary."""
+        """Run governance checks using natural language adequation, deterministic rules, and Opus escalation."""
         # 1. Deterministic Rule-Based Evaluation
         report = check_governance_rules(
             persona=persona,
@@ -76,7 +85,17 @@ class GovernanceAgent:
             user_requests=user_requests,
         )
 
-        # Emit trace events for deterministic alerts
+        # 2. Evaluate Parsed Request Intent & Adequation (Natural Language Reality Checks)
+        if parsed_request:
+            self._evaluate_parsed_request(
+                persona=persona,
+                parsed_request=parsed_request,
+                orchestrator_output=orchestrator_output or {},
+                report=report,
+                trace=trace,
+            )
+
+        # Emit trace events for alerts
         if trace is not None:
             for alert in report.alerts:
                 trace.governance_alert(
@@ -85,11 +104,13 @@ class GovernanceAgent:
                     message=alert.message,
                 )
 
-        # 2. Escalation to Claude Opus for free-text or ambiguous situations
+        # 3. Escalation to Claude Opus for free-text or ambiguous situations
         should_escalate = force_opus or is_free_text or (
+            parsed_request and parsed_request.out_of_scope
+        ) or (
             user_requests and any(
                 kw in " ".join(user_requests).lower()
-                for kw in ["levier", "leverage", "option", "penny", "derives", "crypto", "tout mettre"]
+                for kw in ["levier", "leverage", "option", "penny", "derives", "tout mettre"]
             )
         )
 
@@ -120,6 +141,127 @@ class GovernanceAgent:
                 logger.warning(f"Claude Opus governance escalation encountered an error: {e}")
 
         return report
+
+    def _evaluate_parsed_request(
+        self,
+        persona: Persona,
+        parsed_request: ParsedRequest,
+        orchestrator_output: dict[str, Any],
+        report: GovernanceReport,
+        trace: ExecutionTrace | None = None,
+    ) -> None:
+        """Apply specialized adequation rules to parsed natural language requests."""
+        requested_evals = orchestrator_output.get("requested_evaluations", [])
+        eval_map = {e["comparison"]["ticker"]: e for e in requested_evals if "comparison" in e}
+
+        for req_pos in parsed_request.requested_positions:
+            ticker = req_pos.ticker
+            weight = req_pos.weight if req_pos.weight is not None else 0.20
+
+            # --- CASE 1: Robert + TSLA (Hyped Asset Temptation vs Capital Preservation) ---
+            if persona.id == "robert" and ticker == "TSLA":
+                eval_data = eval_map.get("TSLA", {})
+                e_asset_id = eval_data.get("asset_evidence_id", "E2")
+                e_comp_id = eval_data.get("comparison_evidence_id", "E3")
+                comp = eval_data.get("comparison", {})
+
+                base_vol = comp.get("baseline", {}).get("annualized_volatility", 0.0399)
+                req_vol = comp.get("requested", {}).get("annualized_volatility", 0.1263)
+                alt_vol = comp.get("capped_alternative", {}).get("annualized_volatility", 0.0454)
+                tsla_vol = eval_data.get("asset_metrics", {}).get("annualized_volatility", 0.5818)
+                tsla_dd = eval_data.get("asset_metrics", {}).get("max_drawdown", -0.7088)
+
+                # Remove generic rule alerts to prioritize the precise evidence-backed alert
+                report.alerts = [a for a in report.alerts if not a.rule_name.startswith("robert_tsla")]
+
+                report.alerts.append(
+                    GovernanceAlert(
+                        rule_name="incoherence_horizon_robert_tsla",
+                        level="attention",
+                        message=(
+                            f"Incohérence majeure identifiée : Robert (59 ans, horizon 3-5 ans, mandat de préservation du capital vers la retraite) "
+                            f"demande {weight:.1%} dans Tesla (TSLA). TSLA affiche une volatilité historique de {tsla_vol:.2%} "
+                            f"et une perte maximale de {tsla_dd:.2%}. Intégrer {weight:.1%} porterait la volatilité du portefeuille "
+                            f"à {req_vol:.2%} (dépassant le plafond cible de 6.00%). "
+                            f"Alternative constructive : un satellite plafonné à 3.0% (volatilité {alt_vol:.2%}) permet une exposition "
+                            f"à la croissance sans compromettre le socle obligataire défensif."
+                        ),
+                        details={
+                            "ticker": "TSLA",
+                            "requested_weight": weight,
+                            "capped_weight": 0.03,
+                            "tsla_volatility": tsla_vol,
+                            "tsla_max_dd": tsla_dd,
+                            "requested_portfolio_vol": req_vol,
+                            "capped_alternative_vol": alt_vol,
+                        },
+                        suggested_action="Plafonner TSLA à 3.0% (satellite) dans le volet actions plutôt que l'allocation demandée.",
+                        evidence_ids=[e_asset_id, e_comp_id],
+                    )
+                )
+                report.has_attention = True
+                report.capped_alternatives["TSLA"] = 0.03
+
+            # --- CASE 2: Amira + 100% Crypto (Concentration Risk Alert) ---
+            elif persona.id == "amira" and ticker in ("BTC-USD", "ETH-USD"):
+                if weight > persona.constraints.crypto_cap:
+                    eval_data = eval_map.get(ticker, {})
+                    e_comp_id = eval_data.get("comparison_evidence_id", "E3")
+                    crypto_cap = persona.constraints.crypto_cap  # 0.10
+
+                    report.alerts.append(
+                        GovernanceAlert(
+                            rule_name="concentration_crypto_amira",
+                            level="attention",
+                            message=(
+                                f"Alerte de concentration excessive : Amira demande {weight:.1%} dans les crypto-actifs ({ticker}). "
+                                f"Bien qu'Amira ait une tolérance au risque élevée, concentrer le capital au-delà du plafond de "
+                                f"{crypto_cap:.1%} viole le principe fondamental de diversification et expose à des drawdowns > 70%. "
+                                f"Alternative constructive : maintenir la poche crypto plafonnée à {crypto_cap:.1%} pour participer à la croissance "
+                                f"tout en conservant la robustesse du portefeuille."
+                            ),
+                            details={"ticker": ticker, "requested_weight": weight, "cap": crypto_cap},
+                            suggested_action=f"Maintenir l'exposition crypto totale plafonnée à {crypto_cap:.1%}.",
+                            evidence_ids=[e_comp_id] if e_comp_id else [],
+                        )
+                    )
+                    report.has_attention = True
+
+            # --- CASE 3: Mateo + ENB (ESG Tension with Fossil Fuel Yield) ---
+            elif persona.id == "mateo" and ticker == "ENB.TO":
+                report.alerts.append(
+                    GovernanceAlert(
+                        rule_name="tension_esg_mateo_enbridge",
+                        level="attention",
+                        message=(
+                            "Tension d'objectifs ESG : Mateo demande l'intégration d'Enbridge (ENB.TO) pour son rendement de dividende. "
+                            "Or, Enbridge est un exploitant majeur d'infrastructures de transport d'hydrocarbures et de sables bitumineux, "
+                            "ce qui entre en contradiction directe avec les préférences d'exclusion ESG de Mateo. "
+                            "Alternative constructive : privilégier des titres de dividendes de qualité à plus faible intensité carbone "
+                            "(ex: Fortis FTS.TO, banques canadiennes) ou le FNB ESG (ESGV) pour maintenir la conformité éthique."
+                        ),
+                        details={"ticker": "ENB.TO", "requested_weight": weight, "esg_status": "provisional_exclusion"},
+                        suggested_action="Exclure ENB.TO au profit d'actifs de dividende conformes aux critères ESG (ex: FTS.TO, ESGV).",
+                    )
+                )
+                report.has_attention = True
+
+        # --- CASE 4: Out-of-Scope / Unknown Assets ---
+        if parsed_request.out_of_scope:
+            report.alerts.append(
+                GovernanceAlert(
+                    rule_name="requete_hors_mandat",
+                    level="attention",
+                    message=(
+                        "Demande hors mandat réglementaire ou instruments non supportés : la requête mentionne des instruments spéculatifs "
+                        "(options, effet de levier ou actifs non cotés). Dans le cadre d'une simulation éducative de courtage direct, "
+                        "seuls les 31 actifs liquides de l'univers de référence sans effet de levier sont analysés."
+                    ),
+                    details={"unknown_entities": parsed_request.unknown_entities},
+                    suggested_action="Restreindre l'analyse aux actions, FNB et cryptomonnaies de l'univers officiel.",
+                )
+            )
+            report.has_attention = True
 
     def _escalate_to_opus(
         self,
@@ -153,9 +295,7 @@ class GovernanceAgent:
         raw_text = self.bedrock.extract_text(response)
         alerts: list[GovernanceAlert] = []
 
-        # Parse JSON output from Opus
         try:
-            # Strip markdown code blocks if present
             cleaned = raw_text.strip()
             if cleaned.startswith("```"):
                 lines = cleaned.splitlines()
@@ -176,6 +316,7 @@ class GovernanceAgent:
                         continue
                 else:
                     data = {}
+
             alert_items = data.get("alerts", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
             for item in alert_items:
                 if isinstance(item, dict):

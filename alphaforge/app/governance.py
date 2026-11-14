@@ -152,18 +152,18 @@ def check_governance_rules(
             vol_str = f"{tsla_vol:.1%}" if tsla_vol else "~58%"
             dd_str = f"{tsla_dd:.1%}" if tsla_dd else "~-71%"
 
-            if tsla_weight > 0.05:
+            if tsla_requested or tsla_weight > 0.03:
                 alerts.append(
                     GovernanceAlert(
                         rule_name="robert_tsla_incoherence",
                         level="attention",
                         message=(
-                            f"Incoherence Alert: Robert requested Tesla (TSLA) with {tsla_weight:.1%} allocation. "
-                            f"Robert's 3-5 year capital preservation horizon conflicts directly with TSLA's {vol_str} annualized volatility "
-                            f"and historical drawdown of {dd_str}."
+                            f"Alerte d'incohérence d'adéquation : Robert a demandé l'intégration de Tesla (TSLA). "
+                            f"L'horizon de 3 à 5 ans et le mandat de préservation du capital de Robert vers la retraite entrent en conflit "
+                            f"avec la volatilité historique de TSLA ({vol_str}) et sa perte maximale de {dd_str}."
                         ),
                         details={"tsla_weight": round(tsla_weight, 4), "tsla_vol": tsla_vol, "tsla_drawdown": tsla_dd},
-                        suggested_action="Constructive Refusal: Cap TSLA at a maximum 3.0% satellite allocation to protect retirement principal.",
+                        suggested_action="Refus constructif : plafonner TSLA à un satellite de 3.0% maximum pour préserver le capital.",
                         evidence_ids=[evidence_map.get("tsla_risk", "E_TSLA")] if "tsla_risk" in evidence_map else [],
                     )
                 )
@@ -174,8 +174,8 @@ def check_governance_rules(
                         rule_name="robert_tsla_capped_satellite",
                         level="info",
                         message=(
-                            f"Constructive Alignment: TSLA is held at a prudently capped satellite weight of {tsla_weight:.1%} "
-                            f"(<= 3.0%), allowing controlled exposure while safeguarding retirement capital."
+                            f"Alignement constructif : TSLA est maintenu à un poids satellite prudent de {tsla_weight:.1%} "
+                            f"(<= 3.0%), offrant une exposition contrôlée sans compromettre le capital retraite."
                         ),
                         details={"tsla_weight": round(tsla_weight, 4)},
                     )

@@ -61,6 +61,25 @@ class ExplanationPayload(BaseModel):
     )
 
 
+class RequestedPosition(BaseModel):
+    """Specific asset position requested by the user in natural language."""
+    ticker: str = Field(..., description="Canonical ticker symbol from universe, e.g. TSLA, BTC-USD, ENB.TO.")
+    weight: float | None = Field(default=None, description="Requested portfolio weight as decimal (e.g. 0.20 for 20%), or null if unspecified.")
+    company_name: str = Field(default="", description="Mentioned company or asset name, e.g. Tesla, Bitcoin, Enbridge.")
+
+
+class ParsedRequest(BaseModel):
+    """Structured interpretation of natural language investor request."""
+    intent: str = Field(default="general_allocation", description="Classified intent: add_position, screen_esg, risk_query, general_allocation, out_of_scope.")
+    requested_positions: list[RequestedPosition] = Field(default_factory=list, description="Specific assets requested with weights.")
+    requested_exclusions: list[str] = Field(default_factory=list, description="Assets requested to be excluded.")
+    constraint_changes: dict[str, Any] = Field(default_factory=dict, description="Requested constraint adjustments.")
+    out_of_scope: bool = Field(default=False, description="True if query involves options, leverage, unlisted assets, or non-financial advice.")
+    unknown_entities: list[str] = Field(default_factory=list, description="Entities mentioned not found in the universe.")
+    language: str = Field(default="fr", description="Language of request (fr or en).")
+    summary: str = Field(default="", description="1-sentence French executive summary of the parsed request.")
+
+
 class AnalysisResult(BaseModel):
     """Final output contract of an AlphaForge AI analysis run."""
     run_id: str

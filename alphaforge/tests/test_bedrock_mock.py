@@ -203,3 +203,151 @@ def test_trace_event_serialization_excludes_cot():
         assert "thought" not in evt
         assert "chain_of_thought" not in evt
         assert "thinking" not in evt
+
+
+def test_request_interpreter_parsing_and_fallback():
+    """Verify natural language request interpreter correctly extracts tickers, weights, and intent."""
+    from alphaforge.app.agents.interpreter import RequestInterpreterAgent
+
+    interpreter = RequestInterpreterAgent()
+
+    # 1. Robert TSLA 20%
+    p1 = interpreter._deterministic_fallback_parse("Je veux mettre 20% de mon portefeuille dans Tesla, qu'en penses-tu ?")
+    assert p1.intent == "add_position"
+    assert len(p1.requested_positions) == 1
+    assert p1.requested_positions[0].ticker == "TSLA"
+    assert p1.requested_positions[0].weight == 0.20
+    assert p1.out_of_scope is False
+
+    # 2. Amira 100% crypto
+    p2 = interpreter._deterministic_fallback_parse("Je veux investir 100% de mon capital dans les cryptomonnaies")
+    assert any(pos.ticker == "BTC-USD" for pos in p2.requested_positions)
+    assert p2.out_of_scope is False
+
+    # 3. Mateo ENB
+    p3 = interpreter._deterministic_fallback_parse("Est-ce que je peux ajouter Enbridge pour son dividende ?")
+    assert any(pos.ticker == "ENB.TO" for pos in p3.requested_positions)
+
+    # 4. Unknown ticker & out of scope
+    p4 = interpreter._deterministic_fallback_parse("Acheter des options d'achat avec effet de levier sur GameStop")
+    assert p4.out_of_scope is True
+
+
+def test_governance_robert_tsla_natural_language_attention_alert():
+    """Verify Robert + TSLA natural language query yields ATTENTION alert, TSLA metrics evidence, and capped alternative."""
+    from alphaforge.app.agents.governance import GovernanceAgent
+    from alphaforge.app.agents.orchestrator import OrchestratorAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+    from alphaforge.app.personas import get_persona
+
+    persona = get_persona("robert")
+    registry = EvidenceRegistry()
+    trace = ExecutionTrace()
+    orchestrator = OrchestratorAgent()
+
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        requested_positions=[RequestedPosition(ticker="TSLA", weight=0.20, company_name="Tesla")],
+    )
+
+    out = orchestrator.run(
+        persona=persona,
+        capital=100000.0,
+        parsed_request=parsed_req,
+        registry=registry,
+        trace=trace,
+    )
+
+    governance = GovernanceAgent()
+    gov_report = governance.evaluate(
+        persona=persona,
+        proposed_weights=out["weights"],
+        universe_df=out["universe_df"],
+        risk_summary_df=out["risk_summary_df"],
+        user_requests=["Je veux mettre 20% de mon portefeuille dans Tesla, qu'en penses-tu ?"],
+        parsed_request=parsed_req,
+        orchestrator_output=out,
+        registry=registry,
+        trace=trace,
+    )
+
+    # Must yield ATTENTION alert
+    tsla_alerts = [a for a in gov_report.alerts if "tsla" in a.rule_name.lower()]
+    assert len(tsla_alerts) >= 1
+    tsla_alert = tsla_alerts[0]
+    assert tsla_alert.level == "attention"
+    assert "Incohérence" in tsla_alert.message
+    assert "Tesla" in tsla_alert.message or "TSLA" in tsla_alert.message
+    assert "3.0%" in tsla_alert.message or "satellite" in tsla_alert.message.lower()
+
+    # Must cite evidence IDs
+    assert len(tsla_alert.evidence_ids) >= 1
+
+    # Must produce capped alternative
+    assert gov_report.capped_alternatives.get("TSLA") == 0.03
+
+
+def test_governance_amira_100pct_crypto_attention_alert():
+    """Verify Amira + 100% crypto yields ATTENTION concentration alert."""
+    from alphaforge.app.agents.governance import GovernanceAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+    from alphaforge.app.personas import get_persona
+    import pandas as pd
+
+    persona = get_persona("amira")
+    gov = GovernanceAgent()
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        requested_positions=[RequestedPosition(ticker="BTC-USD", weight=1.00, company_name="Bitcoin")],
+    )
+
+    dummy_universe = pd.DataFrame([{"ticker": "BTC-USD", "asset_class": "crypto", "sector": "Crypto asset"}])
+    report = gov.evaluate(
+        persona=persona,
+        proposed_weights={"BTC-USD": 0.10, "AAPL": 0.30},
+        universe_df=dummy_universe,
+        parsed_request=parsed_req,
+    )
+
+    crypto_alerts = [a for a in report.alerts if "crypto" in a.rule_name.lower()]
+    assert len(crypto_alerts) >= 1
+    assert any(a.level == "attention" for a in crypto_alerts)
+
+
+def test_governance_mateo_enb_esg_tension_alert():
+    """Verify Mateo + ENB.TO yields ATTENTION ESG tension alert."""
+    from alphaforge.app.agents.governance import GovernanceAgent
+    from alphaforge.app.schemas import ParsedRequest, RequestedPosition
+    from alphaforge.app.personas import get_persona
+    import pandas as pd
+
+    persona = get_persona("mateo")
+    gov = GovernanceAgent()
+    parsed_req = ParsedRequest(
+        intent="add_position",
+        requested_positions=[RequestedPosition(ticker="ENB.TO", weight=0.10, company_name="Enbridge")],
+    )
+
+    dummy_universe = pd.DataFrame([{"ticker": "ENB.TO", "asset_class": "equity", "sector": "Energy"}])
+    report = gov.evaluate(
+        persona=persona,
+        proposed_weights={"ESGV": 0.15, "XBB.TO": 0.35},
+        universe_df=dummy_universe,
+        parsed_request=parsed_req,
+    )
+
+    esg_alerts = [a for a in report.alerts if "esg" in a.rule_name.lower() or "enbridge" in a.rule_name.lower()]
+    assert len(esg_alerts) >= 1
+    assert any(a.level == "attention" for a in esg_alerts)
+
+
+def test_tool_call_trace_data_consistency():
+    """Verify every tool_call event consistently exposes details.tool and details.args."""
+    trace = ExecutionTrace()
+    trace.tool_call("evaluate_asset_addition", {"ticker": "TSLA", "requested_weight": 0.20})
+
+    ev = trace.events[0]
+    assert ev.details["tool"] == "evaluate_asset_addition"
+    assert ev.details["args"]["ticker"] == "TSLA"
+    assert ev.details["data"]["tool"] == "evaluate_asset_addition"
+    assert ev.details["data"]["args"]["requested_weight"] == 0.20

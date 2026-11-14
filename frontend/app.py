@@ -242,6 +242,10 @@ if st.session_state["last_result"] is not None:
 
     # 1. Summary Cards
     st.subheader(f"Portefeuille Stratégique Adapté — {res['persona_name']}")
+    parsed_req = res.get("parsed_request", {})
+    if parsed_req and parsed_req.get("summary"):
+        st.info(f"🧠 **Interprétation de la requête investisseur (Haiku) :** {parsed_req.get('summary')} | *Mode d'exécution : {res.get('execution_path', 'bedrock_agent')}*")
+
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Volatilité Cible", f"{metrics.get('annualized_volatility', 0):.2%}", help="Volatilité annualisée historique en CAD")
@@ -253,6 +257,35 @@ if st.session_state["last_result"] is not None:
         st.metric("Stress Test 2022", f"{stress.get('portfolio', {}).get('max_drawdown', 0):.2%}", help="Choc stagflation 2022 vs 60/40")
     with col5:
         st.metric("Actifs Actifs", f"{metrics.get('active_assets_count', len(weights))}", help="Nombre d'actifs en portefeuille")
+
+    # Constructive Alternative Comparison Card (if specific asset evaluated)
+    evals = res.get("requested_evaluations", [])
+    if evals:
+        for ev in evals:
+            comp = ev.get("comparison", {})
+            tkr = comp.get("ticker", "Actif")
+            st.markdown(f"### ⚖️ Analyse Comparative d'Adéquation : {tkr}")
+            st.markdown(
+                f"Comparaison tripartite entre le mandat de base, l'impact de la demande formulée ({comp.get('requested', {}).get('weight', 0):.0%}), "
+                f"et l'alternative constructive plafonnée ({comp.get('capped_alternative', {}).get('weight', 0):.0%}) :"
+            )
+            c_base, c_req, c_alt = st.columns(3)
+            with c_base:
+                st.markdown("**🛡️ Portefeuille de Base (0 %)**")
+                st.write(f"• Volatilité : **{comp.get('baseline', {}).get('annualized_volatility', 0):.2%}**")
+                st.write(f"• Perte Max 2022 : **{comp.get('baseline', {}).get('stress_2022_max_dd', 0):.2%}**")
+                st.write("• Bande cible : ✅ Conforme")
+            with c_req:
+                st.markdown(f"**⚠️ Portefeuille Demandé ({comp.get('requested', {}).get('weight', 0):.0%} {tkr})**")
+                st.write(f"• Volatilité : **{comp.get('requested', {}).get('annualized_volatility', 0):.2%}**")
+                st.write(f"• Perte Max 2022 : **{comp.get('requested', {}).get('stress_2022_max_dd', 0):.2%}**")
+                req_ok = comp.get("requested", {}).get("target_band_respected", False)
+                st.write(f"• Bande cible : {'✅ Conforme' if req_ok else '❌ Non conforme (Dépassée)'}")
+            with c_alt:
+                st.markdown(f"**💡 Alternative Plafonnée ({comp.get('capped_alternative', {}).get('weight', 0):.0%} {tkr})**")
+                st.write(f"• Volatilité : **{comp.get('capped_alternative', {}).get('annualized_volatility', 0):.2%}**")
+                st.write(f"• Perte Max 2022 : **{comp.get('capped_alternative', {}).get('stress_2022_max_dd', 0):.2%}**")
+                st.write("• Bande cible : ✅ Conforme")
 
     # 2. Governance Alerts Section
     if alerts:

@@ -89,12 +89,14 @@ class ExplainerAgent:
         if trace:
             trace.step_start("5. Génération de l'Explication Explicable", "Synthèse factuelle fondée exclusivement sur les preuves E#.")
 
-        # Prepare evidence summary for prompt
+        # Prepare evidence summary for prompt without blind character truncation
         evidence_summary_lines = []
         for item in registry.list_all():
+            metrics_payload = item.summary_metrics if (hasattr(item, "summary_metrics") and item.summary_metrics) else item.result
+            metrics_str = json.dumps(metrics_payload, default=str, ensure_ascii=False)
             evidence_summary_lines.append(
                 f"[{item.id}] Outil: {item.tool} | Description: {item.description} | Date: {item.date} | Devise: {item.currency}\n"
-                f"     Résultat: {json.dumps(item.result, default=str)[:3000]}"
+                f"     Chiffres clés et métriques certifiées :\n     {metrics_str}"
             )
         evidence_text = "\n\n".join(evidence_summary_lines)
 

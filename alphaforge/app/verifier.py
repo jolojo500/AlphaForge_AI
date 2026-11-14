@@ -119,6 +119,8 @@ def build_evidence_number_pool(item: EvidenceItem) -> set[float]:
     pool.update(collect_numbers_from_object(item.args))
     pool.update(collect_numbers_from_object(item.description))
     pool.update(collect_numbers_from_object(item.date))
+    if hasattr(item, "summary_metrics") and item.summary_metrics:
+        pool.update(collect_numbers_from_object(item.summary_metrics))
     return pool
 
 
