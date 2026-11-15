@@ -9,6 +9,7 @@ validated with Pydantic here, with one repair retry.
 from __future__ import annotations
 
 import json
+import os
 import re
 from functools import lru_cache
 from typing import Any, Literal
@@ -92,7 +93,10 @@ def call_json[T: BaseModel](
     One repair retry: the model is shown its own reply and the validation error. Raises
     LLMError if the second attempt also fails. `llm` is injectable for tests.
     """
-    llm = llm or get_llm(kind)
+    if llm is None:
+        if os.getenv("AF_LLM_OFFLINE") == "1":
+            raise LLMError("LLM calls are disabled (AF_LLM_OFFLINE=1)")
+        llm = get_llm(kind)
     instructions = (
         "Reply with a single JSON object that matches this JSON schema. "
         "No prose, no code fences.\n" + schema_hint(schema)
