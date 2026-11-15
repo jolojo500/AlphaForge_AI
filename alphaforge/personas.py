@@ -12,6 +12,7 @@ PERSONAS: dict[str, dict] = {
         "constraints": [],
         "preferences": ["likes_tech", "likes_crypto", "wants_diversification"],
         "budget_cad": 100_000.0,
+        "account_type": "tfsa",
         "example_request": (
             "J'ai 100 000 $ CAD, un horizon de 15 ans et plus. J'aime la techno et la crypto "
             "mais je veux rester diversifiée."
@@ -26,6 +27,7 @@ PERSONAS: dict[str, dict] = {
         "constraints": ["no_crypto", "esg_only", "no_controversies"],
         "preferences": ["wants_balance"],
         "budget_cad": None,
+        "account_type": "non_registered",
         "example_request": (
             "Je veux un portefeuille équilibré et responsable sur environ 10 ans, "
             "sans entreprises controversées."
@@ -40,6 +42,7 @@ PERSONAS: dict[str, dict] = {
         "constraints": ["no_crypto"],
         "preferences": [],
         "budget_cad": None,
+        "account_type": "rrsp",
         "example_request": "Je veux mettre 25 % de mon portefeuille dans TSLA.",
     },
 }

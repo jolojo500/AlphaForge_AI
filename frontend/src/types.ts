@@ -14,6 +14,7 @@ export const SCENARIO_METRIC_LABELS: Record<string, string> = {
   top_weight: 'Poids principal',
   sector_concentration_hhi: 'Concentration (HHI)',
   us_exposure: 'Exposition US',
+  tax_drag: 'Friction fiscale estimée',
 };
 
 export interface Profile {
@@ -22,6 +23,7 @@ export interface Profile {
   horizon_years: number;
   risk_tolerance: 'low' | 'low_moderate' | 'moderate' | 'high';
   risk_capacity: 'low' | 'moderate' | 'high';
+  account_type?: 'tfsa' | 'rrsp' | 'fhsa' | 'non_registered' | 'mixed';
   constraints: string[];
   preferences: string[];
   budget_cad: number | null;
@@ -279,6 +281,7 @@ export interface BackendRunPayload {
     horizon_years: number;
     risk_tolerance: string;
     risk_capacity: string;
+    account_type?: 'tfsa' | 'rrsp' | 'fhsa' | 'non_registered' | 'mixed';
     constraints: string[];
     preferences: string[];
     budget_cad: number | null;

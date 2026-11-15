@@ -9,6 +9,7 @@ profile_baseline  long-only minimum variance under the profile's caps. No expect
 
 from __future__ import annotations
 
+import datetime as dt
 import math
 import re
 
@@ -27,6 +28,7 @@ from alphaforge.state import (
     Scenario,
     effective_risk,
 )
+from alphaforge.tax import asset_location_note, scenario_tax_drag, tax_rules_evidence
 from alphaforge.tracing import traced
 
 try:  # Track B supplies LLM-drafted notes in B-6; templated notes until then
@@ -61,6 +63,7 @@ METHODS = {
     "top_weight": "largest single weight in the scenario",
     "sector_concentration_hhi": "Herfindahl index of the weights by universe sector label",
     "us_exposure": "weight in US-listed assets (crypto not counted)",
+    "tax_drag": "estimated annual tax drag based on historical dividend/interest yields and account tax rules",
 }
 
 
@@ -242,11 +245,20 @@ def build_scenarios(
     return weights, caps
 
 
-def scenario_metrics(weights: pd.Series, prices: pd.DataFrame, info: pd.DataFrame) -> dict:
-    """The six fixed metric values (PRD 3.3), computed with the quant functions."""
+def scenario_metrics(
+    weights: pd.Series,
+    prices: pd.DataFrame,
+    info: pd.DataFrame,
+    *,
+    account_type: str = "non_registered",
+    as_of: dt.date | None = None,
+) -> dict:
+    """The fixed metric values (PRD 3.3, Issue #118), computed with quant and tax functions."""
     w = weights.to_dict()
     conc = concentration(w, info)
     stress = stress_2022(prices, w)
+    tax_date = as_of or (prices.index[-1].date() if len(prices) else dt.date.today())
+    tax_d = scenario_tax_drag(weights, account_type, tax_date, info)
     return {
         "volatility_ann": volatility(prices, w),
         "max_drawdown": max_drawdown(prices, w),
@@ -254,6 +266,7 @@ def scenario_metrics(weights: pd.Series, prices: pd.DataFrame, info: pd.DataFram
         "top_weight": conc["top_weight"],
         "sector_concentration_hhi": conc["sector_hhi"],
         "us_exposure": conc["us_exposure"],
+        "tax_drag": tax_d,
     }
 
 
@@ -338,11 +351,15 @@ def targeted_changes(
     return per_ticker, sorted(drop), changes
 
 
-def _template_notes(name, weights, values, ids, caps_eid, requested, flagged) -> list[str]:
+def _template_notes(
+    name, weights, values, ids, caps_eid, requested, flagged, account_type: str = "non_registered"
+) -> list[str]:
     risk = (
         f"Volatilité annualisée {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
         f"perte maximale historique {_pct(values['max_drawdown'])} ({ids['max_drawdown']})."
     )
+    if "tax_drag" in ids and values.get("tax_drag") is not None:
+        risk += f" Friction fiscale annuelle estimée {_pct(values['tax_drag'])} ({ids['tax_drag']})."
     if name == "as_requested":
         if requested in weights:
             head = (
@@ -360,16 +377,21 @@ def _template_notes(name, weights, values, ids, caps_eid, requested, flagged) ->
                 "Cet actif est exclu par une contrainte du profil ; il figure ici uniquement "
                 "à titre de comparaison."
             )
-        return notes
-    if name == "capped":
+    elif name == "capped":
         head = f"Même demande ramenée aux limites du profil ({caps_eid})"
         head += f" : {requested} à {weights.get(requested, 0.0):.0%}." if requested else "."
-        return [head, risk]
-    return [
-        f"Allocation de variance minimale sous les limites du profil ({caps_eid}), "
-        "sans aucune prévision de rendement.",
-        risk,
-    ]
+        notes = [head, risk]
+    else:
+        notes = [
+            f"Allocation de variance minimale sous les limites du profil ({caps_eid}), "
+            "sans aucune prévision de rendement.",
+            risk,
+        ]
+
+    loc_note = asset_location_note(account_type)
+    if loc_note and loc_note not in notes:
+        notes.append(loc_note)
+    return notes
 
 
 # --- node ---------------------------------------------------------------------------------
@@ -482,19 +504,67 @@ def scenarios_node(state: GraphState) -> dict:
     end = prices.index[-1].date() if len(prices) else as_of
     window = f"{prices.index[0].date()}..{end}" if len(prices) else "no data"
     evidence_so_far = dict(state.evidence)
-    scenarios = []
+
+    # Compute metric values for all scenarios
+    all_values: dict[str, dict] = {}
+    scenario_ids: dict[str, dict] = {name: {} for name in SCENARIO_NAMES}
     for name in SCENARIO_NAMES:
         w = weights[name]
-        values = {k: _r4(v) for k, v in scenario_metrics(w, prices, info).items()}
-        ids = {}
-        for m in SCENARIO_METRICS:
-            ids[m] = reg.add(
+        all_values[name] = {
+            k: _r4(v)
+            for k, v in scenario_metrics(
+                w, prices, info, account_type=profile.account_type, as_of=as_of
+            ).items()
+        }
+
+    # Pass 1: standard risk metrics (EP2..EP7, EP8..EP13, EP14..EP19)
+    base_metrics = [m for m in SCENARIO_METRICS if m != "tax_drag"]
+    for name in SCENARIO_NAMES:
+        values = all_values[name]
+        for m in base_metrics:
+            scenario_ids[name][m] = reg.add(
                 {"metric": m, "scenario": name, "value": values[m], "unit": "ratio"},
                 source=SOURCE,
                 date=end,
                 method=f"{METHODS[m]}, historical backtest of fictional weights, {window}",
                 confidence="fact" if values[m] is not None else "assumption",
             )
+
+    # Pass 2: tax drag metric per scenario (marked as an assumption)
+    if "tax_drag" in SCENARIO_METRICS:
+        for name in SCENARIO_NAMES:
+            values = all_values[name]
+            scenario_ids[name]["tax_drag"] = reg.add(
+                {
+                    "metric": "tax_drag",
+                    "scenario": name,
+                    "account_type": profile.account_type,
+                    "value": values["tax_drag"],
+                    "unit": "ratio",
+                },
+                source="Règles fiscales ARC et convention fiscale Canada-É.-U.",
+                url="https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years.html",
+                date=end,
+                method=f"{METHODS['tax_drag']}, compte {profile.account_type}",
+                confidence="assumption",
+            )
+
+    # Pass 3: Sourced tax rules evidence entries
+    for rule in tax_rules_evidence(as_of, profile.account_type):
+        reg.add(
+            rule["value"],
+            source=rule["source"],
+            url=rule["url"],
+            date=rule["date"],
+            method=rule["method"],
+            confidence=rule["confidence"],
+        )
+
+    scenarios = []
+    for name in SCENARIO_NAMES:
+        w = weights[name]
+        values = all_values[name]
+        ids = scenario_ids[name]
         sc = Scenario(name=name, weights=w.to_dict(), metrics=ids)
         if current_weights is not None:
             from alphaforge.holdings import calculate_trades_and_turnover
@@ -511,7 +581,9 @@ def scenarios_node(state: GraphState) -> dict:
                 method="0.5 * sum(abs(target_weight - current_weight))",
                 confidence="fact",
             )
-        notes = _template_notes(name, w, values, ids, caps_eid, requested, flagged)
+        notes = _template_notes(
+            name, w, values, ids, caps_eid, requested, flagged, account_type=profile.account_type
+        )
         if draft_notes is not None:
             try:
                 notes = list(draft_notes(sc, evidence_so_far | reg.items())) or notes
@@ -523,16 +595,37 @@ def scenarios_node(state: GraphState) -> dict:
     # Fourth reference column: client's current portfolio (#120)
     if current_weights is not None:
         w_curr = weights["current"]
-        values_curr = {k: _r4(v) for k, v in scenario_metrics(w_curr, prices, info).items()}
+        values_curr = {
+            k: _r4(v)
+            for k, v in scenario_metrics(
+                w_curr, prices, info, account_type=profile.account_type, as_of=as_of
+            ).items()
+        }
         ids_curr = {}
         for m in SCENARIO_METRICS:
-            ids_curr[m] = reg.add(
-                {"metric": m, "scenario": "current", "value": values_curr[m], "unit": "ratio"},
-                source=SOURCE,
-                date=end,
-                method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}",
-                confidence="fact" if values_curr[m] is not None else "assumption",
-            )
+            if m == "tax_drag":
+                ids_curr[m] = reg.add(
+                    {
+                        "metric": "tax_drag",
+                        "scenario": "current",
+                        "account_type": profile.account_type,
+                        "value": values_curr["tax_drag"],
+                        "unit": "ratio",
+                    },
+                    source="Règles fiscales ARC et convention fiscale Canada-É.-U.",
+                    url="https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years.html",
+                    date=end,
+                    method=f"{METHODS['tax_drag']}, compte {profile.account_type}",
+                    confidence="assumption",
+                )
+            else:
+                ids_curr[m] = reg.add(
+                    {"metric": m, "scenario": "current", "value": values_curr[m], "unit": "ratio"},
+                    source=SOURCE,
+                    date=end,
+                    method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}",
+                    confidence="fact" if values_curr[m] is not None else "assumption",
+                )
         notes_curr = [
             f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
             f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "

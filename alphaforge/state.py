@@ -21,7 +21,10 @@ SCENARIO_METRICS: tuple[str, ...] = (
     "top_weight",
     "sector_concentration_hhi",
     "us_exposure",
+    "tax_drag",
 )
+
+AccountType = Literal["tfsa", "rrsp", "fhsa", "non_registered", "mixed"]
 
 
 # Ordered risk scale shared by tolerance and capacity (#115). Suitability follows the more
@@ -53,6 +56,7 @@ class Profile(BaseModel):
     constraints: list[str] = Field(default_factory=list)  # hard rules
     preferences: list[str] = Field(default_factory=list)  # soft
     budget_cad: float | None = None
+    account_type: AccountType = "non_registered"
     request_type: Literal["build", "judge"] = "build"
     requested_idea: dict | None = None  # {"ticker": "TSLA", "weight": 0.25}
     excluded_tickers: list[str] = Field(default_factory=list)  # set by what-if

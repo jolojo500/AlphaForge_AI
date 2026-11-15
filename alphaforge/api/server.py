@@ -492,12 +492,16 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
         from alphaforge.holdings import parse_holdings
 
         current_holdings = parse_holdings(current_holdings)
+    account_type = str(data.get("account_type") or "non_registered").lower()
+    if account_type not in {"tfsa", "rrsp", "fhsa", "non_registered", "mixed"}:
+        account_type = "non_registered"
     return {
         "label": str(data.get("label") or "Profil personnalisé"),
         "objective": str(data.get("objective") or "balanced"),
         "horizon_years": horizon,
         "risk_tolerance": tolerance,
         "risk_capacity": capacity,
+        "account_type": account_type,
         "constraints": [str(c) for c in data.get("constraints") or []],
         "preferences": [str(c) for c in data.get("preferences") or []],
         "budget_cad": data.get("budget_cad"),

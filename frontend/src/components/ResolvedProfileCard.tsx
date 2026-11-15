@@ -53,6 +53,14 @@ const PREFERENCE_LABELS: Record<string, string> = {
   wants_balance: 'Équilibre',
 };
 
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  tfsa: "CELI (Libre d'impôt)",
+  rrsp: "REER (Épargne-retraite)",
+  fhsa: "CELIAPP (Première propriété)",
+  non_registered: "Non enregistré (Imposable)",
+  mixed: "Portefeuille mixte",
+};
+
 const PERSONA_NAMES: Record<string, string> = {
   amira: 'Amira, 26 ans',
   mateo: 'Mateo, 41 ans',
@@ -77,6 +85,9 @@ export const ResolvedProfileCard: React.FC<ResolvedProfileCardProps> = ({
 
   const rawCapacity = profile?.risk_capacity || payloadData?.risk_capacity || 'moderate';
   const capacity = CAPACITY_LABELS[rawCapacity] || rawCapacity;
+
+  const rawAccountType = profile?.account_type || payloadData?.account_type || 'non_registered';
+  const accountTypeDisplay = ACCOUNT_TYPE_LABELS[rawAccountType] || rawAccountType;
 
   const constraints = profile?.constraints || payloadData?.constraints || [];
   const preferences = profile?.preferences || payloadData?.preferences || [];
@@ -117,9 +128,14 @@ export const ResolvedProfileCard: React.FC<ResolvedProfileCardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-foreground">{personaDisplay}</span>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[11px] font-normal border-primary/30 text-primary">
+              {accountTypeDisplay}
+            </Badge>
+            <div className="flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-foreground">{personaDisplay}</span>
+            </div>
           </div>
         </div>
 

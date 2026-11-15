@@ -265,6 +265,20 @@ export function prepareBackendPayload(
     maxLossPct = parsedLoss;
   }
 
+  let accountType: 'tfsa' | 'rrsp' | 'fhsa' | 'non_registered' | 'mixed' = 'non_registered';
+  const at = (profile.accountType || '').toLowerCase();
+  if (at.includes('celi') && at.includes('app')) {
+    accountType = 'fhsa';
+  } else if (at.includes('celi') || at.includes('tfsa')) {
+    accountType = 'tfsa';
+  } else if (at.includes('reer') || at.includes('rrsp') || at.includes('cri') || at.includes('ferr')) {
+    accountType = 'rrsp';
+  } else if (at.includes('mixte') || at.includes('mixed')) {
+    accountType = 'mixed';
+  } else if (at.includes('non') || at.includes('imposable')) {
+    accountType = 'non_registered';
+  }
+
   const payload: BackendRunPayload = {
     persona: 'custom_user',
     request_text: fullRequestText,
@@ -275,6 +289,7 @@ export function prepareBackendPayload(
       horizon_years: horizonYears,
       risk_tolerance: riskTolerance,
       risk_capacity: riskCapacity,
+      account_type: accountType,
       constraints: Array.from(new Set(constraints)),
       preferences,
       budget_cad: profile.simulatedCapital,
