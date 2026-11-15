@@ -146,3 +146,56 @@ def test_call_is_logged_without_prompt_content(caplog):
     text = " ".join(r.getMessage() for r in caplog.records)
     assert "test-model" in text and "input_tokens=11" in text and "output_tokens=7" in text
     assert "latency_ms=" in text and "SECRET PROMPT TEXT" not in text
+
+
+def test_usage_accumulator_records_calls_and_tokens():
+    class Msg:
+        content = '{"label": "a", "score": 1}'
+        usage_metadata = {"input_tokens": 42, "output_tokens": 18}
+
+    class Fake:
+        model_id = "global.anthropic.claude-sonnet-5-5"
+
+        def invoke(self, messages):
+            return Msg()
+
+    with llm.track_llm_usage() as acc:
+        assert acc == []
+        out = llm.call_json("prompt", Out, llm=Fake())
+        assert out.label == "a"
+        assert len(acc) == 1
+        entry = acc[0]
+        assert entry["model"] == "global.anthropic.claude-sonnet-5-5"
+        assert entry["calls"] == 1
+        assert entry["input_tokens"] == 42
+        assert entry["output_tokens"] == 18
+        assert entry["latency_ms"] >= 0
+
+    # Outside the context manager, accumulator is None
+    assert llm.get_llm_accumulator() is None
+
+
+def test_usage_accumulator_records_repair_retries():
+    replies = [
+        FakeMsg("not json"),
+        FakeMsg('{"label": "repaired", "score": 2}'),
+    ]
+    # Set usage_metadata on the second response
+    replies[0].usage_metadata = {"input_tokens": 20, "output_tokens": 5}
+    replies[1].usage_metadata = {"input_tokens": 30, "output_tokens": 10}
+
+    class Fake:
+        model_id = "global.anthropic.claude-haiku-5-5"
+
+        def invoke(self, messages):
+            return replies.pop(0)
+
+    with llm.track_llm_usage() as acc:
+        out = llm.call_json("prompt", Out, llm=Fake())
+        assert out.label == "repaired"
+        assert len(acc) == 2
+        assert acc[0]["input_tokens"] == 20
+        assert acc[1]["input_tokens"] == 30
+        assert sum(e["input_tokens"] for e in acc) == 50
+        assert sum(e["output_tokens"] for e in acc) == 15
+

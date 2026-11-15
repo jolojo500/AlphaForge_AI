@@ -29,3 +29,21 @@ MAX_RED_TEAM_LOOPS = 2
 RED_TEAM_ENABLED = os.getenv("AF_RED_TEAM", "on").lower() not in ("off", "0", "false")
 RED_TEAM_RECHECK = os.getenv("AF_RED_TEAM_RECHECK", "off").lower() in ("on", "1", "true")
 MAX_EXPLAIN_RETRIES = 1
+
+# Model prices for the cost estimate (USD per 1,000,000 tokens), cited as an assumption.
+# These are Anthropic's first-party list prices for the models we call, as published on
+# 2026-11-03. Amazon Bedrock bills Claude at its own partner rates, which we could not
+# verify here, so the figure is an estimate of the order of magnitude, not an invoice.
+# The Haiku 5.5 price applies to prompts up to 100K tokens (all of ours).
+BEDROCK_PRICE_SOURCE_URL = "https://platform.claude.com/docs/en/about-claude/pricing"
+BEDROCK_PRICE_DATE = "2026-11-03"
+BEDROCK_PRICE_BASIS = "Anthropic first-party list price, used as an estimate of Bedrock cost"
+# Fallback only: the cost estimate uses the last Bank of Canada USD/CAD rate in the data.
+USD_TO_CAD_RATE = 1.40
+
+BEDROCK_PRICING: dict[str, dict[str, float]] = {
+    "global.anthropic.claude-sonnet-5-5": {"input_usd_per_1m": 2.00, "output_usd_per_1m": 10.00},
+    "global.anthropic.claude-haiku-5-5": {"input_usd_per_1m": 0.10, "output_usd_per_1m": 0.50},
+    "global.anthropic.claude-opus-5-5": {"input_usd_per_1m": 4.00, "output_usd_per_1m": 20.00},
+}
+

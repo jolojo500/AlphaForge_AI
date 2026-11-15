@@ -14,9 +14,11 @@ from scripts.eval import (
     compute_citation_coverage,
     compute_constraint_violations,
     compute_numeric_fidelity,
+    compute_persona_metrics,
     compute_stability,
     format_markdown_section,
     format_markdown_table,
+    format_persona_cost_table,
 )
 
 
@@ -154,3 +156,94 @@ def test_markdown_table_formatting():
     section = format_markdown_section(dummy)
     assert "### 10.1 Évaluation globale du graphe et cas adverses" in section
     assert "| **Test Case** |" in section
+    assert "Coût et latence par persona" in section
+
+
+def test_compute_persona_metrics_and_cost_table():
+    cases = [
+        CaseResult(
+            case_id="c1",
+            name="Amira 1",
+            persona="amira",
+            request_summary="s1",
+            request_text="t1",
+            numeric_fidelity="100 %",
+            numeric_errors=0,
+            total_numbers=10,
+            constraint_violations=0,
+            violations_detail=[],
+            citation_coverage="100 %",
+            cited_claims=5,
+            total_claims=5,
+            stability="100 %",
+            max_weight_diff=0.0,
+            whatif_coherence="ok",
+            verifier_status="Conforme",
+            interrupted_resolved=False,
+            cost_cad=0.0100,
+            latency_ms=1200,
+            total_tokens=1500,
+        ),
+        CaseResult(
+            case_id="c2",
+            name="Amira 2",
+            persona="amira",
+            request_summary="s2",
+            request_text="t2",
+            numeric_fidelity="100 %",
+            numeric_errors=0,
+            total_numbers=10,
+            constraint_violations=0,
+            violations_detail=[],
+            citation_coverage="100 %",
+            cited_claims=5,
+            total_claims=5,
+            stability="100 %",
+            max_weight_diff=0.0,
+            whatif_coherence="ok",
+            verifier_status="Conforme",
+            interrupted_resolved=False,
+            cost_cad=0.0200,
+            latency_ms=1800,
+            total_tokens=2500,
+        ),
+        CaseResult(
+            case_id="c3",
+            name="Robert 1",
+            persona="robert",
+            request_summary="s3",
+            request_text="t3",
+            numeric_fidelity="100 %",
+            numeric_errors=0,
+            total_numbers=10,
+            constraint_violations=0,
+            violations_detail=[],
+            citation_coverage="100 %",
+            cited_claims=5,
+            total_claims=5,
+            stability="100 %",
+            max_weight_diff=0.0,
+            whatif_coherence="ok",
+            verifier_status="Conforme",
+            interrupted_resolved=False,
+            cost_cad=0.0050,
+            latency_ms=800,
+            total_tokens=900,
+        ),
+    ]
+
+    metrics = compute_persona_metrics(cases)
+    assert "amira" in metrics
+    assert "robert" in metrics
+    assert metrics["amira"]["mean_cost_cad"] == pytest.approx(0.0150)
+    assert metrics["amira"]["mean_latency_ms"] == pytest.approx(1500.0)
+    assert metrics["amira"]["mean_tokens"] == pytest.approx(2000.0)
+    assert metrics["amira"]["runs_count"] == 2
+
+    assert metrics["robert"]["mean_cost_cad"] == pytest.approx(0.0050)
+    assert metrics["robert"]["runs_count"] == 1
+
+    table = format_persona_cost_table(metrics)
+    assert "| **Amira** | 0.0150 $ CAD | 1500 ms | 2000 | 2 exécutions |" in table
+    assert "| **Robert** | 0.0050 $ CAD | 800 ms | 900 | 1 exécutions |" in table
+

@@ -55,6 +55,37 @@ export interface TraceEntry {
   started_at: string;
   ended_at: string;
   summary: string;
+  model?: string;
+  calls?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  latency_ms?: number;
+}
+
+export interface RunCostModel {
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  latency_ms: number;
+  cost_usd: number;
+  cost_cad: number;
+}
+
+export interface RunCost {
+  cost_cad: number;
+  cost_usd: number;
+  total_tokens: number;
+  input_tokens: number;
+  output_tokens: number;
+  total_latency_ms: number;
+  calls: number;
+  is_estimate: boolean;
+  pricing_source: string;
+  pricing_date: string;
+  usd_to_cad_rate: number;
+  confidence: string;
+  models: Record<string, RunCostModel>;
 }
 
 export interface SavedRunSummary {
@@ -128,6 +159,7 @@ export interface GraphState {
   verification: Verification | null;
   retries: Record<string, number>;
   trace: TraceEntry[];
+  cost?: RunCost;
   run_id?: string;
 }
 

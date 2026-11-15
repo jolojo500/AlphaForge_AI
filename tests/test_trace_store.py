@@ -25,6 +25,8 @@ def test_local_json_trace_store():
         saved = store.save_run("test-run-123", state)
         assert saved["run_id"] == "test-run-123"
         assert saved["persona"] == "robert"
+        assert "cost" in saved
+        assert "cost_cad" in saved["cost"]
 
         # Get run
         retrieved = store.get_run("test-run-123")
@@ -34,6 +36,9 @@ def test_local_json_trace_store():
         assert len(retrieved["trace"]) > 0
         assert retrieved["verification"]["passed"] is True
         assert retrieved["final_state"]["persona"] == "robert"
+        assert "cost" in retrieved
+        assert "cost_cad" in retrieved["cost"]
+        assert retrieved["cost"]["is_estimate"] is True
 
         # List runs
         runs = store.list_runs()
@@ -79,6 +84,9 @@ def test_dynamodb_trace_store_with_stub():
     assert retrieved["persona"] == "amira"
     assert len(retrieved["trace"]) > 0
     assert retrieved["final_state"]["persona"] == "amira"
+    assert "cost" in retrieved
+    assert "cost_cad" in retrieved["cost"]
+    assert retrieved["cost"]["is_estimate"] is True
 
     runs = store.list_runs()
     assert len(runs) == 1

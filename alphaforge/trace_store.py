@@ -64,6 +64,9 @@ def _prepare_item(
     run_verification = (
         verification if verification is not None else state_dict.get("verification")
     )
+    from alphaforge.tracing import calculate_run_cost
+
+    cost = calculate_run_cost(run_trace)
 
     created_at = dt.datetime.now(dt.UTC).isoformat()
     return {
@@ -75,6 +78,7 @@ def _prepare_item(
         "status": "completed",
         "verification": run_verification,
         "trace": run_trace,
+        "cost": cost,
         "final_state": state_dict,
     }
 
@@ -127,8 +131,20 @@ class LocalJsonTraceStore(TraceStore):
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         target = self.storage_dir / f"{run_id}.json"
         if target.is_file():
-            return json.loads(target.read_text(encoding="utf-8"))
-        return get_golden_run(run_id)
+            data = json.loads(target.read_text(encoding="utf-8"))
+            if "cost" not in data:
+                from alphaforge.tracing import calculate_run_cost
+
+                data["cost"] = calculate_run_cost(data.get("trace"))
+            return data
+        golden = get_golden_run(run_id)
+        if golden:
+            if "cost" not in golden:
+                from alphaforge.tracing import calculate_run_cost
+
+                golden["cost"] = calculate_run_cost(golden.get("trace"))
+            return golden
+        return None
 
     def list_runs(
         self,
@@ -261,6 +277,7 @@ class DynamoDBTraceStore(TraceStore):
             "created_at": item["created_at"],
             "status": item["status"],
             "trace_json": json.dumps(item["trace"], ensure_ascii=False),
+            "cost_json": json.dumps(item.get("cost", {}), ensure_ascii=False),
             "verification_json": json.dumps(item["verification"], ensure_ascii=False),
             "verification_passed": (item.get("verification") or {}).get("passed", False),
         }
@@ -297,6 +314,17 @@ class DynamoDBTraceStore(TraceStore):
 
         trace = json.loads(raw.get("trace_json", "[]"))
         verification = json.loads(raw.get("verification_json", "null"))
+        cost_raw = raw.get("cost_json")
+        cost = None
+        if cost_raw:
+            try:
+                cost = json.loads(cost_raw)
+            except Exception:
+                cost = None
+        if cost is None:
+            from alphaforge.tracing import calculate_run_cost
+
+            cost = calculate_run_cost(trace)
 
         final_state: dict[str, Any] = {}
         if "s3_state_key" in raw and self._s3 is not None:
@@ -318,6 +346,7 @@ class DynamoDBTraceStore(TraceStore):
             "status": raw.get("status", "completed"),
             "verification": verification,
             "trace": trace,
+            "cost": cost,
             "final_state": final_state,
         }
 
