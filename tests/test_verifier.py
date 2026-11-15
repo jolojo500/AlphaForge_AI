@@ -302,7 +302,7 @@ def test_verifier_forbidden_wording_english(evidence, en_forbidden):
     [
         "Educational simulation. No personalized advice.",
         "No guaranteed return; past metrics do not forecast future performance.",
-        "The capped scenario is most consistent with the declared risk tolerance.",
+        "The version adjusted to your limits is most consistent with the declared risk tolerance.",
         "Historical statistics show a maximum drawdown of 15.2% without indicating future returns.",
         "The comparison illustrates differences in volatility and diversification.",
     ],
@@ -330,4 +330,29 @@ def test_verifier_english_section_keys(evidence):
     assert v.check_sections(doc_en) == []
     assert v.check_wording(doc_en) == []
     assert v.check_eids(doc_en, evidence) == []
+
+
+@pytest.mark.parametrize(
+    "internal_id_text",
+    [
+        "Le scénario as_requested dépasse les limites déclarées.",
+        "Le scénario capped réduit le risque du portefeuille.",
+        "Le scénario profile_baseline sert de référence.",
+        "Selon votre persona Robert.",
+        "Le policy_rate_ca est de 2,25 %.",
+        "Le policy_rate_us est de 4,5 %.",
+        "L'indicateur cpi_yoy_ca augmente.",
+        "You should hold this equity.",
+        "ACHAT de 10 000 $",
+        "VENTE de 5 000 $",
+        "BUY 5 shares",
+        "SELL 10 shares",
+        "HOLD 2 shares",
+    ],
+)
+def test_verifier_blocks_internal_identifiers_hold_and_orders(evidence, internal_id_text):
+    doc = mutate(resume=internal_id_text)
+    errs = v.check_wording(doc)
+    assert len(errs) > 0
+    assert any("formulation interdite" in err for err in errs)
 

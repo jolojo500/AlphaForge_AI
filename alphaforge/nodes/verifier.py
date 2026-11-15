@@ -1,8 +1,10 @@
 """Verifier (PRD 5.10). Owned by Track B.
 
-The LLM audits reasoning; this code audits numbers. Four deterministic checks:
-cited ids exist, numbers match their cited evidence, no advice or forecast wording,
-all required sections are present.
+The LLM audits reasoning; this code audits numbers. Deterministic checks:
+cited ids exist, numbers match their cited evidence, no advice, order or forecast wording
+(in the explanation, the scenario notes and the red-team objections), all required sections
+are present, and no claim that a scenario respects the user's limits while the guardrail
+check (`state.guardrails`) reports a breach for it.
 """
 from __future__ import annotations
 
@@ -64,8 +66,32 @@ _WORDING = [
     r"\bwill (?:return|yield|earn|generate|reach|gain|rise|outperform|grow)\b",
     r"\bpr[ée]visions?\b",
     r"\bforecasts?\b",
+    # Buy/sell verbs addressed to the reader (final report, P0-7). Nouns stay allowed
+    # ("frais à la vente", "aucune recommandation d'achat").
+    r"\b(?:r?acheter|(?:re)?vendre|rachetez|revendez)\b",
+    r"\bbuy\b(?!-and-hold| and hold)",
+    r"\bsell\b(?!-offs?\b)",
+    # Hold recommendation (PRD 5.10, Issue #168).
+    r"(?<!buy-and-)(?<!buy and )\bhold\b",
+    # Internal identifiers that must not leak into user text (Issues #168, #171).
+    r"\bas_requested\b",
+    r"\bcapped\b",
+    r"\bprofile_baseline\b",
+    r"\bpersonas?\b",
+    r"\b(?:policy_rate_ca|policy_rate_us|cpi_yoy_ca|cpi_yoy_us)\b",
+    # Forward-looking phrases.
+    r"\bpotentiel de (?:croissance|hausse|gain|rendement)s?\b",
+    r"\b(?:fort|haut|grand|bon|meilleur|important|excellent)s? potentiels?\b",
+    r"\bpermettr(?:a|ont)\b",
+    r"\b(?:growth|upside|return) potential\b",
+    r"\b(?:strong|high|great|significant) potential\b",
+    r"\bwill (?:deliver|allow|enable|provide|benefit|increase|appreciate|pay)\b",
+    # Tips on how to trade.
+    r"\bnorbert\b",
 ]
 _WORDING_RE = [re.compile(p) for p in _WORDING]
+# Order labels in capitals, matched on the text as written ("VENTE BTC-USD -100 000 $").
+_ORDER_LABEL_RE = re.compile(r"\b(?:ACHATS?|VENTES?|BUY|SELL|HOLD)\b")
 _NEGATION_RE = re.compile(
     r"\b(?:pas|aucun|aucune|ne|jamais|non|sans|n'|no|not|never|cannot|without)\b[^.;:]{0,30}$"
 )
@@ -85,12 +111,43 @@ _NUM_RE = re.compile(
 )
 
 # Scenario names as they appear in claims, mapped to their internal name (#114).
+# The plain-language names ("la version ajustée à vos limites", "votre demande telle quelle",
+# "le profil de référence", "votre portefeuille actuel") come first; the older names stay
+# accepted.
 _SCENARIO_ALIASES = {
-    "as_requested": ("as_requested", "demandé", "demandée", "requested"),
-    "capped": ("capped", "plafonné", "plafonnée", "plafonnement"),
-    "profile_baseline": ("profile_baseline", "référence", "baseline"),
-    "current": ("current", "actuel", "actuelle", "existant", "détenu", "actuels"),
+    "as_requested": (
+        "as_requested", "telle quelle", "tel quel", "request as is", "as requested",
+        "demandé", "demandée", "requested",
+    ),
+    "capped": (
+        "capped", "ajustée à vos limites", "version ajustée", "scénario ajusté",
+        "adjusted to your limits", "adjusted version", "plafonné", "plafonnée", "plafonnement",
+    ),
+    "profile_baseline": ("profile_baseline", "référence", "reference profile", "baseline"),
+    "current": (
+        "current", "portefeuille actuel", "actuel", "actuelle", "existant", "détenu", "actuels",
+    ),
 }
+
+# Phrases that claim a scenario stays within the limits the user declared (final report,
+# fix 3). "ajustée à vos limites" is a scenario name, not such a claim.
+_LIMIT_CLAIM_RE = [
+    re.compile(p)
+    for p in (
+        r"selon (?:vos|les|tes) garde-fous",
+        r"respect\w* (?:bien |toutes |chacune de |l'ensemble de )?(?:vos|les|tes|ses) "
+        r"(?:limites|garde-fous|plafonds|contraintes)",
+        r"(?:dans|sous|à l'intérieur de|en deçà de) (?:toutes )?(?:vos|tes) (?:limites|garde-fous)",
+        r"conformes? (?:à|a) (?:toutes )?(?:vos|tes) (?:limites|garde-fous)",
+        r"aucune (?:de vos )?limites? (?:déclarée )?(?:n'est|n'a été) (?:dépassée|franchie)",
+        r"(?:according to|within|inside|under) (?:all )?(?:of )?your (?:declared |stated )?"
+        r"(?:limits|guardrails)",
+        r"(?:respects?|meets?|satisf(?:y|ies)|honou?rs?|complies with|stays? within) "
+        r"(?:all )?(?:of )?(?:your|the) (?:declared |stated )?(?:limits|guardrails)",
+        r"no (?:declared |stated )?limit is (?:crossed|breached|exceeded)",
+    )
+]
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 
 
 # --------------------------------------------------------------------------- helpers
@@ -241,7 +298,69 @@ def check_wording(explanation: dict) -> list[str]:
                 if any(al.search(context) for al in ALLOW_LIST_WORDING):
                     continue
                 errors.append(f"{where}: formulation interdite « {m.group(0)} »")
+        for m in _ORDER_LABEL_RE.finditer(text):
+            errors.append(f"{where}: formulation interdite « {m.group(0)} »")
     return errors
+
+
+def check_text_wording(texts: list[tuple[str, str]]) -> list[str]:
+    """`check_wording` on free texts given as (where, text), e.g. scenario notes."""
+    errors = []
+    for where, text in texts:
+        for err in check_wording({"resume": text}):
+            errors.append(err.replace("resume:", f"{where}:", 1))
+    return errors
+
+
+def _breaches(guardrails: list[dict] | None) -> dict[str, list[dict]]:
+    """Breached guardrail entries by scenario name (entries without a scenario are skipped)."""
+    out: dict[str, list[dict]] = {}
+    for g in guardrails or []:
+        if isinstance(g, dict) and g.get("status") == "breach" and g.get("scenario"):
+            out.setdefault(str(g["scenario"]), []).append(g)
+    return out
+
+
+def _claimed_scenario(sentence: str, pos: int, default: str | None) -> str | None:
+    """The scenario a limit claim at `pos` talks about: the nearest scenario named in the
+    sentence (before the claim first), else the scenario selected as most coherent."""
+    hits = []
+    for name, aliases in _SCENARIO_ALIASES.items():
+        for alias in aliases:
+            for m in re.finditer(re.escape(alias), sentence):
+                hits.append((m.start(), name))
+    before = [h for h in hits if h[0] <= pos]
+    if before:
+        return max(before)[1]
+    if hits:
+        return min(hits)[1]
+    return default
+
+
+def check_limit_claims(explanation: dict, guardrails: list[dict] | None) -> list[str]:
+    """No text may say a scenario respects the user's limits when a guardrail is breached."""
+    breaches = _breaches(guardrails)
+    if not breaches:
+        return []
+    best = _get_field(explanation, "scenario_le_plus_coherent")
+    errors = []
+    for where, text in _all_text(explanation):
+        for sentence in _SENTENCE_SPLIT_RE.split(text.lower()):
+            for rx in _LIMIT_CLAIM_RE:
+                for m in rx.finditer(sentence):
+                    if _NEGATION_RE.search(sentence[max(0, m.start() - 40) : m.start()]):
+                        continue
+                    name = _claimed_scenario(sentence, m.start(), best)
+                    if name not in breaches:
+                        continue
+                    b = breaches[name][0]
+                    label = b.get("label_fr") or b.get("limit") or "limite déclarée"
+                    errors.append(
+                        f"{where}: « {m.group(0)} » affirme que le scénario {name} respecte vos "
+                        f"limites alors que la vérification des limites signale un dépassement "
+                        f"({label}). Décris le dépassement au lieu de cette formule."
+                    )
+    return list(dict.fromkeys(errors))
 
 
 def check_sections(explanation: dict) -> list[str]:
@@ -278,6 +397,16 @@ def _context_numbers(state: GraphState) -> list[float]:
             out.append(float(p.requested_idea["weight"]))
         if p.current_holdings:
             out += [float(v) for v in p.current_holdings.values()]
+        if p.requested_allocation:
+            out += [float(v) for v in p.requested_allocation.values()]
+        # Limits the user declared in the questionnaire are the user's own numbers.
+        for limit in (p.max_loss_12m, p.crypto_target_min, p.sector_cap):
+            if isinstance(limit, (int, float)):
+                out.append(float(limit))
+    for g in state.guardrails or []:
+        declared = g.get("declared") if isinstance(g, dict) else None
+        if isinstance(declared, (int, float)) and not isinstance(declared, bool):
+            out.append(float(declared))
     return out
 
 
@@ -295,6 +424,15 @@ def verify(state: GraphState) -> list[str]:
         explanation, state.evidence, _context_numbers(state), _scenario_weights(state)
     )
     errors += check_wording(explanation)
+    errors += check_limit_claims(explanation, state.guardrails)
+    # The notes and objections are shown next to the answer: same wording rules.
+    side_texts = [
+        (f"notes du scénario {sc.name}", note) for sc in state.scenarios for note in sc.notes
+    ]
+    side_texts += [
+        ("objection", str(o.get("objection", ""))) for o in state.objections if isinstance(o, dict)
+    ]
+    errors += check_text_wording(side_texts)
     return errors
 
 

@@ -139,9 +139,43 @@ def test_low_capacity_profile_rejects_crypto_weight_clearly(state):
     )
     answer = ex.template_explanation(state.model_copy(update={"profile": profile}))
 
+    assert answer["resume"].startswith("Non :")
     assert "peu cohérente" in answer["resume"]
     assert answer["scenario_le_plus_coherent"] == "profile_baseline"
     assert "votre portefeuille" in answer["resume"]
+
+
+def test_judge_direct_verdict_yes_and_partly(state):
+    # Compatible request with no breaches -> "Oui :"
+    profile_yes = state.profile.model_copy(
+        update={
+            "risk_tolerance": "high",
+            "risk_capacity": "high",
+            "requested_idea": {"ticker": "SPY", "weight": 0.10},
+            "request_type": "judge",
+            "conflicts": [],
+            "current_holdings": None,
+        }
+    )
+    ans_yes = ex.template_explanation(state.model_copy(update={"profile": profile_yes, "guardrails": []}))
+    assert ans_yes["resume"].startswith("Oui :")
+    assert "cohérente avec votre profil" in ans_yes["resume"]
+
+    # Compatible with profile risk framework but breaches a declared limit -> "En partie :"
+    breach = {
+        "status": "breach",
+        "scenario": "as_requested",
+        "limit": "sector_cap",
+        "label_fr": "Plafond sectoriel",
+        "declared": 0.40,
+        "actual": 0.50,
+        "evidence": [],
+    }
+    ans_partly = ex.template_explanation(
+        state.model_copy(update={"profile": profile_yes, "guardrails": [breach]})
+    )
+    assert ans_partly["resume"].startswith("En partie :")
+    assert "partiellement cohérente" in ans_partly["resume"]
 
 
 def test_subpercent_request_is_not_rounded_to_zero(state):
