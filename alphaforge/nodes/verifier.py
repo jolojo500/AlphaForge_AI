@@ -54,9 +54,16 @@ _NEGATION_RE = re.compile(
 _ISO_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 _NUM_RE = re.compile(
     r"(?P<num>[-−–]?\d+(?:[ \u00a0\u202f]\d{3})*(?:[.,]\d+)?)"
-    r"(?P<pct>\s*(?:%|pour cent|percent))?",
+    r"(?P<pct>\s*(?:%|pour cent|percent|points? de pourcentage|points?\b|pts\b|pp\b))?",
     re.IGNORECASE,
 )
+
+# Scenario names as they appear in claims, mapped to their internal name (#114).
+_SCENARIO_ALIASES = {
+    "as_requested": ("as_requested", "demandé", "demandée", "requested"),
+    "capped": ("capped", "plafonné", "plafonnée", "plafonnement"),
+    "profile_baseline": ("profile_baseline", "référence", "baseline"),
+}
 
 
 # --------------------------------------------------------------------------- helpers
@@ -66,6 +73,20 @@ def _items(explanation: dict):
         for item in explanation.get(section) or []:
             if isinstance(item, dict):
                 yield section, str(item.get("claim", "")), list(item.get("evidence") or [])
+
+
+def _number_items(explanation: dict):
+    """Claim items plus the free-text summary and uncertainty, whose ids are cited inline (#114)."""
+    yield from _items(explanation)
+    for key in ("resume", "incertitude"):
+        text = explanation.get(key)
+        if isinstance(text, str):
+            yield key, text, EID_RE.findall(text)
+
+
+def _named_scenarios(text: str) -> set[str]:
+    lowered = text.lower()
+    return {name for name, aliases in _SCENARIO_ALIASES.items() if any(a in lowered for a in aliases)}
 
 
 def _all_text(explanation: dict) -> list[tuple[str, str]]:
@@ -130,20 +151,30 @@ def check_eids(explanation: dict, evidence: Mapping[str, Evidence]) -> list[str]
 
 
 def check_numbers(
-    explanation: dict, evidence: Mapping[str, Evidence], context: list[float] | None = None
+    explanation: dict,
+    evidence: Mapping[str, Evidence],
+    context: list[float] | None = None,
+    scenario_weights: Mapping[str, list[float]] | None = None,
 ) -> list[str]:
-    """Every percentage or decimal in a claim appears in its cited evidence (±1%).
+    """Every number the user reads appears in the evidence cited next to it (±1 %).
 
-    `context` holds numbers that come from the user's own request or from the scenario
-    weights (not evidence), which a claim may restate.
+    Checked: percentages, decimals and integers with a unit (%, points), in the four claim
+    sections and in `resume` / `incertitude` (ids cited inline there). A difference between
+    two cited values is accepted ("un écart de 17 points").
+    `context` holds the numbers of the user's own request. `scenario_weights` maps a scenario
+    name to its weights; a claim may restate the weights of the scenarios it names, only.
     """
     errors = []
     ctx = list(context or [])
-    for section, claim, ids in _items(explanation):
+    weights = scenario_weights or {}
+    for section, claim, ids in _number_items(explanation):
         values = [numeric(evidence[e]) for e in ids if e in evidence]
         values = [v for v in values if v is not None]
+        diffs = [abs(a - b) for i, a in enumerate(values) for b in values[i + 1 :]]
+        named = [w for name in _named_scenarios(claim) for w in weights.get(name, [])]
+        allowed = values + diffs + ctx + named
         for claimed, is_pct, decimals in extract_numbers(claim):
-            if any(_matches(claimed, is_pct, decimals, v) for v in values + ctx):
+            if any(_matches(claimed, is_pct, decimals, v) for v in allowed):
                 continue
             shown = f"{claimed:g} %" if is_pct else f"{claimed:g}"
             if values:
@@ -189,6 +220,7 @@ def check_sections(explanation: dict) -> list[str]:
 
 
 def _context_numbers(state: GraphState) -> list[float]:
+    """Numbers from the user's own request (horizon, budget, requested weight)."""
     out: list[float] = []
     p = state.profile
     if p:
@@ -197,9 +229,11 @@ def _context_numbers(state: GraphState) -> list[float]:
             out.append(float(p.budget_cad))
         if p.requested_idea:
             out.append(float(p.requested_idea["weight"]))
-    for sc in state.scenarios:
-        out += [float(w) for w in sc.weights.values()]
     return out
+
+
+def _scenario_weights(state: GraphState) -> dict[str, list[float]]:
+    return {sc.name: [float(w) for w in sc.weights.values()] for sc in state.scenarios}
 
 
 def verify(state: GraphState) -> list[str]:
@@ -208,7 +242,9 @@ def verify(state: GraphState) -> list[str]:
         return ["explication absente"]
     errors = check_sections(explanation)
     errors += check_eids(explanation, state.evidence)
-    errors += check_numbers(explanation, state.evidence, _context_numbers(state))
+    errors += check_numbers(
+        explanation, state.evidence, _context_numbers(state), _scenario_weights(state)
+    )
     errors += check_wording(explanation)
     return errors
 

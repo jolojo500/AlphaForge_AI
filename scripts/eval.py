@@ -36,6 +36,7 @@ from alphaforge.nodes.profile import SINGLE_STOCK_CAP
 from alphaforge.nodes.verifier import (
     _context_numbers,
     _items,
+    _scenario_weights,
     check_numbers,
     extract_numbers,
 )
@@ -161,7 +162,9 @@ def execute_run(persona: str, request_text: str) -> tuple[GraphState, bool]:
 
 def compute_numeric_fidelity(state: GraphState) -> tuple[str, int, int]:
     """Verify that every number cited in claims matches its evidence or context."""
-    errors = check_numbers(state.explanation, state.evidence, _context_numbers(state))
+    errors = check_numbers(
+        state.explanation, state.evidence, _context_numbers(state), _scenario_weights(state)
+    )
     items = list(_items(state.explanation))
     total_nums = sum(len(extract_numbers(claim)) for _, claim, _ in items)
     err_count = len(errors)

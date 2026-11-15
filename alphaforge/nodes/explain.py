@@ -59,6 +59,9 @@ Règles strictes :
   utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
 - Concision stricte : 1 à 2 affirmations (claims) par section, environ 25 à 30 mots par affirmation.
   Va droit au but, sans répétition. Le résumé doit comporter 1 à 2 phrases directes (environ 30 mots).
+- Le résumé et l'incertitude sont vérifiés comme les affirmations : n'y écris un nombre que s'il est
+  suivi de son identifiant entre crochets dans le texte (par exemple « 23,2 % [EP3] »). Sinon,
+  formule-les sans chiffres.
 - Ne remplace pas les trois scénarios par un seul : compare-les, puis indique le plus cohérent.
 - Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives
   (« fictional »). Si une preuve est fictive ou une hypothèse, dis-le dans les limites.
