@@ -6,9 +6,9 @@ This document describes the cloud infrastructure, deployment pipeline, created A
 
 ## 1. Live Public Endpoint
 
-- **Public Web Application & API**: [http://18.206.125.42/](http://18.206.125.42/) (HTTP Port 80)
-- **Health Check Endpoint**: [http://18.206.125.42/health](http://18.206.125.42/health) (`{"status":"ok"}`)
-- **Persona List Endpoint**: [http://18.206.125.42/personas](http://18.206.125.42/personas)
+- **Public Web Application & API**: [https://d1br9rnvwb43a5.cloudfront.net/](https://d1br9rnvwb43a5.cloudfront.net/) (HTTP Port 80)
+- **Health Check Endpoint**: [https://d1br9rnvwb43a5.cloudfront.net/health](https://d1br9rnvwb43a5.cloudfront.net/health) (`{"status":"ok"}`)
+- **Persona List Endpoint**: [https://d1br9rnvwb43a5.cloudfront.net/personas](https://d1br9rnvwb43a5.cloudfront.net/personas)
 - **CloudWatch Logs**: `/alphaforge/app` (us-east-1)
 
 All three personas (`amira`, `mateo`, `robert`) run live with real-time SSE streaming (`/runs/{id}/events`), interactive What-If scenario comparisons (`/runs/{id}/whatif`), and automated trace persistence in DynamoDB + S3.
@@ -190,3 +190,7 @@ aws logs delete-log-group --log-group-name /alphaforge/app
 # aws dynamodb delete-table --table-name alphaforge-traces
 # aws s3 rb s3://alphaforge-data-908027403910 --force
 ```
+
+## HTTPS (#112)
+
+The public URL is **https://d1br9rnvwb43a5.cloudfront.net/** (CloudFront distribution `E28Y8O0PL1SV9A`, tag `project=alphaforge`). CloudFront terminates TLS with its default certificate, redirects HTTP to HTTPS, disables caching (API + server-sent events) and forwards all viewer headers. `infra/cloudfront.sh` creates it idempotently; with `AF_LOCK_ORIGIN=1` it also restricts the instance's port 80 to CloudFront's origin-facing prefix list, so the bare IP no longer serves the app in clear text. The app sets HSTS, CSP, `X-Frame-Options` and `X-Content-Type-Options` on every response.
