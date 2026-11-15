@@ -343,6 +343,8 @@ def extract_profile(
         "extract its standard market ticker symbol (e.g. 'TSM' for TSMC, 'AMZN' for Amazon, 'TSLA' for Tesla, 'DOGE-USD' for Dogecoin, 'BTC-USD' for Bitcoin, 'PLTR' for Palantir). "
         "If it is in the starter universe, use that exact ticker; if outside, return its standard Yahoo Finance ticker symbol so it can be dynamically ingested. "
         "If no specific asset is named, ticker must be null. "
+        "requested_allocation holds the weights the request names, as fractions: keys are listed tickers or the "
+        "asset-class codes crypto, equity, bond, gold (e.g. 'garder 50 % en crypto' -> {\"crypto\": 0.5}); null if none. "
         "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
         "Strict wording ('sans énergies fossiles', 'uniquement ESG', 'exclure') maps to extra_constraints: esg_only. "
         "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income, esg_tilt). "
@@ -359,8 +361,19 @@ def extract_profile(
                 res.extra_preferences.remove("esg_tilt")
         elif not STRICT_ESG_RE.search(lowered_p) and SOFT_ESG_RE.search(lowered_p) and "esg_tilt" not in res.extra_preferences:
             res.extra_preferences.append("esg_tilt")
+        # The model does not always fill the allocation the question names ("garder 50 % en
+        # crypto", "15 % en Bitcoin via BTCC.B"). The deterministic reading of the same text
+        # fills what the model left empty; it never overrides what the model did extract.
+        rx = _regex_extract(primary_text)
+        if res.ticker is None and rx.ticker:
+            res.ticker = rx.ticker
+            if res.weight_pct is None:
+                res.weight_pct = rx.weight_pct
+            res.request_type = "judge"
         if res.requested_allocation is None and res.ticker and res.weight_pct is not None and 0 < res.weight_pct <= 100:
             res.requested_allocation = {res.ticker: round(res.weight_pct / 100.0, 4)}
+        if res.requested_allocation is None and rx.requested_allocation:
+            res.requested_allocation = rx.requested_allocation
         if res.requested_vehicle is None:
             from alphaforge.tax import LISTED_CRYPTO_ETFS
             for v in sorted(LISTED_CRYPTO_ETFS, key=len, reverse=True):
