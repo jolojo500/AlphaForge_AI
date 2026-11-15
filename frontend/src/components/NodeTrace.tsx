@@ -11,7 +11,7 @@ interface NodeTraceProps {
   cost?: RunCost;
 }
 
-const NODE_LABELS: Record<string, string> = {
+export const NODE_LABELS: Record<string, string> = {
   profile: 'Profil (Agent 1)',
   screening: 'Filtrage admissibilité',
   quant: 'Métriques quantitatives',

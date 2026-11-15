@@ -76,6 +76,7 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
     { val: 10, label: '10 ans' },
     { val: 15, label: '15 ans' },
     { val: 20, label: '20 ans' },
+    { val: 25, label: '25 ans' },
     { val: 30, label: '30 ans' },
   ];
 
