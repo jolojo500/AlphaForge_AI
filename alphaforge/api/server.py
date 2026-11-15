@@ -21,6 +21,8 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from alphaforge.graph import (
+    _cfg,
+    get_graph,
     get_state,
     initial_state,
     resume_run,
@@ -149,46 +151,90 @@ def set_store(new_store: BaseRunStore) -> None:
 
 
 def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
-    """Attempt to restore a Run and its final state from the trace store or golden runs."""
+    """Attempt to restore a Run and its state from the trace store or checkpointer."""
     run = store.get(run_id)
     if run is not None:
         return run
 
+    # 1. Try trace store first (completed runs & golden runs)
     try:
         ts = get_trace_store()
         run_data = ts.get_run(run_id)
-        if not run_data:
-            return None
+        if run_data:
+            final_state_data = run_data.get("final_state")
+            graph_state = None
+            if final_state_data:
+                graph_state = GraphState.model_validate(final_state_data)
 
-        final_state_data = run_data.get("final_state")
-        graph_state = None
-        if final_state_data:
-            graph_state = GraphState.model_validate(final_state_data)
+            as_of_date_val = run_data.get("as_of_date")
+            as_of_date = None
+            if as_of_date_val:
+                try:
+                    as_of_date = dt.date.fromisoformat(str(as_of_date_val)[:10])
+                except Exception:
+                    pass
 
-        as_of_date_val = run_data.get("as_of_date")
-        as_of_date = None
-        if as_of_date_val:
-            try:
-                as_of_date = dt.date.fromisoformat(str(as_of_date_val)[:10])
-            except Exception:
-                pass
+            run = Run(
+                run_id=run_id,
+                persona=run_data.get("persona", ""),
+                request_text=run_data.get("request_text", ""),
+                as_of_date=as_of_date,
+            )
+            run.status = run_data.get("status", "completed")
+            run.state = graph_state
+            if run.status == "completed":
+                run.record_event({"type": "final", "run_id": run.run_id})
 
-        run = Run(
-            run_id=run_id,
-            persona=run_data.get("persona", ""),
-            request_text=run_data.get("request_text", ""),
-            as_of_date=as_of_date,
-        )
-        run.status = run_data.get("status", "completed")
-        run.state = graph_state
-        if run.status == "completed":
-            run.record_event({"type": "final", "run_id": run.run_id})
-
-        store.save(run)
-        return run
+            store.save(run)
+            return run
     except Exception:
         logging.exception("Failed to rehydrate run %s from trace store", run_id)
-        return None
+
+    # 2. Try checkpointer (e.g. for paused / interrupted runs after process restart)
+    try:
+        graph = get_graph()
+        thread_state = graph.get_state(_cfg(run_id))
+        if thread_state and thread_state.values:
+            checkpoint_values = thread_state.values
+            as_of_date_val = checkpoint_values.get("as_of_date")
+            as_of_date = None
+            if isinstance(as_of_date_val, dt.date):
+                as_of_date = as_of_date_val
+            elif as_of_date_val:
+                try:
+                    as_of_date = dt.date.fromisoformat(str(as_of_date_val)[:10])
+                except Exception:
+                    pass
+
+            run = Run(
+                run_id=run_id,
+                persona=checkpoint_values.get("persona", ""),
+                request_text=checkpoint_values.get("request_text", ""),
+                as_of_date=as_of_date,
+            )
+            if thread_state.tasks and any(t.interrupts for t in thread_state.tasks):
+                run.status = "interrupted"
+                for t in thread_state.tasks:
+                    if t.interrupts:
+                        val = t.interrupts[0].value
+                        run.question = (
+                            val.get("question") if isinstance(val, dict) else str(val)
+                        )
+                        run.record_event(
+                            {"type": "interrupt", "question": run.question}
+                        )
+                        break
+            else:
+                run.status = "completed"
+                run.state = GraphState.model_validate(checkpoint_values)
+                run.record_event({"type": "final", "run_id": run.run_id})
+
+            store.save(run)
+            return run
+    except Exception:
+        logging.exception("Failed to rehydrate run %s from checkpointer", run_id)
+
+    return None
 
 
 def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:

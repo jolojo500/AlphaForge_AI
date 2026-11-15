@@ -132,6 +132,31 @@ class LocalJsonTraceStore(TraceStore):
     ) -> list[dict[str, Any]]:
         runs = []
         seen = set()
+
+        if include_golden:
+            for golden in load_golden_runs():
+                rid = golden.get("run_id")
+                p = golden.get("persona", "")
+                if persona and p != persona:
+                    continue
+                if rid and rid not in seen:
+                    seen.add(rid)
+                    v = golden.get("verification") or {}
+                    runs.append(
+                        {
+                            "run_id": rid,
+                            "persona": p,
+                            "as_of_date": golden.get("as_of_date", ""),
+                            "request_text": golden.get("request_text", ""),
+                            "created_at": golden.get("created_at", ""),
+                            "status": golden.get("status", "completed"),
+                            "verification_passed": v.get("passed", False)
+                            if isinstance(v, dict)
+                            else bool(v),
+                            "is_golden": True,
+                        }
+                    )
+
         for file_path in sorted(
             self.storage_dir.glob("*.json"),
             key=lambda p: p.stat().st_mtime,
@@ -154,34 +179,16 @@ class LocalJsonTraceStore(TraceStore):
                             "request_text": data.get("request_text", ""),
                             "created_at": data.get("created_at", ""),
                             "status": data.get("status", "completed"),
-                            "verification_passed": v.get("passed", False) if isinstance(v, dict) else bool(v),
-                            "is_golden": bool(data.get("is_golden", rid.startswith("golden_"))),
+                            "verification_passed": v.get("passed", False)
+                            if isinstance(v, dict)
+                            else bool(v),
+                            "is_golden": bool(
+                                data.get("is_golden", rid.startswith("golden_"))
+                            ),
                         }
                     )
             except Exception:  # noqa: BLE001
                 pass
-
-        if include_golden:
-            for golden in load_golden_runs():
-                rid = golden.get("run_id")
-                p = golden.get("persona", "")
-                if persona and p != persona:
-                    continue
-                if rid and rid not in seen:
-                    seen.add(rid)
-                    v = golden.get("verification") or {}
-                    runs.append(
-                        {
-                            "run_id": rid,
-                            "persona": p,
-                            "as_of_date": golden.get("as_of_date", ""),
-                            "request_text": golden.get("request_text", ""),
-                            "created_at": golden.get("created_at", ""),
-                            "status": golden.get("status", "completed"),
-                            "verification_passed": v.get("passed", False) if isinstance(v, dict) else bool(v),
-                            "is_golden": True,
-                        }
-                    )
 
         return runs[:limit]
 
@@ -323,32 +330,6 @@ class DynamoDBTraceStore(TraceStore):
     ) -> list[dict[str, Any]]:
         items = []
         seen = set()
-        try:
-            scan_kwargs: dict[str, Any] = {"Limit": limit}
-            if persona:
-                scan_kwargs["FilterExpression"] = "persona = :p"
-                scan_kwargs["ExpressionAttributeValues"] = {":p": persona}
-            resp = self._table.scan(**scan_kwargs)
-            for raw in resp.get("Items", []):
-                try:
-                    rid = raw["run_id"]
-                    seen.add(rid)
-                    items.append(
-                        {
-                            "run_id": rid,
-                            "persona": raw.get("persona", ""),
-                            "as_of_date": raw.get("as_of_date", ""),
-                            "request_text": raw.get("request_text", ""),
-                            "created_at": raw.get("created_at", ""),
-                            "status": raw.get("status", "completed"),
-                            "verification_passed": raw.get("verification_passed", False),
-                            "is_golden": raw.get("run_id", "").startswith("golden_"),
-                        }
-                    )
-                except Exception:  # noqa: BLE001
-                    pass
-        except Exception:  # noqa: BLE001
-            pass
 
         if include_golden:
             for golden in load_golden_runs():
@@ -367,10 +348,45 @@ class DynamoDBTraceStore(TraceStore):
                             "request_text": golden.get("request_text", ""),
                             "created_at": golden.get("created_at", ""),
                             "status": golden.get("status", "completed"),
-                            "verification_passed": v.get("passed", False) if isinstance(v, dict) else bool(v),
+                            "verification_passed": v.get("passed", False)
+                            if isinstance(v, dict)
+                            else bool(v),
                             "is_golden": True,
                         }
                     )
+
+        try:
+            scan_kwargs: dict[str, Any] = {"Limit": limit}
+            if persona:
+                scan_kwargs["FilterExpression"] = "persona = :p"
+                scan_kwargs["ExpressionAttributeValues"] = {":p": persona}
+            resp = self._table.scan(**scan_kwargs)
+            for raw in resp.get("Items", []):
+                try:
+                    rid = raw["run_id"]
+                    if rid not in seen:
+                        seen.add(rid)
+                        items.append(
+                            {
+                                "run_id": rid,
+                                "persona": raw.get("persona", ""),
+                                "as_of_date": raw.get("as_of_date", ""),
+                                "request_text": raw.get("request_text", ""),
+                                "created_at": raw.get("created_at", ""),
+                                "status": raw.get("status", "completed"),
+                                "verification_passed": raw.get(
+                                    "verification_passed", False
+                                ),
+                                "is_golden": raw.get("run_id", "").startswith(
+                                    "golden_"
+                                ),
+                            }
+                        )
+                except Exception:  # noqa: BLE001
+                    pass
+        except Exception:  # noqa: BLE001
+            pass
+
         return items[:limit]
 
 
