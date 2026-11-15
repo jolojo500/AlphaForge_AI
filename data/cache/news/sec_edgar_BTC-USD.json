@@ -1,0 +1,97 @@
+{
+ "provider": "sec_edgar",
+ "key": "BTC-USD",
+ "fetched_at": "2026-11-15T01:22:53+00:00",
+ "items": [
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774926035539/ibit20260930_10q.htm",
+   "published_at": "2026-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774926026004/bit20260630c_10q.htm",
+   "published_at": "2026-08-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774926015538/bit20260331_10q.htm",
+   "published_at": "2026-05-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774926010480/bit20260328_8k.htm",
+   "published_at": "2026-03-31T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774926006058/bit20251231_10k.htm",
+   "published_at": "2026-02-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774925033435/bit20250930_10q.htm",
+   "published_at": "2025-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774925024884/bit20250630_10q.htm",
+   "published_at": "2025-08-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774925015168/bit20250331_10q.htm",
+   "published_at": "2025-05-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774925011313/bit20250404_8k.htm",
+   "published_at": "2025-04-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "BTC-USD",
+   "headline": "iShares Bitcoin Trust (IBIT): Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1980994/000143774925006260/bit20241231_10k.htm",
+   "published_at": "2025-03-05T00:00:00Z",
+   "provider": "sec_edgar"
+  }
+ ]
+}
