@@ -83,3 +83,26 @@ def test_live_red_team(persona):
     s = run(persona, PERSONAS[persona]["example_request"])
     assert all(o["evidence"] and o["evidence"][0] in s.evidence for o in s.objections)
     assert s.retries["red_team"] <= 3
+
+
+def test_second_pass_makes_no_model_call(use_llm):
+    calls = []
+    use_llm({"objections": [obj("blocking")]})
+    route = llm._override
+
+    def counting(messages, kind):
+        if '"severity"' in messages[0][1]:
+            calls.append(kind)
+        return route(messages, kind)
+
+    llm.set_llm_override(counting)
+    s = run("amira", PERSONAS["amira"]["example_request"])
+    assert s.retries["red_team"] == 2
+    assert len(calls) == 1  # the rebuilt scenarios are not re-reviewed by the model
+
+
+def test_objection_with_invented_number_is_dropped(use_llm):
+    bad = obj("warning") | {"objection": "Perte maximale de -99,9 % sur ce scénario."}
+    use_llm({"objections": [bad, obj("warning")]})
+    s = run("amira", PERSONAS["amira"]["example_request"])
+    assert [o["objection"] for o in s.objections] == ["Concentration américaine élevée."]

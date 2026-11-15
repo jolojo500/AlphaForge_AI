@@ -16,8 +16,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from alphaforge import llm
+from alphaforge import config, llm
 from alphaforge.evidence import EID_RE, numeric
+from alphaforge.nodes.verifier import check_numbers, check_wording
 from alphaforge.state import Evidence, GraphState
 from alphaforge.tracing import traced
 
@@ -55,7 +56,12 @@ def describe_evidence(ev: Evidence) -> str:
     if isinstance(v, dict):
         label = " ".join(str(v[k]) for k in ("metric", "scenario", "ticker") if k in v) or "value"
         num = numeric(ev)
-        body = f"{num:.4g}" if num is not None else str(v.get("value", v))
+        if num is None:
+            body = str(v.get("value", v))
+        elif v.get("unit") == "ratio":
+            body = f"{num * 100:.1f} %".replace(".", ",")
+        else:
+            body = f"{num:.4g}"
     else:
         label, body = "valeur", str(v)
     return f"{ev.id} | {label} = {body} | {ev.source} | {ev.date} | {ev.confidence}"
@@ -70,8 +76,9 @@ def _prompt(state: GraphState) -> str:
     ]
     for sc in state.scenarios:
         top = sorted(sc.weights.items(), key=lambda kv: -kv[1])[:8]
+        shown = f"{len(top)} premières lignes sur {len(sc.weights)}, total 100 %"
         lines.append(
-            f"- {sc.name}: " + ", ".join(f"{t} {w:.0%}" for t, w in top)
+            f"- {sc.name} ({shown}): " + ", ".join(f"{t} {w:.0%}" for t, w in top)
             + " | indicateurs " + ", ".join(f"{m}={e}" for m, e in sc.metrics.items())
         )
     ids = {e for sc in state.scenarios for e in sc.metrics.values()}
@@ -89,6 +96,10 @@ def clean_objections(review: Review, state: GraphState, first_pass: bool) -> lis
         ids = [e for e in dict.fromkeys(o.evidence + EID_RE.findall(o.objection)) if e in state.evidence]
         if not ids or not o.objection.strip():
             continue
+        # Same deterministic checks as the explanation: no invented number, no advice wording.
+        probe = {"pourquoi_ce_choix": [{"claim": o.objection, "evidence": ids}]}
+        if check_numbers(probe, state.evidence) or check_wording({"resume": o.objection}):
+            continue
         severity = o.severity if first_pass else "warning"
         out.append(
             {"scenario": o.scenario, "objection": o.objection.strip(), "evidence": ids, "severity": severity}
@@ -100,8 +111,22 @@ def clean_objections(review: Review, state: GraphState, first_pass: bool) -> lis
 def red_team_node(state: GraphState) -> dict:
     n = state.retries.get("red_team", 0)
     update: dict = {"retries": {"red_team": n + 1}}
+    if not config.RED_TEAM_ENABLED:
+        return {**update, "objections": [], "summary": "Relecture critique désactivée (AF_RED_TEAM=off)."}
     if not state.scenarios or state.profile is None:
         return {**update, "objections": [], "summary": "Aucune objection : pas de scénario à relire."}
+    if n > 0:
+        # Second pass after a blocking loop: the scenario builder already acted on the
+        # objections. Keep them as warnings for the explanation instead of a new model call.
+        kept = [{**o, "severity": "warning"} for o in state.objections]
+        return {
+            **update,
+            "objections": kept,
+            "summary": (
+                "Scénarios reconstruits après objection ; "
+                f"{len(kept)} objection(s) conservée(s) comme avertissement."
+            ),
+        }
     try:
         review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
     except llm.LLMError:
