@@ -178,3 +178,11 @@ def call_json[T: BaseModel](
                     ),
                 ]
     raise LLMError(f"invalid JSON after one repair attempt: {error[:500]}")
+
+
+def draft_notes(target, evidence, profile=None, *, llm_client=None):
+    """Draft verified LLM notes for scenarios (re-exported from alphaforge.nodes.notes)."""
+    from alphaforge.nodes.notes import draft_notes as _draft_notes
+
+    return _draft_notes(target, evidence, profile, llm_client=llm_client)
+
