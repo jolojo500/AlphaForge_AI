@@ -9,6 +9,7 @@ so the run still ends with a verifiable explanation.
 """
 from __future__ import annotations
 
+import os
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -56,6 +57,8 @@ Règles strictes :
   aucune promesse. Les statistiques sont historiques.
   N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » :
   utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
+- Concision stricte : au plus 3 affirmations (claims) par section, environ 35 mots par affirmation.
+  Va droit au but, sans répétition.
 - Ne remplace pas les trois scénarios par un seul : compare-les, puis indique le plus cohérent.
 - Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives
   (« fictional »). Si une preuve est fictive ou une hypothèse, dis-le dans les limites.
@@ -106,19 +109,41 @@ def describe_evidence(ev: Evidence) -> str:
 
 
 def _select_evidence(state: GraphState) -> list[Evidence]:
-    """Scenario metrics, exclusions, macro and news first, then quant for held tickers."""
-    held = {t for sc in state.scenarios for t in sc.weights}
+    """Select only evidence the explanation needs (keeps prompt well under 6k tokens)."""
+    # Top 8 tickers by highest weight across scenarios + requested ticker
+    max_weights: dict[str, float] = {}
+    for sc in state.scenarios:
+        for t, w in sc.weights.items():
+            if w > max_weights.get(t, 0.0):
+                max_weights[t] = w
+    top_tickers = set(sorted(max_weights, key=lambda t: max_weights[t], reverse=True)[:8])
+    if state.profile and state.profile.requested_idea:
+        top_tickers.add(state.profile.requested_idea["ticker"])
+
     metric_ids = {e for sc in state.scenarios for e in sc.metrics.values()}
-    cited = set(metric_ids) | {x.get("evidence_id") for x in state.exclusions}
-    cited |= {e.get("evidence_id") for e in state.events}
-    ordered = []
+    cited_ids = metric_ids | {x.get("evidence_id") for x in state.exclusions if x.get("evidence_id")}
+    cited_ids |= {e.get("evidence_id") for e in state.events if e.get("evidence_id")}
+
+    ordered: list[Evidence] = []
     for eid, ev in sorted(state.evidence.items(), key=lambda kv: (kv[0][:2], int(kv[0][2:]))):
-        v = ev.value if isinstance(ev.value, dict) else {}
-        tickers = set(v.get("tickers", [])) | ({v["ticker"]} if "ticker" in v else set())
-        if eid in cited or eid[:2] in ("EM", "EP") or (eid[:2] == "EQ" and tickers <= held) or (
-            not tickers and eid[:2] != "EN"
-        ):
+        prefix = eid[:2]
+        # Include scenario metrics, macro, exclusions, events, and explicitly cited items
+        if prefix in ("EP", "EM", "ES", "EN") or eid in cited_ids:
             ordered.append(ev)
+            continue
+        if prefix == "EQ":
+            v = ev.value
+            # Survivorship assumption entry has no ticker or string value
+            if not isinstance(v, dict):
+                ordered.append(ev)
+                continue
+            if "tickers" in v:
+                if set(v["tickers"]) <= top_tickers:
+                    ordered.append(ev)
+                continue
+            ticker = v.get("ticker")
+            if ticker is None or ticker in top_tickers:
+                ordered.append(ev)
     return ordered[:MAX_EVIDENCE_LINES]
 
 
@@ -189,8 +214,8 @@ def template_explanation(state: GraphState) -> dict:
             donnees.append(
                 {
                     "claim": (
-                        f"Scénario {sc.name} : volatilité annualisée historique de {abs(vol):.1%}, "
-                        f"perte maximale historique de {abs(mdd):.1%}."
+                        f"Scénario {sc.name} : volatilité annualisée historique de {_fr(abs(vol) * 100, 1)} %, "
+                        f"perte maximale historique de {_fr(abs(mdd) * 100, 1)} %."
                     ),
                     "evidence": ids,
                 }
@@ -206,7 +231,7 @@ def template_explanation(state: GraphState) -> dict:
             {
                 "claim": (
                     f"Le scénario {best.name} présente la plus faible perte maximale historique "
-                    f"({abs(bm):.1%}) parmi les trois, ce qui est le plus cohérent avec une "
+                    f"({_fr(abs(bm) * 100, 1)} %) parmi les trois, ce qui est le plus cohérent avec une "
                     f"tolérance au risque « {tol_str} »."
                 ),
                 "evidence": [best.metrics["max_drawdown"]],
@@ -216,13 +241,10 @@ def template_explanation(state: GraphState) -> dict:
         donnees = [{"claim": "Aucun indicateur chiffré n'est disponible.", "evidence": []}]
     if not pourquoi:
         pourquoi = [{"claim": "Le choix repose sur le profil déclaré.", "evidence": []}]
-    fictional = any(e.confidence == "fictional" for e in state.evidence.values())
     limites = [
         {"claim": "Cette explication a été produite par un gabarit, sans modèle de langage.", "evidence": []},
         {"claim": "Les statistiques sont historiques et ne décrivent pas l'avenir.", "evidence": []},
     ]
-    if fictional:
-        limites.append({"claim": "Certaines valeurs sont des données fictives de démonstration.", "evidence": []})
     if state.profile and state.profile.conflicts:
         limites.append(
             {"claim": "Le profil comporte des tensions avec la demande formulée.", "evidence": []}
@@ -242,11 +264,25 @@ def template_explanation(state: GraphState) -> dict:
 
 
 # ----------------------------------------------------------------------- node
+def _explain_llm():
+    if llm._override is not None or os.getenv("AF_LLM_OFFLINE") == "1":
+        return None
+    from langchain_aws import ChatBedrockConverse
+
+    from alphaforge import config
+    return ChatBedrockConverse(
+        model=llm.model_id("main"),
+        region_name=config.AWS_REGION,
+        max_tokens=6000,
+    )
+
+
 def generate_explanation(state: GraphState, llm_client=None) -> tuple[dict, bool]:
     """Returns (explanation dict, used_template)."""
+    client = llm_client if llm_client is not None else _explain_llm()
     try:
         out = llm.call_json(
-            build_prompt(state), Explanation, kind="main", system=SYSTEM, llm=llm_client
+            build_prompt(state), Explanation, kind="main", system=SYSTEM, llm=client
         )
     except llm.LLMError:
         return template_explanation(state), True
