@@ -79,14 +79,15 @@ def test_concentration_on_real_universe():
 def test_sector_hhi_looks_through_etf_holdings():
     info = get_provider().asset_info()
     spy = concentration({"SPY": 1.0}, info, as_of=AS_OF)
-    assert 0 < spy["sector_hhi"] < 1.0  # no longer "its own sector"
+    assert spy["effective_sectors"] >= 8  # a broad index fund is diversified, not one sector
     assert spy["effective_sectors"] == pytest.approx(1 / spy["sector_hhi"])
-    assert spy["other_sector_share"] > 0  # holdings outside the universe are "Autres"
+    assert spy["other_sector_share"] > 0  # holdings outside the universe: spread over 11 GICS sectors
+    assert concentration({"AAPL": 1.0}, info, as_of=AS_OF)["sector_hhi"] == 1.0
+    assert concentration("RY.TO", info)["effective_sectors"] == 1.0
     # SPY and ESGV overlap almost fully: splitting between them barely changes the HHI,
     # whereas the old sector-label HHI would have halved (0.5 for two "sectors").
     split = concentration({"SPY": 0.5, "ESGV": 0.5}, info, as_of=AS_OF)
     assert abs(split["sector_hhi"] - spy["sector_hhi"]) < 0.05
-    assert split["sector_hhi"] > 0.3
 
 
 def test_country_and_single_name_exposure_look_through():

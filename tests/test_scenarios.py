@@ -382,6 +382,10 @@ def test_issue_173_hhi_looks_through_etfs_and_reads_as_effective_sectors():
         assert hhi_ev.value["effective_sectors"] == pytest.approx(1 / numeric(hhi_ev), rel=1e-3)
         assert "secteurs effectifs" in hhi_ev.value["label"]
         assert "looking through ETF holdings" in hhi_ev.method
+        assumption = out["evidence"][hhi_ev.value["assumption"]]
+        assert assumption.confidence == "assumption"
+        assert "répartie également entre les 11 secteurs GICS" in assumption.value
+        assert f"({hhi_ev.value['other_sector_share']:.1%})" in assumption.value
         (top_name,) = _scenario_evidence(out, "top_name_exposure", name)
         assert top_name.value["name"] and numeric(top_name) > 0
         (canada,) = _scenario_evidence(out, "canada_exposure", name)

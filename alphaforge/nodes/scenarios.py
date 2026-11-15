@@ -40,6 +40,7 @@ from alphaforge.data.index_history import (
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import (
+    GICS_SECTORS,
     OTHER_SECTOR,
     concentration,
     max_drawdown,
@@ -108,8 +109,10 @@ METHODS = {
     "stress_2022": "total return of the scenario in CAD over 2022-01-03..2022-12-30",
     "top_weight": "largest single weight in the scenario",
     "sector_concentration_hhi": "Herfindahl index of the sector weights after looking through ETF holdings "
-    "(SPY, QQQ, ESGV, XIU.TO replaced by their cached holdings; a holding outside the universe counts "
-    f"as '{OTHER_SECTOR}'); decimal, effective sectors = 1 / HHI",
+    "(SPY, QQQ, ESGV, XIU.TO replaced by their cached holdings; a holding outside the universe has no "
+    f"documented sector ('{OTHER_SECTOR}') and that share is assumed spread evenly across the "
+    f"{GICS_SECTORS} GICS sectors: HHI = sum(known share^2) + other^2 / {GICS_SECTORS}); decimal, "
+    "effective sectors = 1 / HHI",
     "us_exposure": "look-through weight in US-listed names, ETF holdings included (crypto not counted)",
     "tax_drag": "estimated annual tax drag based on historical dividend/interest yields and account tax rules",
     "fee_drag": "weighted average management expense ratio (MER) across holdings",
@@ -796,7 +799,7 @@ def hhi_label(hhi: float | None, effective: float | None) -> str:
     return f"{hhi:.2f}".replace(".", ",") + f" ≈ {max(1, round(effective))} secteurs effectifs"
 
 
-def _metric_value(metric: str, scenario: str, values: dict) -> dict:
+def _metric_value(metric: str, scenario: str, values: dict, sector_assumption: str | None = None) -> dict:
     """The evidence value dict of a scenario metric; HHI carries its effective-sector reading."""
     val: dict = {"metric": metric, "scenario": scenario, "value": values.get(metric), "unit": "ratio"}
     if metric == "sector_concentration_hhi":
@@ -805,7 +808,25 @@ def _metric_value(metric: str, scenario: str, values: dict) -> dict:
         val["label"] = hhi_label(values.get(metric), eff)
         val["other_sector_share"] = values.get("other_sector_share")
         val["look_through"] = True
+        if sector_assumption:
+            val["assumption"] = sector_assumption
     return val
+
+
+def _sector_assumption(reg: EvidenceRegistry, scenario: str, values: dict, as_of: dt.date) -> str | None:
+    """Assumption cited by the HHI evidence: the undocumented ETF share is spread over the GICS sectors."""
+    other = values.get("other_sector_share") or 0.0
+    if other <= 0:
+        return None
+    return reg.add(
+        f"Concentration sectorielle du scénario {scenario} : la part des FNB sans secteur documenté "
+        f"({_pct(other)}) est supposée répartie également entre les {GICS_SECTORS} secteurs GICS ; "
+        "un fonds indiciel large n'est pas un secteur à lui seul.",
+        source="data/cache/holdings (titres hors univers sans secteur)",
+        date=as_of,
+        method=f"other_share^2 / {GICS_SECTORS} added to the HHI instead of other_share^2",
+        confidence="assumption",
+    )
 
 
 def _r4(x) -> float | None:
@@ -1132,9 +1153,10 @@ def scenarios_node(state: GraphState) -> dict:
     base_metrics = [m for m in SCENARIO_METRICS if m not in ("tax_drag", "fee_drag")]
     for name in SCENARIO_NAMES:
         values = all_values[name]
+        sector_eid = _sector_assumption(reg, name, values, as_of)
         for m in base_metrics:
             scenario_ids[name][m] = reg.add(
-                _metric_value(m, name, values),
+                _metric_value(m, name, values, sector_eid),
                 source=price_source,
                 date=end,
                 method=f"{METHODS[m]}, historical backtest of fictional weights, {window}",
@@ -1508,6 +1530,7 @@ def scenarios_node(state: GraphState) -> dict:
             ).items()
         }
         ids_curr = {}
+        sector_eid_curr = _sector_assumption(reg, "current", values_curr, as_of)
         for m in SCENARIO_METRICS:
             if m == "tax_drag":
                 ids_curr[m] = reg.add(
@@ -1540,7 +1563,7 @@ def scenarios_node(state: GraphState) -> dict:
                 )
             else:
                 ids_curr[m] = reg.add(
-                    _metric_value(m, "current", values_curr),
+                    _metric_value(m, "current", values_curr, sector_eid_curr),
                     source=SOURCE,
                     date=end,
                     method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}{part_note}",

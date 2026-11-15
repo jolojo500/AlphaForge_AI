@@ -88,6 +88,7 @@ def correlation(prices: pd.DataFrame, a: Target, b: Target) -> float:
 
 
 OTHER_SECTOR = "Autres"  # ETF holdings outside the universe have no sector label
+GICS_SECTORS = 11  # the undocumented remainder of a broad index fund is spread evenly over them
 
 
 def _lookthrough_weights(
@@ -131,6 +132,9 @@ def concentration(
 
     An ETF with cached holdings (SPY, QQQ, ESGV, XIU.TO) is replaced by its holdings; each
     holding takes the universe sector label when it is in the universe, otherwise "Autres".
+    The "Autres" share is not one sector: it is assumed spread evenly across the 11 GICS
+    sectors, so HHI = sum(known sector share^2) + other_share^2 / 11 (reported as
+    `other_sector_share`, cited as an assumption by the scenario node).
     `us_exposure` / `canada_exposure` count the look-through weight in US- / TSX-listed names
     (crypto has no country). `top_weight` stays the largest line of the portfolio (the UI
     metric); `top_name_exposure` is the largest look-through exposure to one name, e.g. AAPL
@@ -143,7 +147,8 @@ def concentration(
     for name, x in lt.items():
         s = _sector_of(name, info)
         sectors[s] = sectors.get(s, 0.0) + x
-    hhi = float(sum(v * v for v in sectors.values()))
+    other = sectors.pop(OTHER_SECTOR, 0.0)
+    hhi = float(sum(v * v for v in sectors.values()) + other * other / GICS_SECTORS)
     names = {n: x for n, x in lt.items() if not n.endswith(":other")}
     top_name = max(sorted(names), key=lambda n: names[n]) if names else None
     return {
@@ -154,7 +159,7 @@ def concentration(
         "top_weight": float(w.max()),
         "top_name_exposure": float(names[top_name]) if top_name else 0.0,
         "top_name": top_name,
-        "other_sector_share": float(sectors.get(OTHER_SECTOR, 0.0)),
+        "other_sector_share": float(other),
     }
 
 
