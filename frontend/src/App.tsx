@@ -25,6 +25,7 @@ import { ExclusionsCard } from './components/ExclusionsCard';
 import { EvidenceTable } from './components/EvidenceTable';
 import { EvidenceModal } from './components/EvidenceModal';
 import { NodeTrace } from './components/NodeTrace';
+import { ResolvedProfileCard } from './components/ResolvedProfileCard';
 import { ConflictsAlert } from './components/ConflictsAlert';
 import { SimulationBanner } from './components/SimulationBanner';
 import { ClarificationBox } from './components/ClarificationBox';
@@ -401,6 +402,15 @@ export const AppContent: React.FC = () => {
               </Badge>
             )}
           </div>
+        )}
+
+        {/* Resolved Profile above the trace (PRD 6 / C-10) */}
+        {(runState?.profile || lastPayload?.profile_data || lastPayload?.persona) && (
+          <ResolvedProfileCard
+            profile={runState?.profile || null}
+            payloadData={lastPayload?.profile_data}
+            persona={lastPayload?.persona}
+          />
         )}
 
         {/* Clarification Box (Agent 1 interrupt) */}

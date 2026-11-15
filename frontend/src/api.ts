@@ -153,11 +153,15 @@ export function prepareBackendPayload(
   else if (profile.riskTolerance === 'Modéré') riskTolerance = 'moderate';
   else if (profile.riskTolerance === 'Élevé') riskTolerance = 'high';
 
-  let riskCapacity = 'low';
-  if (
-    profile.essentialExpensesImpact.includes('couvertes') &&
-    profile.capitalNeedNext12Months.includes('urgence')
-  ) {
+  let riskCapacity: 'low' | 'moderate' | 'high' = 'low';
+  const expensesCovered = profile.essentialExpensesImpact?.includes('couvertes') ?? false;
+  const hasEmergencyFund = profile.capitalNeedNext12Months?.includes('urgence') ?? false;
+  const noWithdrawalSoon =
+    horizonYears >= 3 || (profile.withdrawalMethod && profile.withdrawalMethod.includes('Réinvestissement'));
+
+  if (expensesCovered && hasEmergencyFund) {
+    riskCapacity = noWithdrawalSoon ? 'high' : 'moderate';
+  } else if (expensesCovered || hasEmergencyFund) {
     riskCapacity = 'moderate';
   }
 
@@ -184,13 +188,43 @@ export function prepareBackendPayload(
   if (/modérée|majeurs/i.test(profile.cryptoPreference) && !preferences.includes('likes_crypto')) {
     preferences.push('likes_crypto');
   }
-  if (profile.currencyPreference.includes('CAD')) {
-    preferences.push('prefers_cad');
+
+  // Contextual information appended to request_text so Agent 1 and LLM prompt
+  // see all investor background, loss tolerance, account type and notes.
+  const contextParts: string[] = [];
+  if (profile.ageRange && profile.ageRange !== 'Non spécifié') {
+    contextParts.push(`Tranche d'âge : ${profile.ageRange}`);
+  }
+  if (profile.familySituation && profile.familySituation !== 'Non spécifié') {
+    contextParts.push(`Situation familiale : ${profile.familySituation}`);
+  }
+  if (profile.accountType) {
+    contextParts.push(`Type de compte : ${profile.accountType}`);
+  }
+  if (profile.maxLossTolerance) {
+    contextParts.push(`Tolérance de perte sur 12 mois : ${profile.maxLossTolerance} %`);
+  }
+  if (profile.sectorConcentrationLimit) {
+    contextParts.push(`Plafond sectoriel : ${profile.sectorConcentrationLimit}`);
+  }
+  if (profile.additionalNotes?.trim()) {
+    contextParts.push(`Remarques libres : ${profile.additionalNotes.trim()}`);
+  }
+
+  let fullRequestText = requestText;
+  if (contextParts.length > 0) {
+    fullRequestText = `${requestText}\n\n[Contexte investisseur]\n${contextParts.join('\n')}`;
+  }
+
+  let maxLossPct: number | null = null;
+  const parsedLoss = parseFloat(profile.maxLossTolerance);
+  if (!isNaN(parsedLoss)) {
+    maxLossPct = parsedLoss;
   }
 
   const payload: BackendRunPayload = {
     persona: 'custom_user',
-    request_text: requestText,
+    request_text: fullRequestText,
     user_profile: profile,
     profile_data: {
       objective,
@@ -200,6 +234,7 @@ export function prepareBackendPayload(
       constraints: Array.from(new Set(constraints)),
       preferences,
       budget_cad: profile.simulatedCapital,
+      max_loss_pct: maxLossPct,
       notes: profile.additionalNotes,
     },
   };

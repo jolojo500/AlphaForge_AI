@@ -102,7 +102,8 @@ def _resolve_ticker(raw: str | None) -> str | None:
 
 def _regex_extract(text: str) -> Extraction:
     """Fallback reader used when the model is unavailable or returns invalid JSON."""
-    lowered = text.lower()
+    primary_text = text.split("\n\n[Contexte investisseur]")[0]
+    lowered = primary_text.lower()
     weight = None
     m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:%|pour\s*cent|percent)", lowered)
     if m:
@@ -145,12 +146,29 @@ def extract_profile(state_persona: str, text: str, llm_client=None) -> tuple[Ext
 
 
 def detect_conflict(
-    *, tolerance: str, horizon_years: int, constraints: list[str], idea: dict | None
+    *,
+    tolerance: str,
+    horizon_years: int,
+    constraints: list[str],
+    idea: dict | None,
+    max_loss_pct: float | None = None,
 ) -> list[str]:
     """Contradictions between the requested idea and the stated profile (deterministic)."""
-    if not idea:
-        return []
     out: list[str] = []
+    if max_loss_pct is not None:
+        tol_fr = TOLERANCE_FR.get(tolerance, tolerance)
+        if max_loss_pct <= 5.0 and tolerance in ("high", "moderate"):
+            out.append(
+                f"Une tolérance de perte sur 12 mois de {max_loss_pct:.0f} % est en contradiction "
+                f"avec une tolérance au risque déclarée « {tol_fr} »."
+            )
+        elif max_loss_pct <= 15.0 and tolerance == "high":
+            out.append(
+                f"Une tolérance de perte sur 12 mois de {max_loss_pct:.0f} % est en contradiction "
+                f"avec une tolérance au risque déclarée « {tol_fr} »."
+            )
+    if not idea:
+        return out
     ticker, weight = idea["ticker"], idea["weight"]
     cap = SINGLE_STOCK_CAP[tolerance]
     asset = _universe().get(ticker, {})
@@ -212,7 +230,11 @@ def build_profile(persona_id: str, ext: Extraction, used_fallback: bool) -> Prof
     if ext.budget_cad and ext.budget_cad > 0:
         budget = float(ext.budget_cad)
     conflicts = detect_conflict(
-        tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea
+        tolerance=p["risk_tolerance"],
+        horizon_years=horizon,
+        constraints=constraints,
+        idea=idea,
+        max_loss_pct=p.get("max_loss_pct"),
     )
     for c in ext.conflicts[:2]:
         c = c.strip()

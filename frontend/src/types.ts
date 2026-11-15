@@ -201,7 +201,7 @@ export interface UserOnboardingProfile {
   cryptoPreference: string;
   esgImportance: string;
   excludedCategories?: string[];
-  currencyPreference: string;
+  currencyPreference?: string;
 
   // Step 5: Informations supplémentaires
   additionalNotes: string;
@@ -222,6 +222,7 @@ export interface BackendRunPayload {
     constraints: string[];
     preferences: string[];
     budget_cad: number | null;
+    max_loss_pct?: number | null;
     notes?: string;
   };
 }
