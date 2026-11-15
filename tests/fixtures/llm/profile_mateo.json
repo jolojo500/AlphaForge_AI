@@ -1,0 +1,7 @@
+{
+ "request_type": "build",
+ "horizon_years": 10,
+ "extra_constraints": [
+  "no_controversies"
+ ]
+}

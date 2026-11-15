@@ -1,0 +1,9 @@
+{
+ "request_type": "build",
+ "budget_cad": 100000,
+ "horizon_years": 15,
+ "extra_preferences": [
+  "Likes Tech",
+  "likes_crypto"
+ ]
+}
