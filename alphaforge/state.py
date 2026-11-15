@@ -147,3 +147,10 @@ class GraphState(BaseModel):
     verification: dict | None = None
     retries: Annotated[dict[str, int], _merge] = Field(default_factory=dict)
     trace: Annotated[list[dict], operator.add] = Field(default_factory=list)
+    # Advisor review & sign-off fields (PRD B-14, #121)
+    reviewed: bool = False
+    reviewer_id: str | None = None
+    reviewed_at: str | None = None
+    chosen_scenario: str | None = None
+    advisor_rationale: str | None = None
+    edited_assumptions: dict | None = None

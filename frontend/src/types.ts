@@ -228,6 +228,29 @@ export interface GraphState {
   trace: TraceEntry[];
   cost?: RunCost;
   run_id?: string;
+  // Advisor review & sign-off (#121)
+  reviewed?: boolean;
+  reviewer_id?: string | null;
+  reviewed_at?: string | null;
+  chosen_scenario?: string | null;
+  advisor_rationale?: string | null;
+  edited_assumptions?: Record<string, unknown> | null;
+}
+
+export interface SuitabilityRecord {
+  run_id: string;
+  reviewer_id: string;
+  reviewed_at: string;
+  chosen_scenario: string;
+  rationale: string;
+  edited_assumptions?: Record<string, unknown> | null;
+  kyc_snapshot?: Record<string, unknown>;
+  scenarios?: Scenario[];
+  model_ids?: Record<string, string>;
+  data_dates?: Record<string, string>;
+  verifier_result?: Record<string, unknown>;
+  pdf_s3_key?: string;
+  pdf_s3_bucket?: string;
 }
 
 export interface PersonaMeta {
