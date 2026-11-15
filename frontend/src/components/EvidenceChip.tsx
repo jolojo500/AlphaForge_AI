@@ -7,21 +7,19 @@ interface EvidenceChipProps {
 }
 
 export const EvidenceChip: React.FC<EvidenceChipProps> = ({ id, onClick, confidence }) => {
-  // Prefix coloring
-  // ES: screening, EQ: quant, EM: macro, EN: news, EP: portfolio
-  let bgClass = 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
+  let bgClass = 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20';
   if (confidence === 'assumption') {
-    bgClass = 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100';
+    bgClass = 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/20';
   } else if (confidence === 'fictional') {
-    bgClass = 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100';
+    bgClass = 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/20';
   } else if (id.startsWith('EQ')) {
-    bgClass = 'bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100';
+    bgClass = 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20';
   } else if (id.startsWith('EM')) {
-    bgClass = 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100';
+    bgClass = 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20';
   } else if (id.startsWith('EN')) {
-    bgClass = 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100';
+    bgClass = 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20';
   } else if (id.startsWith('EP')) {
-    bgClass = 'bg-violet-50 text-violet-800 border-violet-200 hover:bg-violet-100';
+    bgClass = 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30 hover:bg-violet-500/20';
   }
 
   return (

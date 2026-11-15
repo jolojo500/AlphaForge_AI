@@ -2,7 +2,7 @@
  * Mirrors alphaforge/state.py and API contracts (PRD 3.3, 6).
  */
 
-export type PersonaId = 'amira' | 'mateo' | 'robert';
+export type PersonaId = 'amira' | 'mateo' | 'robert' | 'custom_user' | string;
 export type ScenarioName = 'as_requested' | 'capped' | 'profile_baseline';
 
 export const SCENARIO_NAMES: ScenarioName[] = ['as_requested', 'capped', 'profile_baseline'];
@@ -172,4 +172,56 @@ export interface WhatIfDiff {
   change?: WhatIfChange;
   parent_run_id?: string;
   child_run_id?: string;
+}
+
+export interface UserOnboardingProfile {
+  // Step 1: Identité, situation & expérience
+  ageRange: string;
+  familySituation: string;
+  investmentExperience: 'Débutant' | 'Intermédiaire' | 'Avancé' | '';
+  businessModelsUnderstanding: string | string[];
+
+  // Step 2: Objectifs & paramètres financiers
+  primaryObjective: string;
+  firstWithdrawalHorizon: string;
+  withdrawalMethod: string;
+  simulatedCapital: number;
+  simulatedCapitalFormatted: string;
+  accountType: string;
+
+  // Step 3: Tolérance au risque & garde-fous
+  riskTolerance: 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé' | '';
+  maxLossTolerance: string;
+  sectorConcentrationLimit: string;
+  capitalNeedNext12Months: string;
+  essentialExpensesImpact: string;
+
+  // Step 4: Préférences & exclusions
+  interestedSectors: string[];
+  cryptoPreference: string;
+  esgImportance: string;
+  excludedCategories?: string[];
+  currencyPreference: string;
+
+  // Step 5: Informations supplémentaires
+  additionalNotes: string;
+  fictionalCapitalAcknowledged: boolean;
+
+  completedAt: string;
+}
+
+export interface BackendRunPayload {
+  persona: string;
+  request_text: string;
+  user_profile?: UserOnboardingProfile;
+  profile_data?: {
+    objective: string;
+    horizon_years: number;
+    risk_tolerance: string;
+    risk_capacity: string;
+    constraints: string[];
+    preferences: string[];
+    budget_cad: number | null;
+    notes?: string;
+  };
 }

@@ -222,6 +222,8 @@ class RunCreateRequest(BaseModel):
     persona: str
     request_text: str = ""
     as_of_date: dt.date | None = None
+    profile_data: dict[str, Any] | None = None
+    user_profile: dict[str, Any] | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -241,10 +243,35 @@ def get_personas() -> dict[str, dict[str, Any]]:
 @app.post("/runs")
 def create_run(req: RunCreateRequest) -> dict[str, str]:
     if req.persona not in PERSONAS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown persona '{req.persona}'. Allowed: {list(PERSONAS.keys())}",
-        )
+        if req.profile_data:
+            PERSONAS[req.persona] = {
+                "label": req.profile_data.get("label", "Profil personnalisé"),
+                "objective": req.profile_data.get("objective", "balanced"),
+                "horizon_years": int(req.profile_data.get("horizon_years", 5)),
+                "risk_tolerance": req.profile_data.get("risk_tolerance", "moderate"),
+                "risk_capacity": req.profile_data.get("risk_capacity", "moderate"),
+                "constraints": list(req.profile_data.get("constraints", [])),
+                "preferences": list(req.profile_data.get("preferences", [])),
+                "budget_cad": req.profile_data.get("budget_cad"),
+                "example_request": req.request_text,
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown persona '{req.persona}'. Allowed: {list(PERSONAS.keys())}",
+            )
+    elif req.profile_data and req.persona == "custom_user":
+        PERSONAS[req.persona].update({
+            "label": req.profile_data.get("label", "Profil personnalisé"),
+            "objective": req.profile_data.get("objective", "balanced"),
+            "horizon_years": int(req.profile_data.get("horizon_years", 5)),
+            "risk_tolerance": req.profile_data.get("risk_tolerance", "moderate"),
+            "risk_capacity": req.profile_data.get("risk_capacity", "moderate"),
+            "constraints": list(req.profile_data.get("constraints", [])),
+            "preferences": list(req.profile_data.get("preferences", [])),
+            "budget_cad": req.profile_data.get("budget_cad"),
+            "example_request": req.request_text,
+        })
     run = store.create(
         persona=req.persona,
         request_text=req.request_text,

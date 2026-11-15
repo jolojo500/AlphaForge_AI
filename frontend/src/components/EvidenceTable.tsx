@@ -2,6 +2,16 @@ import React, { useState, useMemo } from 'react';
 import { Evidence } from '../types';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Database, Search, ExternalLink } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 
 interface EvidenceTableProps {
   evidence: Record<string, Evidence>;
@@ -25,7 +35,6 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
 }) => {
   const [filterPrefix, setFilterPrefix] = useState<PrefixFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(15);
 
   const evidenceList = useMemo(() => Object.values(evidence), [evidence]);
 
@@ -51,139 +60,128 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
   if (evidenceList.length === 0) return null;
 
   return (
-    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <Database className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-slate-800">
-            5. Registre complet des preuves ({evidenceList.length})
-          </h2>
+    <Card className="bg-card border-border shadow-sm mb-6">
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-primary" />
+            <h2 className="text-sm sm:text-base font-semibold text-foreground">
+              5. Registre complet des preuves ({evidenceList.length})
+            </h2>
+          </div>
+
+          {/* Search input */}
+          <div className="relative w-full sm:w-60">
+            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-2.5" />
+            <Input
+              type="text"
+              placeholder="Filtrer par actif, source..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-xs"
+            />
+          </div>
         </div>
 
-        {/* Search input */}
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Filtrer par actif, source..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
+        {/* Prefix filter tabs */}
+        <div className="flex flex-wrap gap-1 mb-3.5 border-b border-border/60 pb-3">
+          {(Object.keys(PREFIX_LABELS) as PrefixFilter[]).map((p) => {
+            const count =
+              p === 'ALL'
+                ? evidenceList.length
+                : evidenceList.filter((e) => e.id.startsWith(p)).length;
+            const isActive = filterPrefix === p;
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setFilterPrefix(p)}
+                className={`text-xs px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-foreground text-background shadow-xs font-medium'
+                    : 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                }`}
+              >
+                {PREFIX_LABELS[p]} ({count})
+              </button>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Prefix filter tabs */}
-      <div className="flex flex-wrap gap-1.5 mb-4 border-b border-slate-100 pb-3">
-        {(Object.keys(PREFIX_LABELS) as PrefixFilter[]).map((p) => {
-          const count =
-            p === 'ALL'
-              ? evidenceList.length
-              : evidenceList.filter((e) => e.id.startsWith(p)).length;
-          const isActive = filterPrefix === p;
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setFilterPrefix(p)}
-              className={`text-xs px-3 py-1 rounded-full font-medium transition-colors cursor-pointer ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {PREFIX_LABELS[p]} ({count})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto max-h-96 overflow-y-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 text-slate-600 uppercase border-b border-slate-200 sticky top-0 z-10">
-            <tr>
-              <th className="py-2 px-3 font-semibold">ID</th>
-              <th className="py-2 px-3 font-semibold">Valeur</th>
-              <th className="py-2 px-3 font-semibold">Source</th>
-              <th className="py-2 px-3 font-semibold">Date</th>
-              <th className="py-2 px-3 font-semibold">Méthode</th>
-              <th className="py-2 px-3 font-semibold">Statut</th>
-              <th className="py-2 px-3 font-semibold">Lien</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filteredEvidence.slice(0, displayLimit).map((ev) => {
-              let displayVal = String(ev.value);
-              if (typeof ev.value === 'object' && ev.value !== null) {
-                if ('value' in ev.value) {
-                  const subVal = (ev.value as { value: unknown }).value;
-                  displayVal = String(subVal);
-                } else {
-                  displayVal = JSON.stringify(ev.value);
+        {/* Table */}
+        <div className="rounded-lg border border-border/80 overflow-hidden max-h-96 overflow-y-auto">
+          <Table>
+            <TableHeader className="bg-muted/60 sticky top-0 z-10">
+              <TableRow className="border-border/80">
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">ID</TableHead>
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">Valeur</TableHead>
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">Source</TableHead>
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">Date</TableHead>
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">Méthode</TableHead>
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">Statut</TableHead>
+                <TableHead className="font-semibold text-foreground text-xs py-2 px-3">Lien</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredEvidence.map((ev) => {
+                let displayVal = String(ev.value);
+                if (typeof ev.value === 'object' && ev.value !== null) {
+                  if ('value' in ev.value) {
+                    const subVal = (ev.value as { value: unknown }).value;
+                    displayVal = String(subVal);
+                  } else {
+                    displayVal = JSON.stringify(ev.value);
+                  }
                 }
-              }
 
-              return (
-                <tr
-                  key={ev.id}
-                  onClick={() => onSelectEvidence(ev.id)}
-                  className="hover:bg-slate-50 cursor-pointer transition-colors"
-                >
-                  <td className="py-2 px-3 font-mono font-bold text-blue-600">{ev.id}</td>
-                  <td className="py-2 px-3 font-mono text-slate-900 max-w-[150px] truncate" title={displayVal}>
-                    {displayVal}
-                  </td>
-                  <td className="py-2 px-3 text-slate-600 max-w-[120px] truncate" title={ev.source}>
-                    {ev.source}
-                  </td>
-                  <td className="py-2 px-3 text-slate-500 whitespace-nowrap">
-                    {ev.date}
-                    <span className="text-[10px] text-slate-400 block">({ev.date_kind})</span>
-                  </td>
-                  <td className="py-2 px-3 text-slate-600 max-w-[220px] truncate" title={ev.method}>
-                    {ev.method}
-                  </td>
-                  <td className="py-2 px-3">
-                    <ConfidenceBadge confidence={ev.confidence} />
-                  </td>
-                  <td className="py-2 px-3">
-                    {ev.url ? (
-                      <a
-                        href={ev.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Ouvrir le lien externe"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredEvidence.length > displayLimit && (
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Affichage de {Math.min(displayLimit, filteredEvidence.length)} sur {filteredEvidence.length} preuves
-          </span>
-          <button
-            type="button"
-            onClick={() => setDisplayLimit((prev) => prev + 20)}
-            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors cursor-pointer"
-          >
-            Voir plus de preuves (+20)
-          </button>
+                return (
+                  <TableRow
+                    key={ev.id}
+                    onClick={() => onSelectEvidence(ev.id)}
+                    className="border-border/60 hover:bg-muted/40 cursor-pointer transition-colors"
+                  >
+                    <TableCell className="py-2.5 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">
+                      {ev.id}
+                    </TableCell>
+                    <TableCell className="py-2.5 px-3 font-mono text-foreground max-w-[150px] truncate" title={displayVal}>
+                      {displayVal}
+                    </TableCell>
+                    <TableCell className="py-2.5 px-3 text-muted-foreground max-w-[120px] truncate" title={ev.source}>
+                      {ev.source}
+                    </TableCell>
+                    <TableCell className="py-2.5 px-3 text-muted-foreground whitespace-nowrap text-xs">
+                      {ev.date}
+                      <span className="text-[10px] text-muted-foreground/70 block">({ev.date_kind})</span>
+                    </TableCell>
+                    <TableCell className="py-2.5 px-3 text-muted-foreground max-w-[220px] truncate text-xs" title={ev.method}>
+                      {ev.method}
+                    </TableCell>
+                    <TableCell className="py-2.5 px-3">
+                      <ConfidenceBadge confidence={ev.confidence} />
+                    </TableCell>
+                    <TableCell className="py-2.5 px-3">
+                      {ev.url ? (
+                        <a
+                          href={ev.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-blue-500 hover:text-blue-700 dark:text-blue-400"
+                          title="Ouvrir le lien externe"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground/40">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
-      )}
-    </section>
+      </CardContent>
+    </Card>
   );
 };
