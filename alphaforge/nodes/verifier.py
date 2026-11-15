@@ -25,25 +25,26 @@ REL_TOL = 0.01
 # Advice and forecast phrasing, French and English (PRD 5.10). Matched on lowercase text.
 _WORDING = [
     r"vous devriez (?:acheter|vendre|investir|placer|mettre|choisir|privil[ée]gier)",
-    r"nous vous (?:recommandons|conseillons)",
-    r"je vous (?:recommande|conseille)",
+    r"\b(?:nous |je )?(?:vous )?recommand(?:ons|ez|e|é|ée|és|ées)\b",
+    r"\b(?:nous |je )?(?:vous )?conseill(?:ons|ez|e|é|ée|és|ées)\b",
     r"\b(?:achetez|vendez|investissez)\b",
     r"il faut (?:acheter|vendre|investir)",
     r"vous (?:allez|pourrez) gagner",
     r"(?:rendement|gain|profit)s? (?:garanti|assur[ée]|certain)",
     r"\bgaranti(?:e|s|es)?\b",
     r"\bsans risque\b",
-    r"rendement attendu",
+    r"rendement[s]? (?:attendu|esp[ée]r[ée]|pr[ée]vu)s?",
+    r"\b(?:rapportera|rapporteront|g[ée]n[ée]rera|g[ée]n[ée]reront|produira|produiront|atteindra|atteindront)\b",
     r"\bva (?:rapporter|monter|augmenter|surperformer)\b",
     r"\bdevrait (?:rapporter|monter|augmenter|surperformer)\b",
     r"\bsurperformera\b",
-    r"you should (?:buy|sell|invest|put|choose)",
-    r"we (?:recommend|advise) (?:that )?you",
+    r"\byou should\b",
+    r"\bwe (?:recommend|advise)\b",
     r"i (?:recommend|advise) (?:that )?you",
     r"\bguaranteed?\b",
     r"\brisk[- ]free\b",
     r"expected returns?",
-    r"\bwill (?:return|earn|gain|rise|outperform|grow)\b",
+    r"\bwill (?:return|yield|earn|generate|reach|gain|rise|outperform|grow)\b",
 ]
 _WORDING_RE = [re.compile(p) for p in _WORDING]
 _NEGATION_RE = re.compile(
