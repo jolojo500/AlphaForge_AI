@@ -37,7 +37,7 @@ def test_one_call_for_three_scenarios_and_valid_notes_replace_templates(base):
 
     llm.set_llm_override(fake)
     out = draft_notes(scenarios, ev, p)
-    assert calls == ["main"]
+    assert calls == ["fast"]
     assert [sc.name for sc in out] == [sc.name for sc in scenarios]
     assert out[0].notes == [f"Perte maximale historique de 23,2 %, la plus forte des trois. [{m['as_requested']['max_drawdown']}]"]
     assert all(sc.notes != orig.notes for sc, orig in zip(out, scenarios, strict=True))
