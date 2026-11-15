@@ -134,7 +134,16 @@ def red_team_node(state: GraphState) -> dict:
 
     if n > 0 and not config.RED_TEAM_RECHECK:
         # Default (#90): keep objections as warnings without a new model call to preserve latency.
-        kept = [{**o, "severity": "warning"} for o in state.objections]
+        kept = [
+            {
+                **o,
+                "severity": "warning",
+                "objection": o["objection"]
+                if str(o.get("objection", "")).startswith("Avant révision")
+                else f"Avant révision : {o['objection']}",
+            }
+            for o in state.objections
+        ]
         return {
             **update,
             "objections": kept,

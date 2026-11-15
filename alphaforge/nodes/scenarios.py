@@ -10,6 +10,7 @@ profile_baseline  long-only minimum variance under the profile's caps. No expect
 from __future__ import annotations
 
 import math
+import re
 
 import numpy as np
 import pandas as pd
@@ -47,7 +48,11 @@ PREFERENCE_SECTORS = {
 }
 EQUITY_CLASSES = {"equity", "etf_equity"}
 DEFAULT_IDEA_WEIGHT = 0.20  # when a judge request names a ticker but no weight
-TIGHTEN = 0.8  # caps multiplier per red-team retry
+OVERLAP_ETF_SHARE = 0.5  # an ETF cited for overlap keeps half of the ETF cap
+CONCENTRATION_SHARE = 0.8  # a line cited for concentration keeps 80 % of its cap
+_OVERLAP_RE = re.compile(r"chevauch|overlap|double emploi|détient déjà|deja|déjà")
+_DROP_RE = re.compile(r"exclu|controvers|esg|contradi|interdit")
+_CONC_RE = re.compile(r"concentr|taux|obligat|secteur|duration|devise|currency|rate|sensib")
 SOURCE = "prices_daily.csv + fx_usdcad_daily.csv"
 METHODS = {
     "volatility_ann": "annualised std of daily log returns of the scenario rebalanced daily, CAD",
@@ -63,13 +68,9 @@ METHODS = {
 
 
 def caps_for(profile: Profile, rounds: int = 0) -> dict[str, float]:
-    caps = dict(CAPS.get(effective_risk(profile.risk_tolerance, profile.risk_capacity), CAPS["moderate"]))
-    if rounds:
-        f = TIGHTEN**rounds
-        for k in ("single_stock", "etf", "crypto_total", "equity_max"):
-            caps[k] *= f
-        caps["equity_min"] = min(caps["equity_min"], caps["equity_max"])
-    return caps
+    """Profile caps for the lower of tolerance and capacity. `rounds` is kept for callers;
+    objections no longer tighten every cap (#116), see `targeted_changes`."""
+    return dict(CAPS.get(effective_risk(profile.risk_tolerance, profile.risk_capacity), CAPS["moderate"]))
 
 
 def _asset_caps(tickers: list[str], info: pd.DataFrame, caps: dict) -> np.ndarray:
@@ -77,11 +78,12 @@ def _asset_caps(tickers: list[str], info: pd.DataFrame, caps: dict) -> np.ndarra
     for t in tickers:
         cls = info.at[t, "asset_class"]
         if cls == "equity":
-            out.append(caps["single_stock"])
+            cap = caps["single_stock"]
         elif cls == "crypto":
-            out.append(caps["crypto_total"])
+            cap = caps["crypto_total"]
         else:
-            out.append(caps["etf"])
+            cap = caps["etf"]
+        out.append(min(cap, caps.get("per_ticker", {}).get(t, cap)))
     return np.array(out, dtype=float)
 
 
@@ -200,9 +202,14 @@ def build_scenarios(
     *,
     rounds: int = 0,
     drop: tuple[str, ...] | list[str] = (),
+    per_ticker: dict[str, float] | None = None,
 ) -> tuple[dict[str, pd.Series], dict[str, float]]:
-    """Weights of the three scenarios and the caps used. `prices` must cover every ticker."""
-    caps = caps_for(profile, rounds)
+    """Weights of the three scenarios and the caps used. `prices` must cover every ticker.
+
+    `per_ticker` caps come from blocking objections and apply to the lines they cite only;
+    the requested idea in `capped` stays at the profile cap (#116)."""
+    profile_caps = caps_for(profile, rounds)
+    caps = {**profile_caps, "per_ticker": dict(per_ticker or {})}
     universe = [t for t in sorted(eligible) if t not in set(drop)] or sorted(eligible)
     cov = prices.pct_change(fill_method=None).dropna().cov().loc[universe, universe]
     baseline = optimize(cov, info, caps)
@@ -214,7 +221,7 @@ def build_scenarios(
         rest = baseline.drop(ticker, errors="ignore")
         as_requested = pd.concat([rest / rest.sum() * (1.0 - w_req), pd.Series({ticker: w_req})])
         if ticker in universe:
-            w_cap = min(w_req, float(_asset_caps([ticker], info, caps)[0]))
+            w_cap = min(w_req, float(_asset_caps([ticker], info, profile_caps)[0]))
             capped = optimize(cov, info, caps, fixed={ticker: w_cap})
         else:
             capped = baseline.copy()  # excluded by a constraint: capped at zero
@@ -276,6 +283,52 @@ def _cited_tickers(objections: list[dict], evidence: dict) -> set[str]:
     return out
 
 
+def targeted_changes(
+    objections: list[dict],
+    evidence: dict,
+    eligible: list[str],
+    info: pd.DataFrame,
+    caps: dict,
+    requested: str | None,
+) -> tuple[dict[str, float], list[str], list[str]]:
+    """Map each blocking objection to a change on the lines it cites only (#116).
+
+    overlap → the cited ETFs keep half of the ETF cap; concentration (sector, rates,
+    currency) → the cited lines keep 80 % of their cap; exclusion, controversy or anything
+    else → the cited lines are dropped. The requested idea is never touched here.
+    Returns (per-ticker caps, dropped tickers, French descriptions of the changes)."""
+    per_ticker: dict[str, float] = {}
+    drop: set[str] = set()
+    changes: list[str] = []
+    base = {t: float(_asset_caps([t], info, caps)[0]) for t in eligible}
+    for o in objections:
+        cited = sorted((_cited_tickers([o], evidence) & set(eligible)) - {requested})
+        if not cited:
+            continue
+        text = str(o.get("objection", "")).lower()
+        metrics = {
+            (evidence[e].value or {}).get("metric")
+            for e in o.get("evidence") or []
+            if e in evidence and isinstance(evidence[e].value, dict)
+        }
+        if "exclusion" in metrics or _DROP_RE.search(text):
+            drop.update(cited)
+            changes.append(f"retrait de {', '.join(cited)}")
+        elif "etf_overlap" in metrics or _OVERLAP_RE.search(text):
+            etfs = [t for t in cited if info.at[t, "asset_class"] not in ("equity", "crypto")]
+            for t in etfs or cited:
+                per_ticker[t] = min(per_ticker.get(t, 1.0), caps["etf"] * OVERLAP_ETF_SHARE)
+            changes.append(f"plafond réduit pour {', '.join(etfs or cited)} (chevauchement)")
+        elif _CONC_RE.search(text):
+            for t in cited:
+                per_ticker[t] = min(per_ticker.get(t, 1.0), base[t] * CONCENTRATION_SHARE)
+            changes.append(f"plafond réduit de 20 % pour {', '.join(cited)} (concentration)")
+        else:
+            drop.update(cited)
+            changes.append(f"retrait de {', '.join(cited)}")
+    return per_ticker, sorted(drop), changes
+
+
 def _template_notes(name, weights, values, ids, caps_eid, requested, flagged) -> list[str]:
     risk = (
         f"Volatilité annualisée {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
@@ -329,15 +382,19 @@ def scenarios_node(state: GraphState) -> dict:
     info = provider.asset_info()
     blocking = [o for o in state.objections if o.get("severity") == "blocking"]
     rounds = state.retries.get("red_team", 0) if blocking else 0
-    drop = sorted(_cited_tickers(blocking, state.evidence) & set(eligible))
     idea = profile.requested_idea if profile.request_type == "judge" else None
     requested = idea.get("ticker") if idea else None
     if requested not in info.index:
         requested = None
+    per_ticker, drop, changes = targeted_changes(
+        blocking, state.evidence, eligible, info, caps_for(profile), requested
+    )
     tickers = sorted(set(eligible) | ({requested} if requested else set()))
     prices = provider.prices_cad(tickers, state.as_of_date)
 
-    weights, caps = build_scenarios(profile, eligible, prices, info, rounds=rounds, drop=drop)
+    weights, caps = build_scenarios(
+        profile, eligible, prices, info, rounds=rounds, drop=drop, per_ticker=per_ticker
+    )
 
     as_of = state.as_of_date
     level = effective_risk(profile.risk_tolerance, profile.risk_capacity)
@@ -357,13 +414,12 @@ def scenarios_node(state: GraphState) -> dict:
         source="PRD 5.7 caps table",
         date=as_of,
         method=f"caps for the lower of tolerance ({profile.risk_tolerance}) and capacity "
-        f"({profile.risk_capacity}) = {level}"
-        + (f", tightened x{TIGHTEN**rounds:.2f} after objections" if rounds else ""),
+        f"({profile.risk_capacity}) = {level}",
         confidence="assumption",
     )
     if rounds:
-        text = f"Scénarios révisés après objection (passage {rounds}) : limites resserrées"
-        text += f", actifs retirés : {', '.join(drop)}." if drop else "."
+        done = "; ".join(changes) if changes else "aucune ligne citée, scénarios inchangés"
+        text = f"Scénarios révisés après objection (passage {rounds}) : {done}."
         reg.add(text, source="red team objections", date=as_of,
                 method="scenario retry rule (PRD 5.8 loop contract)", confidence="assumption")
     flagged = requested is not None and requested not in eligible
@@ -403,5 +459,5 @@ def scenarios_node(state: GraphState) -> dict:
 
     summary = "Trois scénarios construits : demandé, plafonné, référence."
     if rounds:
-        summary += " Révisés après objections (limites resserrées)."
+        summary += " Révisés après objections : " + ("; ".join(changes) or "aucun changement") + "."
     return {"scenarios": scenarios, "evidence": reg.items(), "summary": summary}

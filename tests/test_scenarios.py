@@ -142,3 +142,36 @@ def test_capacity_binds_when_lower_than_tolerance():
     assert caps_for(prof("high", "low"))["single_stock"] == pytest.approx(0.03)
     assert caps_for(prof("low_moderate", "low"))["equity_max"] == pytest.approx(0.25)  # Robert
     assert caps_for(prof("moderate", "high"))["single_stock"] == pytest.approx(0.07)  # tolerance binds
+
+
+def _obj(text, eid):
+    return [{"scenario": "capped", "objection": text, "evidence": [eid], "severity": "blocking"}]
+
+
+def test_overlap_objection_caps_only_the_cited_etfs_and_keeps_the_idea_at_the_profile_cap():
+    ov = Evidence(id="EQ1", value={"metric": "etf_overlap", "tickers": ["AGG", "XBB.TO"], "value": 0.4},
+                  source="test", date=AS_OF, method="test")
+    out = _run(ROBERT_TSLA, evidence={"EQ1": ov},
+               objections=_obj("Chevauchement entre deux fonds obligataires.", "EQ1"),
+               retries={"red_team": 1})
+    capped = _by_name(out)["capped"].weights
+    assert capped["TSLA"] == pytest.approx(0.03, abs=TOL)  # idea untouched (#116)
+    assert capped.get("AGG", 0) <= 0.125 + TOL and capped.get("XBB.TO", 0) <= 0.125 + TOL
+    # lines not cited keep the normal ETF cap
+    assert max(capped.values()) <= 0.25 + TOL
+
+
+def test_concentration_objection_reduces_the_cited_line_by_20_percent():
+    c = Evidence(id="EQ1", value={"metric": "volatility_ann", "ticker": "ZST.TO", "value": 0.01},
+                 source="test", date=AS_OF, method="test")
+    out = _run(ROBERT_TSLA, evidence={"EQ1": c},
+               objections=_obj("Forte sensibilité aux taux.", "EQ1"), retries={"red_team": 1})
+    assert _by_name(out)["profile_baseline"].weights.get("ZST.TO", 0) <= 0.20 + TOL
+
+
+def test_requested_idea_is_never_dropped_by_an_objection():
+    c = Evidence(id="EQ1", value={"metric": "volatility_ann", "ticker": "TSLA", "value": 0.6},
+                 source="test", date=AS_OF, method="test")
+    out = _run(ROBERT_TSLA, evidence={"EQ1": c},
+               objections=_obj("TSLA est trop volatile.", "EQ1"), retries={"red_team": 1})
+    assert _by_name(out)["capped"].weights["TSLA"] == pytest.approx(0.03, abs=TOL)
