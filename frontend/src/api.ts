@@ -105,6 +105,26 @@ export async function login(username: string, password: string): Promise<LoginRe
   return data;
 }
 
+export async function register(
+  username: string,
+  password: string,
+  email?: string
+): Promise<LoginResponse> {
+  const res = await apiFetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password, email: email || undefined }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Échec lors de la création du compte.');
+  }
+  const data = (await res.json()) as LoginResponse;
+  setAuthToken(data.access_token || data.id_token || '');
+  setStoredUser(data.user);
+  return data;
+}
+
 export function logout(): void {
   clearAuth();
 }
@@ -462,11 +482,6 @@ export function prepareBackendPayload(
     contextParts.push(`Remarques libres : ${profile.additionalNotes.trim()}`);
   }
 
-  let fullRequestText = requestText;
-  if (contextParts.length > 0) {
-    fullRequestText = `${requestText}\n\n[Contexte investisseur]\n${contextParts.join('\n')}`;
-  }
-
   let maxLossPct: number | null = null;
   const parsedLoss = parseFloat(profile.maxLossTolerance);
   if (!isNaN(parsedLoss)) {
@@ -489,7 +504,7 @@ export function prepareBackendPayload(
 
   const payload: BackendRunPayload = {
     persona: 'custom_user',
-    request_text: fullRequestText,
+    request_text: requestText.trim(),
     language,
     user_profile: profile,
     current_holdings: profile.currentHoldings,

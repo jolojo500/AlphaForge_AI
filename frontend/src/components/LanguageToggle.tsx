@@ -17,7 +17,7 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({
     <button
       type="button"
       onClick={toggleLanguage}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all active:scale-95 border border-transparent hover:border-border/60 cursor-pointer ${className}`}
+      className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer border border-transparent ${className}`}
       title={language === 'fr' ? 'Switch to English' : 'Passer en français'}
       aria-label="Toggle language"
     >

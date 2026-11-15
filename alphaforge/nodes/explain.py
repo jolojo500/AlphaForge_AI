@@ -332,7 +332,42 @@ def template_explanation(state: GraphState) -> dict:
                     "evidence": [best.metrics["max_drawdown"]],
                 }
             )
+    req_idea = getattr(state.profile, "requested_idea", None) if state.profile else None
+    if isinstance(req_idea, dict):
+        ticker = req_idea.get("ticker")
+        w_val = req_idea.get("weight")
+    elif req_idea is not None:
+        ticker = getattr(req_idea, "ticker", None)
+        w_val = getattr(req_idea, "weight", None)
+    else:
+        ticker = None
+        w_val = None
+    weight_pct = int(round(w_val * 100)) if w_val is not None else None
+    horizon = getattr(state.profile, "horizon_years", 5) if state.profile else 5
+    scenario_label = "le scénario ajusté" if best.name == "capped" else ("le scénario de votre demande" if best.name == "as_requested" else "le profil de base")
+
     if lang == "en":
+        tol_str = (
+            TOLERANCE_EN.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
+            if state.profile
+            else "moderate"
+        )
+        if ticker and weight_pct:
+            resume = (
+                f"Your request to allocate {weight_pct} % to {ticker} has been analyzed across three scenarios against your {tol_str} risk profile (horizon {horizon} years). "
+                f"The {best.name.replace('_', ' ')} scenario is the most consistent with your financial capacity and objectives."
+            )
+        elif ticker:
+            resume = (
+                f"An allocation to {ticker} has been analyzed across three scenarios against your {tol_str} risk profile (horizon {horizon} years). "
+                f"The {best.name.replace('_', ' ')} scenario is the most consistent with your risk profile."
+            )
+        else:
+            resume = (
+                f"Three simulated allocation scenarios were evaluated against your {tol_str} risk profile (horizon {horizon} years). "
+                f"The {best.name.replace('_', ' ')} scenario is the most consistent with your declared objectives."
+            )
+
         if not donnees:
             donnees = [{"claim": "No numerical metrics available.", "evidence": []}]
         if not pourquoi:
@@ -346,7 +381,7 @@ def template_explanation(state: GraphState) -> dict:
                 {"claim": "The profile has contradictions with the formulated request.", "evidence": []}
             )
         return {
-            "resume": "Comparison of three simulated scenarios with their historical risk metrics.",
+            "resume": resume,
             "quelles_donnees": donnees,
             "pourquoi_ce_choix": pourquoi,
             "limites": limites,
@@ -357,6 +392,27 @@ def template_explanation(state: GraphState) -> dict:
             "scenario_le_plus_coherent": best.name,
             "avertissement": DISCLAIMER_EN,
         }
+
+    tol_str = (
+        TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
+        if state.profile
+        else "modéré"
+    )
+    if ticker and weight_pct:
+        resume = (
+            f"Votre souhait d'investir {weight_pct} % sur {ticker} a été analysé à travers trois scénarios face à votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
+            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec votre capacité financière et vos objectifs."
+        )
+    elif ticker:
+        resume = (
+            f"L'exposition à {ticker} a été analysée à travers trois scénarios face à votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
+            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec votre profil de risque."
+        )
+    else:
+        resume = (
+            f"Trois scénarios d'allocation ont été simulés pour votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
+            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec le profil déclaré."
+        )
 
     if not donnees:
         donnees = [{"claim": "Aucun indicateur chiffré n'est disponible.", "evidence": []}]
@@ -371,7 +427,7 @@ def template_explanation(state: GraphState) -> dict:
             {"claim": "Le profil comporte des tensions avec la demande formulée.", "evidence": []}
         )
     return {
-        "resume": "Comparaison de trois scénarios fictifs avec leurs indicateurs de risque historiques.",
+        "resume": resume,
         "quelles_donnees": donnees,
         "pourquoi_ce_choix": pourquoi,
         "limites": limites,

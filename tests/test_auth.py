@@ -75,3 +75,58 @@ def test_require_advisor_dependency():
     with pytest.raises(HTTPException) as exc:
         require_advisor(regular_user)
     assert exc.value.status_code == 403
+
+
+def test_dev_token_is_rejected_when_auth_is_on(monkeypatch):
+    # The dev signing secret is in the repository: a locally signed token must never pass in prod.
+    token = create_dev_token(User(user_id="x", username="advisor", groups=["advisor"]))
+    monkeypatch.setenv("AF_AUTH", "on")
+    with pytest.raises(HTTPException) as exc:
+        verify_token(token)
+    assert exc.value.status_code == 401
+
+
+def test_register_dev_mode_never_grants_a_group():
+    from alphaforge.auth import register_user
+
+    res = register_user("advisor", "longenough1")
+    assert res["user"]["groups"] == []
+    for bad in ("ab", "a b c", "x" * 65):
+        with pytest.raises(HTTPException) as exc:
+            register_user(bad, "longenough1")
+        assert exc.value.status_code == 400
+    with pytest.raises(HTTPException):
+        register_user("newuser", "short")
+
+
+def test_register_existing_cognito_user_is_a_conflict_not_a_session(monkeypatch):
+    import alphaforge.auth as auth
+
+    class Exists(Exception):
+        pass
+
+    class Other(Exception):
+        pass
+
+    class FakeClient:
+        class exceptions:  # noqa: N801
+            UsernameExistsException = Exists
+            InvalidPasswordException = Other
+            InvalidParameterException = Other
+
+        def sign_up(self, **kw):
+            raise Exists()
+
+    class FakeSession:
+        def __init__(self, **kw):
+            pass
+
+        def client(self, *a, **kw):
+            return FakeClient()
+
+    monkeypatch.setenv("AF_AUTH", "on")
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    monkeypatch.setattr(auth.boto3, "Session", FakeSession)
+    with pytest.raises(HTTPException) as exc:
+        auth.register_user("advisor", "Longenough1!")
+    assert exc.value.status_code == 409

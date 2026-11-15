@@ -4,16 +4,23 @@ import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Columns2, RotateCcw, LogIn, LogOut, User as UserIcon, ShieldCheck } from 'lucide-react';
-import { DemoPersonas } from './DemoPersonas';
+import {
+  ArrowRight,
+  History,
+  LogIn,
+  LogOut,
+  User as UserIcon,
+  ShieldCheck,
+  UserRound,
+} from 'lucide-react';
 import { AuthUser } from '../types';
 import { useLanguage } from '@/context/LanguageContext';
+import { DEMO_PERSONAS, DEMO_ORDER } from '../lib/demoProfiles';
 
 interface WelcomeScreenProps {
   onStart: () => void;
-  onDemo: (personaId: string, requestText: string) => void;
-  onCompare?: () => void;
-  onReplay?: () => void;
+  onSelectDemo: (personaId: 'robert' | 'amira' | 'mateo') => void;
+  onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
   onOpenProfile?: () => void;
@@ -22,9 +29,8 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onStart,
-  onDemo,
-  onCompare,
-  onReplay,
+  onSelectDemo,
+  onOpenHistory,
   currentUser,
   onOpenAuth,
   onOpenProfile,
@@ -34,23 +40,24 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   const isEn = language === 'en';
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-between px-4 py-6 transition-colors">
-      {/* Top Bar with Theme Toggle, Language Toggle, Auth, and Compare Button */}
-      <div className="w-full max-w-5xl flex justify-between items-center">
-        {onCompare ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onCompare}
-            className="text-xs text-muted-foreground hover:text-foreground gap-1.5"
-          >
-            <Columns2 className="w-3.5 h-3.5" />
-            <span>{isEn ? 'Compare two profiles' : 'Comparer deux profils'}</span>
-          </Button>
-        ) : (
-          <div />
-        )}
+    <div className="min-h-screen bg-background flex flex-col items-center justify-between px-4 py-5 sm:py-8 font-sans transition-colors">
+      {/* Top Bar with History, Auth, Language Toggle and Theme Toggle */}
+      <header className="w-full max-w-4xl mx-auto flex justify-between items-center select-none">
+        <div>
+          {onOpenHistory && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenHistory}
+              className="text-xs text-muted-foreground hover:text-foreground gap-1.5 h-8 cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5 text-primary" />
+              <span>{isEn ? 'Past simulations' : 'Historique'}</span>
+            </Button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           {currentUser ? (
             <div className="flex items-center gap-1.5">
@@ -103,52 +110,67 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <LanguageToggle />
           <ThemeToggle />
         </div>
-      </div>
+      </header>
 
-      {/* Centered Hero */}
-      <div className="text-center space-y-5 flex flex-col items-center my-auto">
-        <Logo size="lg" />
-        <div className="flex flex-wrap items-center justify-center gap-2">
+      {/* Centered Hero - Logo prominently centered above Start Button */}
+      <div className="text-center space-y-6 flex flex-col items-center my-auto w-full max-w-xl mx-auto py-8">
+        <div className="flex justify-center items-center py-2">
+          <Logo size="xl" className="h-8 sm:h-10" />
+        </div>
+
+        {/* Primary Action Button */}
+        <div className="w-full max-w-sm">
           <Button
             type="button"
             onClick={onStart}
-            className="px-6 h-9 rounded-md text-xs sm:text-sm font-medium transition-all shadow-xs active:scale-98 flex items-center gap-2"
+            className="w-full h-11 text-xs sm:text-sm font-medium cursor-pointer flex items-center justify-center gap-2"
           >
             <span>{isEn ? 'Start investor questionnaire' : 'Commencer le questionnaire'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
-          {onCompare && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCompare}
-              className="px-4 h-9 rounded-md text-xs sm:text-sm font-medium transition-all gap-1.5"
-            >
-              <Columns2 className="w-3.5 h-3.5" />
-              <span>{isEn ? 'Compare two profiles' : 'Comparer deux profils'}</span>
-            </Button>
-          )}
-          {onReplay && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onReplay}
-              className="px-4 h-9 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border-border/80 cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" />
-              <span>{isEn ? 'Replay an analysis' : 'Rejouer une analyse'}</span>
-            </Button>
-          )}
         </div>
-        <DemoPersonas onPick={onDemo} />
+
+        {/* 3 Demo Personas (Sober, Minimalist, Pre-fills Query Screen without auto-launch) */}
+        <div className="w-full pt-4 space-y-2.5">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium select-none">
+            {isEn ? 'Or explore with a demo profile' : 'Ou tester avec un profil de démonstration'}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+            {DEMO_ORDER.map((id) => {
+              const persona = DEMO_PERSONAS[id];
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onSelectDemo(id)}
+                  className="p-3 bg-card hover:bg-muted/60 border border-border rounded-xl text-left transition-all group flex flex-col justify-between cursor-pointer active:scale-98"
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                      <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{persona.name}</span>
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {persona.age} ans
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+                    {persona.badge}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Discreet footer */}
-      <div className="text-[11px] text-muted-foreground/60 select-none text-center">
+      {/* Discrete uniform footer disclaimer */}
+      <footer className="w-full max-w-4xl mx-auto pt-6 text-center text-[11px] text-muted-foreground border-t border-border/40 select-none">
         {isEn
-          ? 'Educational simulation · No personalized advice · PolyFinances 2026'
-          : 'Simulation éducative · Aucun conseil personnalisé · PolyFinances 2026'}
-      </div>
+          ? 'Educational simulation · No personalized advice · Past performance does not guarantee future results'
+          : 'Simulation éducative · Aucun conseil réglementé · Les performances passées ne garantissent pas les résultats futurs'}
+      </footer>
     </div>
   );
 };
