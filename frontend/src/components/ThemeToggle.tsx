@@ -1,6 +1,7 @@
 import React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "@/lib/theme"
+import { useLanguage } from "@/context/LanguageContext"
 
 interface ThemeToggleProps {
   className?: string;
@@ -9,14 +10,19 @@ interface ThemeToggleProps {
 
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", showLabel = false }) => {
   const { theme, toggleTheme } = useTheme()
+  const { language } = useLanguage()
+  const label =
+    language === "en"
+      ? theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+      : theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
       className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer border border-transparent ${className}`}
-      title={theme === "dark" ? "Passer en mode clair" : "Passer en mode sombre"}
-      aria-label="Basculer le thème"
+      title={label}
+      aria-label={label}
     >
       <div className="relative w-4 h-4 flex items-center justify-center">
         {theme === "dark" ? (
@@ -27,7 +33,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className = "", showLa
       </div>
       {showLabel && (
         <span className="text-xs font-medium">
-          {theme === "dark" ? "Mode clair" : "Mode sombre"}
+          {language === "en"
+            ? theme === "dark" ? "Light mode" : "Dark mode"
+            : theme === "dark" ? "Mode clair" : "Mode sombre"}
         </span>
       )}
     </button>

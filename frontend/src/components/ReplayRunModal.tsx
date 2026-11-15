@@ -19,8 +19,26 @@ import {
   AlertCircle,
   FolderOpen,
   ArrowRight,
+  Clock,
+  GitCompare,
+  User,
 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
+import { DEMO_PERSONAS } from '../lib/demoProfiles';
+import { fmtDateTime } from '@/lib/format';
+import { accountLabel, toleranceLabel, whatIfFieldLabel, whatIfValueLabel } from '@/lib/labels';
+
+/** A short line about the profile behind a run: what the server sent, or the demo persona's summary. */
+function profileSummary(run: SavedRunSummary, lang: 'fr' | 'en'): string | null {
+  if (run.profile_summary) return run.profile_summary;
+  const parts: string[] = [];
+  if (run.horizon_years) parts.push(lang === 'en' ? `Horizon ${run.horizon_years} yrs` : `Horizon ${run.horizon_years}\u00a0ans`);
+  if (run.risk_tolerance) parts.push(lang === 'en' ? `${toleranceLabel(run.risk_tolerance, 'en')} tolerance` : `tolérance ${toleranceLabel(run.risk_tolerance, 'fr')}`);
+  if (run.account_type) parts.push(accountLabel(run.account_type, lang));
+  if (parts.length > 0) return parts.join(' · ');
+  const demo = (DEMO_PERSONAS as Record<string, { summary?: string } | undefined>)[run.persona];
+  return demo?.summary ?? null;
+}
 
 interface ReplayRunModalProps {
   isOpen: boolean;
@@ -168,6 +186,9 @@ export const ReplayRunModal: React.FC<ReplayRunModalProps> = ({
                 color: 'bg-muted text-foreground border-border',
               };
               const isCurrentReplaying = replayingRunId === run.run_id;
+              const isWhatIf = Boolean(run.parent_run_id);
+              const summary = profileSummary(run, isEn ? 'en' : 'fr');
+              const when = fmtDateTime(run.created_at, isEn ? 'en' : 'fr');
 
               return (
                 <div
@@ -199,24 +220,60 @@ export const ReplayRunModal: React.FC<ReplayRunModalProps> = ({
                           className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px] font-medium flex items-center gap-1"
                         >
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>{isEn ? 'Deterministic Verified' : 'Vérifié déterministe'}</span>
+                          <span>{isEn ? 'Figures checked' : 'Chiffres vérifiés'}</span>
                         </Badge>
                       )}
 
+                      {isWhatIf && (
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-primary/30 text-[10px] font-medium flex items-center gap-1"
+                          title={
+                            run.change
+                              ? `${whatIfFieldLabel(run.change.field, isEn ? 'en' : 'fr')}\u00a0: ${whatIfValueLabel(run.change.field, run.change.value, isEn ? 'en' : 'fr')}`
+                              : undefined
+                          }
+                        >
+                          <GitCompare className="w-3 h-3" aria-hidden="true" />
+                          <span>
+                            {isEn ? 'What if' : 'Et si…'}
+                            {run.change
+                              ? `\u00a0: ${whatIfFieldLabel(run.change.field, isEn ? 'en' : 'fr').toLowerCase()} → ${whatIfValueLabel(run.change.field, run.change.value, isEn ? 'en' : 'fr')}`
+                              : ''}
+                          </span>
+                        </Badge>
+                      )}
+
+                      {when && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-auto sm:ml-0 tabular-nums">
+                          <Clock className="w-3 h-3" aria-hidden="true" />
+                          <span>{when}</span>
+                        </span>
+                      )}
                       {run.as_of_date && (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 ml-auto sm:ml-0 font-mono">
-                          <Calendar className="w-3 h-3" />
-                          <span>{run.as_of_date}</span>
+                        <span
+                          className="text-[10px] text-muted-foreground flex items-center gap-1 font-mono"
+                          title={isEn ? 'Data as of this date' : 'Données arrêtées à cette date'}
+                        >
+                          <Calendar className="w-3 h-3" aria-hidden="true" />
+                          <span>{isEn ? 'data as of' : 'données au'} {run.as_of_date}</span>
                         </span>
                       )}
                     </div>
 
                     <p className="text-xs text-foreground leading-snug line-clamp-2">
-                      « {run.request_text || (isEn ? 'No request text specified' : 'Aucune requête textuelle spécifiée')} »
+                      « {run.request_text || (isEn ? 'No request text specified' : 'Aucune question saisie')} »
                     </p>
 
+                    {summary && (
+                      <p className="text-[11px] text-muted-foreground flex items-start gap-1 leading-snug">
+                        <User className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
+                        <span>{summary}</span>
+                      </p>
+                    )}
+
                     <div className="text-[10px] text-muted-foreground/60 font-mono truncate">
-                      ID : {run.run_id}
+                      {isEn ? 'Id' : 'Identifiant'}&nbsp;: {run.run_id}
                     </div>
                   </div>
 

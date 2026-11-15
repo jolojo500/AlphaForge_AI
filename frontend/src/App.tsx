@@ -64,6 +64,8 @@ export const AppContent: React.FC = () => {
   // What-If state
   const [whatIfDiff, setWhatIfDiff] = useState<WhatIfDiff | null>(null);
   const [isWhatIfRunning, setIsWhatIfRunning] = useState<boolean>(false);
+  // The run before the what-if: its answer stays on screen beside the new one (#180).
+  const [whatIfBaseline, setWhatIfBaseline] = useState<GraphState | null>(null);
 
   // Simulation History (formerly Replay) modal state
   const [isReplayModalOpen, setIsReplayModalOpen] = useState<boolean>(false);
@@ -201,6 +203,7 @@ export const AppContent: React.FC = () => {
     setActiveTrace([]);
     setRunState(null);
     setWhatIfDiff(null);
+    setWhatIfBaseline(null);
 
     // Cancel existing stream if any
     if (unsubscribeRef.current) {
@@ -285,6 +288,8 @@ export const AppContent: React.FC = () => {
     if (!currentRunId) return;
     setIsWhatIfRunning(true);
     setWhatIfDiff(null);
+    // Keep the answer the reader is looking at: it becomes the "before" column.
+    const baseline = whatIfBaseline ?? runState;
     try {
       const { run_id: childId } = await createWhatIf(currentRunId, field, value);
       const unsub = subscribeRunEvents(
@@ -304,6 +309,7 @@ export const AppContent: React.FC = () => {
             setIsWhatIfRunning(false);
             Promise.all([fetchRunDiff(childId), fetchRunState(childId)])
               .then(([diff, state]) => {
+                setWhatIfBaseline(baseline);
                 setWhatIfDiff(diff);
                 setRunState(state);
                 setCurrentRunId(childId);
@@ -344,6 +350,7 @@ export const AppContent: React.FC = () => {
       setIsRunning(false);
       setClarificationQuestion(null);
       setWhatIfDiff(null);
+      setWhatIfBaseline(null);
       setLastPayload({
         persona: state.persona,
         request_text: state.request_text,
@@ -547,7 +554,11 @@ export const AppContent: React.FC = () => {
             onResetProfile={handleResetProfile}
             onSelectEvidence={setSelectedEvidenceId}
             whatIfDiff={whatIfDiff}
-            onCloseWhatIfDiff={() => setWhatIfDiff(null)}
+            whatIfBaseline={whatIfBaseline}
+            onCloseWhatIfDiff={() => {
+              setWhatIfDiff(null);
+              setWhatIfBaseline(null);
+            }}
             onRunWhatIf={handleRunWhatIf}
             isWhatIfRunning={isWhatIfRunning}
             onOpenHistory={() => setIsReplayModalOpen(true)}

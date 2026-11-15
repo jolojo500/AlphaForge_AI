@@ -23,6 +23,10 @@ interface ExplanationSectionProps {
   onSelectEvidence: (eid: string) => void;
   /** Jump to the evidence row in the registry; falls back to opening the evidence dialog. */
   onJump?: (eid: string) => void;
+  /** Position in the detailed section, so the numbering stays continuous. */
+  sectionNumber?: number;
+  /** Number of scenarios shown, so "les trois scénarios" agrees with the cards. */
+  scenarioCount?: number;
 }
 
 export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
@@ -31,10 +35,37 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
   evidence,
   onSelectEvidence,
   onJump,
+  sectionNumber,
+  scenarioCount,
 }) => {
   const { language, t } = useLanguage();
   const isEn = language === 'en';
   const lang = isEn ? 'en' : 'fr';
+  const prefix = sectionNumber ? `${sectionNumber}. ` : '';
+  const jump = onJump ?? onSelectEvidence;
+
+  const renderClaims = (items: { claim: string; evidence: string[] }[] | undefined) => (
+    <ul className="space-y-2 text-xs text-foreground">
+      {items?.map((item, idx) => (
+        <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
+          <p className="mb-1 text-foreground leading-snug">
+            <RichText text={item.claim} evidence={evidence} onJump={jump} lang={lang} scenarioCount={scenarioCount} />
+          </p>
+          <div className="flex flex-wrap items-center mt-1">
+            {item.evidence?.map((eid) => (
+              <EvidenceChip
+                key={eid}
+                id={eid}
+                onClick={jump}
+                confidence={evidence[eid]?.confidence}
+                evidence={evidence[eid]}
+              />
+            ))}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 
   // If verification failed explicitly, show the failure panel instead of explanation
   if (verification && verification.passed === false) {
@@ -78,7 +109,8 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
             <h2 className="text-sm sm:text-base font-semibold text-foreground">
-              {t('explain.title', 'Explicabilité & Gouvernance (Les 4 piliers BNCD)')}
+              {prefix}
+              {t('explain.title', 'Pourquoi cette réponse ?')}
             </h2>
           </div>
 
@@ -96,7 +128,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-800 dark:text-sky-300 block mb-0.5">
               {t('explain.summary', "Synthèse de l'analyse :")}
             </span>
-            <p><RichText text={explanation.resume} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
+            <p><RichText text={explanation.resume} evidence={evidence} onJump={jump} lang={lang} scenarioCount={scenarioCount} /></p>
           </div>
         )}
 
@@ -106,112 +138,48 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <HelpCircle className="w-4 h-4 text-blue-500" />
-              <h3>{t('explain.what_data', '1. Quelles données avons-nous utilisées ?')}</h3>
+              <h3>{t('explain.what_data', 'Quelles données avons-nous utilisées ?')}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               {t('explain.what_data_sub', 'Séries de prix historiques ajustées, macroéconomie et actualités datées.')}
             </p>
-            <ul className="space-y-2 text-xs text-foreground">
-              {explanation.quelles_donnees?.map((item, idx) => (
-                <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
-                  <div className="flex flex-wrap items-center mt-1">
-                    {item.evidence?.map((eid) => (
-                      <EvidenceChip
-                        key={eid}
-                        id={eid}
-                        onClick={onSelectEvidence}
-                        confidence={evidence[eid]?.confidence}
-                      />
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {renderClaims(explanation.quelles_donnees)}
           </div>
 
           {/* Question 2: Pourquoi ce choix ? */}
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
-              <h3>{t('explain.why_choice', '2. Pourquoi ce choix ?')}</h3>
+              <h3>{t('explain.why_choice', 'Pourquoi ce choix ?')}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               {t('explain.why_choice_sub', 'Cohérence avec les objectifs, la tolérance et la capacité déclarées.')}
             </p>
-            <ul className="space-y-2 text-xs text-foreground">
-              {explanation.pourquoi_ce_choix?.map((item, idx) => (
-                <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
-                  <div className="flex flex-wrap items-center mt-1">
-                    {item.evidence?.map((eid) => (
-                      <EvidenceChip
-                        key={eid}
-                        id={eid}
-                        onClick={onSelectEvidence}
-                        confidence={evidence[eid]?.confidence}
-                      />
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {renderClaims(explanation.pourquoi_ce_choix)}
           </div>
 
           {/* Question 3: Quelles sont les limites ? */}
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <h3>{t('explain.limits', '3. Quelles sont les limites ?')}</h3>
+              <h3>{t('explain.limits', 'Quelles sont les limites ?')}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               {t('explain.limits_sub', 'Biais de survie, modèles rétrospectifs et hypothèses de distribution.')}
             </p>
-            <ul className="space-y-2 text-xs text-foreground">
-              {explanation.limites?.map((item, idx) => (
-                <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
-                  <div className="flex flex-wrap items-center mt-1">
-                    {item.evidence?.map((eid) => (
-                      <EvidenceChip
-                        key={eid}
-                        id={eid}
-                        onClick={onSelectEvidence}
-                        confidence={evidence[eid]?.confidence}
-                      />
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {renderClaims(explanation.limites)}
           </div>
 
           {/* Question 4: Qu'est-ce qui changerait la réponse ? */}
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <RefreshCw className="w-4 h-4 text-indigo-500" />
-              <h3>{t('explain.what_change', "4. Qu'est-ce qui changerait la réponse ?")}</h3>
+              <h3>{t('explain.what_change', "Qu'est-ce qui changerait la réponse ?")}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
               {t('explain.what_change_sub', "Sensibilité de l'allocation aux variations d'horizon ou de contraintes.")}
             </p>
-            <ul className="space-y-2 text-xs text-foreground">
-              {explanation.ce_qui_changerait_la_reponse?.map((item, idx) => (
-                <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
-                  <div className="flex flex-wrap items-center mt-1">
-                    {item.evidence?.map((eid) => (
-                      <EvidenceChip
-                        key={eid}
-                        id={eid}
-                        onClick={onSelectEvidence}
-                        confidence={evidence[eid]?.confidence}
-                      />
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {renderClaims(explanation.ce_qui_changerait_la_reponse)}
           </div>
         </div>
 
