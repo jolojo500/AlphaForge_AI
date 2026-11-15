@@ -25,6 +25,12 @@ from alphaforge.tracing import traced
 KNOWN_CONSTRAINTS = {"no_crypto", "esg_only", "no_controversies"}
 # Single-stock reference caps by tolerance (PRD 5.7 caps table). Used only to flag a conflict.
 SINGLE_STOCK_CAP = {"high": 0.10, "moderate": 0.07, "low_moderate": 0.05, "low": 0.05}
+TOLERANCE_FR = {
+    "high": "élevée",
+    "moderate": "modérée",
+    "low_moderate": "faible à modérée",
+    "low": "faible",
+}
 CRYPTO_MIN_HORIZON_YEARS = 5
 
 ASK_GOAL = "Que souhaitez-vous faire : construire une allocation ou évaluer une idée précise ?"
@@ -149,9 +155,10 @@ def detect_conflict(
     cap = SINGLE_STOCK_CAP[tolerance]
     asset = _universe().get(ticker, {})
     if asset.get("asset_class") == "equity" and weight > cap:
+        tol_str = TOLERANCE_FR.get(tolerance, tolerance)
         out.append(
             f"{weight:.0%} dans {ticker} dépasse le plafond de référence de {cap:.0%} par action "
-            f"pour une tolérance au risque « {tolerance} » et un horizon de {horizon_years} ans."
+            f"pour une tolérance au risque « {tol_str} » et un horizon de {horizon_years} ans."
         )
     if asset.get("asset_class") == "crypto":
         if "no_crypto" in constraints:
