@@ -97,7 +97,7 @@ def test_robert_tsla_is_challenged_not_refused(runs):
     assert CRYPTO <= {e["ticker"] for e in s.exclusions}
 
     assert _weight(s, "as_requested", {"TSLA"}) == pytest.approx(0.25)
-    assert _weight(s, "capped", {"TSLA"}) <= 0.05 + 1e-6
+    assert _weight(s, "capped", {"TSLA"}) <= 0.03 + 1e-6  # low capacity binds (#115)
     dd = {n: _metric(s, n, "max_drawdown") for n in SCENARIO_NAMES}
     assert dd["as_requested"] < dd["capped"] <= dd["profile_baseline"] + 1e-9
     stress = {n: _metric(s, n, "stress_2022") for n in SCENARIO_NAMES}
@@ -108,8 +108,12 @@ def test_robert_tsla_is_challenged_not_refused(runs):
 
 def test_whatif_changes_the_answer_coherently(runs):
     base = runs["robert"]
-    looser = rerun(base, ("risk_tolerance", "high"))
-    assert "profile" not in {t["node"] for t in looser.trace}
+    # Raising tolerance alone does not loosen anything: Robert's low capacity binds (#115).
+    bolder = rerun(base, ("risk_tolerance", "high"))
+    assert "profile" not in {t["node"] for t in bolder.trace}
+    assert _weight(bolder, "capped", {"TSLA"}) == pytest.approx(_weight(base, "capped", {"TSLA"}))
+    # With capacity raised too, the caps loosen to the high-risk single-stock cap.
+    looser = rerun(bolder, ("risk_capacity", "high"))
     assert _weight(looser, "capped", {"TSLA"}) > _weight(base, "capped", {"TSLA"})
     assert _weight(looser, "capped", {"TSLA"}) <= 0.10 + 1e-6
 

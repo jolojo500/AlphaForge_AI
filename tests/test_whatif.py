@@ -62,10 +62,13 @@ def test_whatif_robert_tolerance_rerun():
 
 def test_whatif_robert_tolerance_loosens_caps():
     initial_state = run("robert", PERSONAS["robert"]["example_request"])
-    new_state = rerun(initial_state, {"field": "risk_tolerance", "value": "high"})
-
-    # When real scenario builder lands in A-6, TSLA cap increases to 10%
-    capped_new = next(s for s in new_state.scenarios if s.name == "capped")
+    bolder = rerun(initial_state, {"field": "risk_tolerance", "value": "high"})
+    # Robert's capacity is low: raising tolerance alone keeps the low cap (#115).
+    capped = next(s for s in bolder.scenarios if s.name == "capped")
+    assert capped.weights["TSLA"] == pytest.approx(0.03)
+    # Raising capacity as well loosens the single-stock cap to 10 %.
+    looser = rerun(bolder, {"field": "risk_capacity", "value": "high"})
+    capped_new = next(s for s in looser.scenarios if s.name == "capped")
     assert capped_new.weights["TSLA"] == pytest.approx(0.10)
 
 

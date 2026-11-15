@@ -24,6 +24,26 @@ SCENARIO_METRICS: tuple[str, ...] = (
 )
 
 
+# Ordered risk scale shared by tolerance and capacity (#115). Suitability follows the more
+# conservative of what the client accepts (tolerance) and what their situation can absorb
+# (capacity), as KYC suitability does.
+RISK_SCALE: tuple[str, ...] = ("low", "low_moderate", "moderate", "high")
+
+
+def effective_risk(tolerance: str, capacity: str) -> str:
+    """The lower of tolerance and capacity on RISK_SCALE (unknown values count as moderate)."""
+    rank = {r: i for i, r in enumerate(RISK_SCALE)}
+    t = rank.get(tolerance, rank["moderate"])
+    c = rank.get(capacity, rank["moderate"])
+    return RISK_SCALE[min(t, c)]
+
+
+def risk_gap(tolerance: str, capacity: str) -> int:
+    """How many levels tolerance sits above capacity (0 when capacity is not the limit)."""
+    rank = {r: i for i, r in enumerate(RISK_SCALE)}
+    return rank.get(tolerance, 2) - rank.get(capacity, 2)
+
+
 class Profile(BaseModel):
     persona: PersonaId
     objective: str

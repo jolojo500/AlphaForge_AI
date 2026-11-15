@@ -63,7 +63,7 @@ def test_robert_tsla_drawdown_order():
 def test_robert_tsla_weights():
     sc = _by_name(_run(ROBERT_TSLA))
     assert sc["as_requested"].weights["TSLA"] == pytest.approx(0.25, abs=TOL)
-    assert sc["capped"].weights["TSLA"] == pytest.approx(0.05, abs=TOL)
+    assert sc["capped"].weights["TSLA"] == pytest.approx(0.03, abs=TOL)  # capacity low binds (#115)
     assert "TSLA" not in sc["profile_baseline"].weights or sc["profile_baseline"].weights["TSLA"] <= 0.05 + TOL
 
 
@@ -128,3 +128,17 @@ def test_deterministic():
     a = [s.model_dump() for s in _run(ROBERT_TSLA)["scenarios"]]
     b = [s.model_dump() for s in _run(ROBERT_TSLA)["scenarios"]]
     assert a == b
+
+
+def test_capacity_binds_when_lower_than_tolerance():
+    from alphaforge.nodes.scenarios import caps_for
+    from alphaforge.state import Profile
+
+    def prof(tol, cap):
+        return Profile(persona="custom", objective="growth", horizon_years=10,
+                       risk_tolerance=tol, risk_capacity=cap)
+
+    assert caps_for(prof("high", "low"))["crypto_total"] == 0.0
+    assert caps_for(prof("high", "low"))["single_stock"] == pytest.approx(0.03)
+    assert caps_for(prof("low_moderate", "low"))["equity_max"] == pytest.approx(0.25)  # Robert
+    assert caps_for(prof("moderate", "high"))["single_stock"] == pytest.approx(0.07)  # tolerance binds

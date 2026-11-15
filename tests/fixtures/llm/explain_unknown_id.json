@@ -8,7 +8,7 @@
    ]
   },
   {
-   "claim": "Le scénario plafonné a une volatilité annualisée de 5,1 %.",
+   "claim": "Le scénario plafonné a une volatilité annualisée de 4,6 %.",
    "evidence": [
     "EP8"
    ]
@@ -16,7 +16,7 @@
  ],
  "pourquoi_ce_choix": [
   {
-   "claim": "Le scénario plafonné limite la position TSLA à 5,0 % et réduit la volatilité.",
+   "claim": "Le scénario plafonné limite la position TSLA à 3,0 % et réduit la volatilité.",
    "evidence": [
     "EP999"
    ]

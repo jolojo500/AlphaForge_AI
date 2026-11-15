@@ -18,13 +18,14 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from alphaforge import config, llm
+from alphaforge.nodes.scenarios import CAPS
 from alphaforge.personas import PERSONAS
-from alphaforge.state import GraphState, Profile
+from alphaforge.state import GraphState, Profile, effective_risk, risk_gap
 from alphaforge.tracing import traced
 
 KNOWN_CONSTRAINTS = {"no_crypto", "esg_only", "no_controversies"}
-# Single-stock reference caps by tolerance (PRD 5.7 caps table). Used only to flag a conflict.
-SINGLE_STOCK_CAP = {"high": 0.10, "moderate": 0.07, "low_moderate": 0.05, "low": 0.05}
+# Single-stock reference caps from the scenario builder's table (one source of truth).
+SINGLE_STOCK_CAP = {level: caps["single_stock"] for level, caps in CAPS.items()}
 TOLERANCE_FR = {
     "high": "élevée",
     "moderate": "modérée",
@@ -171,9 +172,17 @@ def detect_conflict(
     constraints: list[str],
     idea: dict | None,
     max_loss_pct: float | None = None,
+    capacity: str | None = None,
 ) -> list[str]:
     """Contradictions between the requested idea and the stated profile (deterministic)."""
     out: list[str] = []
+    level = effective_risk(tolerance, capacity) if capacity else tolerance
+    if capacity and risk_gap(tolerance, capacity) >= 2:
+        out.append(
+            f"La tolérance au risque déclarée « {TOLERANCE_FR.get(tolerance, tolerance)} » dépasse "
+            f"nettement la capacité financière « {TOLERANCE_FR.get(capacity, capacity)} » : les "
+            "limites du profil suivent la capacité, la plus prudente des deux."
+        )
     if max_loss_pct is not None:
         tol_fr = TOLERANCE_FR.get(tolerance, tolerance)
         if max_loss_pct <= 5.0 and tolerance in ("high", "moderate"):
@@ -189,13 +198,14 @@ def detect_conflict(
     if not idea:
         return out
     ticker, weight = idea["ticker"], idea["weight"]
-    cap = SINGLE_STOCK_CAP[tolerance]
+    cap = SINGLE_STOCK_CAP[level]
     asset = _universe().get(ticker, {})
     if asset.get("asset_class") == "equity" and weight > cap:
-        tol_str = TOLERANCE_FR.get(tolerance, tolerance)
+        lvl_str = TOLERANCE_FR.get(level, level)
+        basis = "un niveau de risque retenu" if level != tolerance else "une tolérance au risque"
         out.append(
             f"{weight:.0%} dans {ticker} dépasse le plafond de référence de {cap:.0%} par action "
-            f"pour une tolérance au risque « {tol_str} » et un horizon de {horizon_years} ans."
+            f"pour {basis} « {lvl_str} » et un horizon de {horizon_years} ans."
         )
     if asset.get("asset_class") == "crypto":
         if "no_crypto" in constraints:
@@ -256,6 +266,7 @@ def build_profile(
         constraints=constraints,
         idea=idea,
         max_loss_pct=p.get("max_loss_pct"),
+        capacity=p.get("risk_capacity"),
     )
     for c in ext.conflicts[:2]:
         c = c.strip()
@@ -328,7 +339,8 @@ def profile_node(state: GraphState) -> dict:
         if c in KNOWN_CONSTRAINTS and c not in constraints:
             constraints.append(c)
     conflicts = detect_conflict(
-        tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea
+        tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea,
+        capacity=p.get("risk_capacity"),
     )
 
     if is_contradictory_profile(conflicts, idea, horizon, constraints):
@@ -342,7 +354,8 @@ def profile_node(state: GraphState) -> dict:
         )
         horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p["horizon_years"]
         conflicts = detect_conflict(
-            tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea
+            tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea,
+        capacity=p.get("risk_capacity"),
         )
         if is_contradictory_profile(conflicts, idea, horizon, constraints) and not state.retries.get("clarify"):
             target_asset = idea["ticker"] if idea else "cryptoactifs"
