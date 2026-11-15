@@ -52,6 +52,11 @@ def apply_change(
         # as_of_date is on GraphState, profile remains unchanged
         return profile
 
+    if field == "current_holdings":
+        from alphaforge.holdings import parse_holdings
+
+        return profile.model_copy(update={"current_holdings": parse_holdings(value)})
+
     raise ValueError(f"Unsupported what-if field: {field}")
 
 

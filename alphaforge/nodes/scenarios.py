@@ -203,8 +203,9 @@ def build_scenarios(
     rounds: int = 0,
     drop: tuple[str, ...] | list[str] = (),
     per_ticker: dict[str, float] | None = None,
+    current_weights: pd.Series | None = None,
 ) -> tuple[dict[str, pd.Series], dict[str, float]]:
-    """Weights of the three scenarios and the caps used. `prices` must cover every ticker.
+    """Weights of the scenarios and the caps used. `prices` must cover every ticker.
 
     `per_ticker` caps come from blocking objections and apply to the lines they cite only;
     the requested idea in `capped` stays at the profile cap (#116)."""
@@ -218,8 +219,14 @@ def build_scenarios(
     ticker = idea.get("ticker") if idea else None
     if ticker in prices.columns:
         w_req = min(max(float(idea.get("weight") or DEFAULT_IDEA_WEIGHT), 0.0), 1.0)
-        rest = baseline.drop(ticker, errors="ignore")
-        as_requested = pd.concat([rest / rest.sum() * (1.0 - w_req), pd.Series({ticker: w_req})])
+        if current_weights is not None:
+            from alphaforge.holdings import build_as_requested_from_current
+
+            as_req_dict = build_as_requested_from_current(current_weights.to_dict(), ticker, w_req)
+            as_requested = pd.Series(as_req_dict)
+        else:
+            rest = baseline.drop(ticker, errors="ignore")
+            as_requested = pd.concat([rest / rest.sum() * (1.0 - w_req), pd.Series({ticker: w_req})])
         if ticker in universe:
             w_cap = min(w_req, float(_asset_caps([ticker], info, profile_caps)[0]))
             capped = optimize(cov, info, caps, fixed={ticker: w_cap})
@@ -230,6 +237,8 @@ def build_scenarios(
         capped = optimize(cov, info, caps, target=as_requested, equity_floor=False)
 
     weights = {"as_requested": _clean(as_requested), "capped": capped, "profile_baseline": baseline}
+    if current_weights is not None:
+        weights["current"] = _clean(current_weights)
     return weights, caps
 
 
@@ -389,11 +398,33 @@ def scenarios_node(state: GraphState) -> dict:
     per_ticker, drop, changes = targeted_changes(
         blocking, state.evidence, eligible, info, caps_for(profile), requested
     )
-    tickers = sorted(set(eligible) | ({requested} if requested else set()))
+    # Resolve current holdings if provided (#120)
+    current_weights: pd.Series | None = None
+    proxies_used: dict[str, str] = {}
+    not_analysed: list[str] = []
+    unanalysed_share = 0.0
+    if profile.current_holdings:
+        from alphaforge.holdings import resolve_holdings
+
+        mapped_w, proxies_used, not_analysed, unanalysed_share = resolve_holdings(
+            profile.current_holdings, set(info.index)
+        )
+        if mapped_w:
+            current_weights = pd.Series(mapped_w)
+
+    current_tickers = set(current_weights.index) if current_weights is not None else set()
+    tickers = sorted(set(eligible) | ({requested} if requested else set()) | current_tickers)
     prices = provider.prices_cad(tickers, state.as_of_date)
 
     weights, caps = build_scenarios(
-        profile, eligible, prices, info, rounds=rounds, drop=drop, per_ticker=per_ticker
+        profile,
+        eligible,
+        prices,
+        info,
+        rounds=rounds,
+        drop=drop,
+        per_ticker=per_ticker,
+        current_weights=current_weights,
     )
 
     as_of = state.as_of_date
@@ -430,6 +461,23 @@ def scenarios_node(state: GraphState) -> dict:
             source="screening", date=as_of, method="requested ticker kept for comparison",
             confidence="assumption",
         )
+    if proxies_used:
+        proxy_desc = ", ".join(f"{orig} → {proxy}" for orig, proxy in sorted(proxies_used.items()))
+        reg.add(
+            f"Actifs du portefeuille actuel représentés par procuration (proxy) : {proxy_desc}.",
+            source="alphaforge.holdings proxy table",
+            date=as_of,
+            method="mapping of non-universe assets to closest 31-asset equivalent",
+            confidence="assumption",
+        )
+    if not_analysed:
+        reg.add(
+            f"Titres non analysés du portefeuille actuel ({_pct(unanalysed_share)}) : {', '.join(sorted(not_analysed))}.",
+            source="screening",
+            date=as_of,
+            method="assets outside the 31-asset universe without proxy excluded from analysis",
+            confidence="assumption",
+        )
 
     end = prices.index[-1].date() if len(prices) else as_of
     window = f"{prices.index[0].date()}..{end}" if len(prices) else "no data"
@@ -448,6 +496,21 @@ def scenarios_node(state: GraphState) -> dict:
                 confidence="fact" if values[m] is not None else "assumption",
             )
         sc = Scenario(name=name, weights=w.to_dict(), metrics=ids)
+        if current_weights is not None:
+            from alphaforge.holdings import calculate_trades_and_turnover
+
+            trades, turnover = calculate_trades_and_turnover(
+                current_weights.to_dict(), w.to_dict(), profile.budget_cad
+            )
+            sc.trades = trades
+            sc.turnover = turnover
+            reg.add(
+                {"metric": "turnover", "scenario": name, "value": turnover, "unit": "ratio"},
+                source="current holdings vs scenario weights",
+                date=end,
+                method="0.5 * sum(abs(target_weight - current_weight))",
+                confidence="fact",
+            )
         notes = _template_notes(name, w, values, ids, caps_eid, requested, flagged)
         if draft_notes is not None:
             try:
@@ -457,7 +520,37 @@ def scenarios_node(state: GraphState) -> dict:
         sc.notes = notes
         scenarios.append(sc)
 
-    summary = "Trois scénarios construits : demandé, plafonné, référence."
+    # Fourth reference column: client's current portfolio (#120)
+    if current_weights is not None:
+        w_curr = weights["current"]
+        values_curr = {k: _r4(v) for k, v in scenario_metrics(w_curr, prices, info).items()}
+        ids_curr = {}
+        for m in SCENARIO_METRICS:
+            ids_curr[m] = reg.add(
+                {"metric": m, "scenario": "current", "value": values_curr[m], "unit": "ratio"},
+                source=SOURCE,
+                date=end,
+                method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}",
+                confidence="fact" if values_curr[m] is not None else "assumption",
+            )
+        notes_curr = [
+            f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
+            f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
+            f"perte maximale historique {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
+        ]
+        if proxies_used:
+            notes_curr.append(f"Actifs avec proxy : {', '.join(proxies_used.keys())}.")
+        if not_analysed:
+            notes_curr.append(
+                f"Actifs non analysés ({_pct(unanalysed_share)}) : {', '.join(not_analysed)}."
+            )
+        sc_curr = Scenario(name="current", weights=w_curr.to_dict(), metrics=ids_curr, notes=notes_curr)
+        scenarios.append(sc_curr)
+
+    if current_weights is not None:
+        summary = "Quatre scénarios construits : demandé, plafonné, référence, et portefeuille actuel."
+    else:
+        summary = "Trois scénarios construits : demandé, plafonné, référence."
     if rounds:
         summary += " Révisés après objections : " + ("; ".join(changes) or "aucun changement") + "."
     return {"scenarios": scenarios, "evidence": reg.items(), "summary": summary}

@@ -53,6 +53,8 @@ export async function createRun(
       as_of_date: asOfDate || null,
       profile_data: extraPayload?.profile_data || null,
       user_profile: extraPayload?.user_profile || null,
+      current_holdings:
+        extraPayload?.current_holdings || extraPayload?.profile_data?.current_holdings || null,
     }),
   });
   if (!res.ok) {
@@ -267,6 +269,7 @@ export function prepareBackendPayload(
     persona: 'custom_user',
     request_text: fullRequestText,
     user_profile: profile,
+    current_holdings: profile.currentHoldings,
     profile_data: {
       objective,
       horizon_years: horizonYears,
@@ -277,6 +280,7 @@ export function prepareBackendPayload(
       budget_cad: profile.simulatedCapital,
       max_loss_pct: maxLossPct,
       notes: profile.additionalNotes,
+      current_holdings: profile.currentHoldings,
     },
   };
 

@@ -3,7 +3,7 @@
  */
 
 export type PersonaId = 'amira' | 'mateo' | 'robert' | 'custom_user' | string;
-export type ScenarioName = 'as_requested' | 'capped' | 'profile_baseline';
+export type ScenarioName = 'as_requested' | 'capped' | 'profile_baseline' | 'current';
 
 export const SCENARIO_NAMES: ScenarioName[] = ['as_requested', 'capped', 'profile_baseline'];
 
@@ -43,11 +43,23 @@ export interface Evidence {
   confidence: 'fact' | 'assumption' | 'fictional';
 }
 
+export interface Trade {
+  ticker: string;
+  current_weight: number;
+  target_weight: number;
+  change: number;
+  action: string;
+  action_en?: string;
+  amount_cad?: number;
+}
+
 export interface Scenario {
   name: ScenarioName;
   weights: Record<string, number>;
   metrics: Record<string, string>;
   notes: string[];
+  turnover?: number;
+  trades?: Trade[];
 }
 
 export interface TraceEntry {
@@ -248,8 +260,10 @@ export interface UserOnboardingProfile {
   excludedCategories?: string[];
   currencyPreference?: string;
 
-  // Step 5: Informations supplémentaires
+  // Step 5: Informations supplémentaires & Portefeuille existant
   additionalNotes: string;
+  currentHoldingsCsv?: string;
+  currentHoldings?: Record<string, number>;
   fictionalCapitalAcknowledged: boolean;
 
   completedAt: string;
@@ -259,6 +273,7 @@ export interface BackendRunPayload {
   persona: string;
   request_text: string;
   user_profile?: UserOnboardingProfile;
+  current_holdings?: Record<string, number>;
   profile_data?: {
     objective: string;
     horizon_years: number;
@@ -269,5 +284,6 @@ export interface BackendRunPayload {
     budget_cad: number | null;
     max_loss_pct?: number | null;
     notes?: string;
+    current_holdings?: Record<string, number>;
   };
 }

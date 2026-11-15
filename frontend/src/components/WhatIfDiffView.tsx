@@ -8,6 +8,7 @@ interface WhatIfDiffViewProps {
 }
 
 const SCENARIO_LABELS: Record<ScenarioName, string> = {
+  current: 'Portefeuille actuel',
   as_requested: 'Scénario demandé',
   capped: 'Scénario plafonné',
   profile_baseline: 'Scénario de référence',

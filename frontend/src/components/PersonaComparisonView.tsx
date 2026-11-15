@@ -93,6 +93,7 @@ const PRESET_REQUESTS = [
 ];
 
 const SCENARIO_TITLES: Record<ScenarioName, string> = {
+  current: 'Portefeuille actuel',
   capped: 'Scénario plafonné',
   as_requested: 'Scénario demandé',
   profile_baseline: 'Scénario de référence du profil',

@@ -277,6 +277,14 @@ def build_profile(
             "Hypothèse : la demande a été lue de façon simplifiée ; le profil repose sur les "
             "hypothèses du persona."
         )
+    current_holdings = None
+    if p.get("current_holdings"):
+        from alphaforge.holdings import parse_holdings
+
+        current_holdings = parse_holdings(p["current_holdings"])
+        if budget is None and current_holdings and sum(current_holdings.values()) > 100:
+            budget = float(sum(current_holdings.values()))
+
     return Profile(
         persona=persona_id,
         objective=p["objective"],
@@ -289,6 +297,7 @@ def build_profile(
         request_type="judge" if idea else "build",
         requested_idea=idea,
         conflicts=conflicts,
+        current_holdings=current_holdings,
     )
 
 

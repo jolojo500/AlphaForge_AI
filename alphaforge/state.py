@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 PersonaId = str
-ScenarioName = Literal["as_requested", "capped", "profile_baseline"]
+ScenarioName = Literal["as_requested", "capped", "profile_baseline", "current"]
 
 SCENARIO_NAMES: tuple[str, ...] = ("as_requested", "capped", "profile_baseline")
 
@@ -58,6 +58,8 @@ class Profile(BaseModel):
     excluded_tickers: list[str] = Field(default_factory=list)  # set by what-if
     conflicts: list[str] = Field(default_factory=list)
     clarification_needed: str | None = None
+    current_holdings: dict[str, float] | None = None
+    not_analysed_holdings: list[str] = Field(default_factory=list)
 
 
 class Evidence(BaseModel):
@@ -76,6 +78,8 @@ class Scenario(BaseModel):
     weights: dict[str, float]  # ticker -> weight, sums to 1.0
     metrics: dict[str, str] = Field(default_factory=dict)  # metric name -> evidence id
     notes: list[str] = Field(default_factory=list)
+    turnover: float | None = None
+    trades: list[dict] | None = None
 
 
 def _merge(left: dict, right: dict) -> dict:

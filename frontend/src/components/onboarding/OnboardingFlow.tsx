@@ -86,6 +86,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [additionalNotes, setAdditionalNotes] = useState<string>(
     initialProfile?.additionalNotes || ''
   );
+  const [currentHoldingsCsv, setCurrentHoldingsCsv] = useState<string>(
+    initialProfile?.currentHoldingsCsv || ''
+  );
+  const [currentHoldings, setCurrentHoldings] = useState<Record<string, number>>(
+    initialProfile?.currentHoldings || {}
+  );
   const [fictionalCapitalAcknowledged, setFictionalCapitalAcknowledged] = useState<boolean>(
     initialProfile?.fictionalCapitalAcknowledged ?? false
   );
@@ -114,6 +120,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       esgImportance: esgImportance || 'Non spécifié',
       excludedCategories,
       additionalNotes,
+      currentHoldingsCsv,
+      currentHoldings: Object.keys(currentHoldings).length > 0 ? currentHoldings : undefined,
       fictionalCapitalAcknowledged,
       completedAt: new Date().toISOString(),
     };
@@ -247,6 +255,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             <Step5AdditionalInfo
               additionalNotes={additionalNotes}
               setAdditionalNotes={setAdditionalNotes}
+              currentHoldingsCsv={currentHoldingsCsv}
+              setCurrentHoldingsCsv={setCurrentHoldingsCsv}
+              setCurrentHoldings={setCurrentHoldings}
               fictionalCapitalAcknowledged={fictionalCapitalAcknowledged}
               setFictionalCapitalAcknowledged={setFictionalCapitalAcknowledged}
               onSave={handleSave}
