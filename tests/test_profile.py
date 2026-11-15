@@ -607,3 +607,24 @@ def test_tfsa_balance_inferred_from_holdings_is_not_compared_with_room():
 def test_crypto_target_needs_a_weight_context(text, expected):
     """#186 item 10: a count of cryptos is not a crypto weight."""
     assert prof._regex_extract(text).requested_allocation == expected
+
+
+def test_model_extraction_is_completed_by_the_deterministic_reading(monkeypatch):
+    """Live bug: the model returned no allocation for '50 % en crypto', so 'as requested' ignored it."""
+    from alphaforge import llm
+    from alphaforge.nodes import profile as prof
+
+    def fake_call_json(prompt, schema, **kw):
+        return schema(request_type="build")  # the model extracted nothing
+
+    monkeypatch.setattr(llm, "call_json", fake_call_json)
+    res, used_fallback = prof.extract_profile("amira", "Je veux garder 50 % en crypto.")
+    assert used_fallback is False
+    assert res.requested_allocation == {"crypto": 0.5}
+
+    res, _ = prof.extract_profile("amira", "Je veux mettre 15 % en Bitcoin via le FNB BTCC.B.")
+    assert res.ticker == "BTC-USD" and res.requested_allocation == {"BTC-USD": 0.15}
+    assert res.requested_vehicle == "BTCC.B" and res.request_type == "judge"
+
+    res, _ = prof.extract_profile("amira", "Je veux un portfolio complet pour la retraite.")
+    assert res.requested_allocation is None and res.ticker is None
