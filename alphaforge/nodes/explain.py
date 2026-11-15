@@ -54,6 +54,8 @@ Règles strictes :
 - Langage de cohérence, jamais de conseil : dis quel scénario est « le plus cohérent avec le profil
   déclaré », sans dire d'acheter, de vendre ou d'investir. Aucune prévision de rendement futur,
   aucune promesse. Les statistiques sont historiques.
+  N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » :
+  utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
 - Ne remplace pas les trois scénarios par un seul : compare-les, puis indique le plus cohérent.
 - Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives
   (« fictional »). Si une preuve est fictive ou une hypothèse, dis-le dans les limites.
