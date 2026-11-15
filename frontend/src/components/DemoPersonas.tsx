@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { fetchPersonas } from '../api';
 import { Button } from '@/components/ui/button';
 import { UserRound } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface PersonaInfo {
   label?: string;
@@ -18,6 +19,8 @@ const ORDER = ['robert', 'amira', 'mateo'];
 
 export const DemoPersonas: React.FC<DemoPersonasProps> = ({ onPick, disabled }) => {
   const [personas, setPersonas] = useState<Record<string, PersonaInfo>>({});
+  const { language } = useLanguage();
+  const isEn = language === 'en';
 
   useEffect(() => {
     fetchPersonas()
@@ -31,7 +34,7 @@ export const DemoPersonas: React.FC<DemoPersonasProps> = ({ onPick, disabled }) 
   return (
     <div className="w-full max-w-xl mx-auto text-center space-y-2">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-        Profils de démonstration
+        {isEn ? 'Demo Personas' : 'Profils de démonstration'}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         {ids.map((id) => (

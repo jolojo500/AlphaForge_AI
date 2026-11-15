@@ -1,0 +1,276 @@
+export type Language = 'fr' | 'en';
+
+export const translations: Record<Language, Record<string, string>> = {
+  fr: {
+    // Top Bar & App Navigation
+    'banner.disclaimer': 'Simulation éducative · Aucun conseil personnalisé d’investissement',
+    'app.ask_another': 'Poser une autre question',
+    'app.compare_profiles': 'Comparer deux profils',
+    'app.compare_short': 'Comparer',
+    'app.modify_profile': 'Modifier profil',
+    'app.replay_analysis': 'Rejouer une analyse',
+    'app.replay_short': 'Rejouer',
+    'app.login': 'Connexion',
+    'app.logout': 'Déconnexion',
+    'app.advisor': 'Conseiller',
+    'app.footer': 'AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026',
+    'nav.profile': 'Questionnaire profil',
+    'nav.edit_profile': 'Éditer le profil',
+    'nav.new_query': 'Nouvelle analyse',
+    'nav.compare': 'Comparer personas',
+    'nav.replay': 'Rejouer simulations',
+    'nav.whatif': 'Simulation What-If',
+    'nav.results': 'Résultats de simulation',
+
+    // Welcome Screen
+    'welcome.title': 'AlphaForge AI',
+    'welcome.subtitle': 'Assistant éducatif de simulation de portefeuille et d’analyse de risque selon les règles de gouvernance BNCD.',
+    'welcome.start_questionnaire': 'Commencer le questionnaire profil',
+    'welcome.use_demo_persona': 'Ou explorer avec un profil démo',
+    'welcome.amira_title': 'Amira, 26 ans',
+    'welcome.amira_desc': 'Croissance dynamique · Horizon 15+ ans · Crypto & Techno · 100 000 $ CAD',
+    'welcome.mateo_title': 'Mateo, 41 ans',
+    'welcome.mateo_desc': 'Profil équilibré · Horizon 10 ans · ESG strict · Zéro controverse',
+    'welcome.robert_title': 'Robert, 59 ans',
+    'welcome.robert_desc': 'Préservation du capital · Horizon 4 ans · Prudence pré-retraite',
+
+    // Query Screen
+    'query.title': 'Que souhaitez-vous explorer aujourd’hui ?',
+    'query.subtitle': 'Formulez une idée d’investissement, une demande d’allocation ou une modification de stratégie.',
+    'query.placeholder': 'Ex: Je veux mettre 25 % de mon portefeuille dans TSLA, ou construire une allocation diversifiée...',
+    'query.btn_run': 'Lancer la simulation',
+    'query.btn_running': 'Analyse multi-agents en cours...',
+    'query.suggested': 'Suggestions de requêtes',
+    'query.sugg_1': 'Je veux investir 25 % de mon portefeuille dans TSLA.',
+    'query.sugg_2': 'Construire un portefeuille équilibré et diversifié avec des ETF à faible coût.',
+    'query.sugg_3': 'Ajouter 10 % de BTC-USD pour dynamiser le rendement de mon portefeuille.',
+
+    // Scenarios Section
+    'scenarios.section_title': '3. Comparaison des scénarios simulés',
+    'scenarios.most_consistent': 'Plus cohérent',
+    'scenarios.weights_title': 'Répartition des actifs',
+    'scenarios.metrics_title': 'Indicateurs clés de risque',
+    'scenarios.asset_evaluated': '(actif évalué)',
+    'scenarios.as_requested_title': 'Scénario brut demandé',
+    'scenarios.as_requested_sub': 'Intégration directe de votre idée',
+    'scenarios.capped_title': 'Scénario plafonné',
+    'scenarios.capped_sub': 'Ajusté selon vos garde-fous',
+    'scenarios.baseline_title': 'Profil de référence',
+    'scenarios.baseline_sub': 'Allocation type sans titre spéculatif',
+    'scenarios.current_title': 'Portefeuille actuel',
+    'scenarios.current_sub': 'Avoirs détenus déclarés',
+
+    // Metrics labels
+    'metric.volatility_ann': 'Volatilité annuelle',
+    'metric.max_drawdown': 'Perte historique max',
+    'metric.stress_2022': 'Stress test 2022',
+    'metric.top_weight': 'Poids principal',
+    'metric.sector_concentration_hhi': 'Concentration (HHI)',
+    'metric.us_exposure': 'Exposition US',
+    'metric.tax_drag': 'Friction fiscale estimée',
+
+    // Explanation Section
+    'explain.title': '4. Explication et synthèse pédagogique (Les 4 questions BNCD)',
+    'explain.subtitle': 'Réponses aux quatre questions de gouvernance BNCD, justifiées par les preuves chiffrées.',
+    'explain.what_data': '1. Quelles données avons-nous utilisées ?',
+    'explain.what_data_sub': 'Séries de prix historiques ajustées, macroéconomie et actualités datées.',
+    'explain.why_choice': '2. Pourquoi ce choix ?',
+    'explain.why_choice_sub': 'Cohérence avec les objectifs, la tolérance et la capacité déclarées.',
+    'explain.limits': '3. Quelles sont les limites ?',
+    'explain.limits_sub': 'Biais de survie, modèles rétrospectifs et hypothèses de distribution.',
+    'explain.what_change': '4. Qu’est-ce qui changerait la réponse ?',
+    'explain.what_change_sub': 'Sensibilité aux chocs de taux, récessions ou changements d’horizon.',
+    'explain.summary': 'Synthèse de l’analyse :',
+    'explain.uncertainty': 'Note sur l’incertitude :',
+    'explain.most_consistent_scenario': 'Scénario le plus cohérent avec le profil',
+    'explain.verification_passed': 'Vérification formelle réussie',
+    'explain.verification_failed': 'Échec du vérificateur formel déterministe',
+    'explain.verification_failed_desc': 'L’explication générée par le modèle a été rejetée car elle ne satisfait pas aux critères stricts d’intégrité numérique ou de conformité (non-conseil).',
+
+    // Profile Card
+    'profile.card_title': 'Hypothèses du profil investisseur',
+    'profile.verified_by_a1': 'Vérifié par Agent 1',
+    'profile.in_progress': 'En cours',
+    'profile.objective': 'Objectif',
+    'profile.horizon': 'Horizon d’investissement',
+    'profile.tolerance': 'Tolérance au risque',
+    'profile.capacity': 'Capacité financière',
+    'profile.constraints': 'Garde-fous & Contraintes',
+    'profile.preferences': 'Préférences déclarées',
+    'profile.no_constraints': 'Aucune contrainte stricte',
+    'profile.neutral': 'Neutre',
+    'profile.budget': 'Budget indicatif',
+    'profile.idea': 'Idée analysée',
+    'profile.account_type': 'Compte fiscal',
+    'profile.status': 'Statut profil',
+    'profile.growth': 'Croissance du capital',
+    'profile.balanced': 'Équilibré & responsable',
+    'profile.capital_preservation': 'Préservation du capital',
+    'profile.income': 'Revenus réguliers',
+    'profile.high': 'Élevée',
+    'profile.moderate': 'Modérée',
+    'profile.low_moderate': 'Faible à modérée',
+    'profile.low': 'Faible',
+
+    // Conflicts & Clarification
+    'conflicts.title': 'Conflit ou incohérence détecté dans la demande',
+    'conflicts.sub': 'L’analyse s’est poursuivie en comparant votre idée brute à un scénario plafonné selon vos contraintes.',
+    'clarification.title': 'Précision requise pour poursuivre l’analyse',
+    'clarification.label': 'Votre réponse :',
+    'clarification.placeholder': 'Précisez votre choix ou votre objectif...',
+    'clarification.btn_send': 'Répondre et continuer',
+    'clarification.sending': 'Envoi...',
+
+    // Exclusions
+    'exclusions.title': 'Filtres et exclusions d’univers',
+    'exclusions.none': 'Aucun actif exclu pour ce profil.',
+
+    // Common
+    'common.years': 'ans',
+    'common.year': 'an',
+    'common.loading': 'Chargement...',
+    'common.error': 'Une erreur est survenue',
+  },
+  en: {
+    // Top Bar & App Navigation
+    'banner.disclaimer': 'Educational simulation · No personalized investment advice',
+    'app.ask_another': 'Ask another question',
+    'app.compare_profiles': 'Compare two profiles',
+    'app.compare_short': 'Compare',
+    'app.modify_profile': 'Edit profile',
+    'app.replay_analysis': 'Replay an analysis',
+    'app.replay_short': 'Replay',
+    'app.login': 'Log in',
+    'app.logout': 'Log out',
+    'app.advisor': 'Advisor',
+    'app.footer': 'AlphaForge AI — Verifiable multi-agent architecture · PolyFinances 2026',
+    'nav.profile': 'Profile Questionnaire',
+    'nav.edit_profile': 'Edit Profile',
+    'nav.new_query': 'New Analysis',
+    'nav.compare': 'Compare Personas',
+    'nav.replay': 'Replay Runs',
+    'nav.whatif': 'What-If Simulation',
+    'nav.results': 'Simulation Results',
+
+    // Welcome Screen
+    'welcome.title': 'AlphaForge AI',
+    'welcome.subtitle': 'Educational portfolio simulation and risk analysis assistant aligned with BNCD governance standards.',
+    'welcome.start_questionnaire': 'Start Investor Questionnaire',
+    'welcome.use_demo_persona': 'Or explore with a demo persona',
+    'welcome.amira_title': 'Amira, 26 yo',
+    'welcome.amira_desc': 'Dynamic growth · 15+ yr horizon · Crypto & Tech · $100,000 CAD',
+    'welcome.mateo_title': 'Mateo, 41 yo',
+    'welcome.mateo_desc': 'Balanced profile · 10 yr horizon · Strict ESG · Zero controversy',
+    'welcome.robert_title': 'Robert, 59 yo',
+    'welcome.robert_desc': 'Capital preservation · 4 yr horizon · Pre-retirement prudence',
+
+    // Query Screen
+    'query.title': 'What would you like to explore today?',
+    'query.subtitle': 'Formulate an investment idea, allocation request, or strategy adjustment.',
+    'query.placeholder': 'E.g.: I want to put 25% of my portfolio in TSLA, or build a diversified portfolio...',
+    'query.btn_run': 'Run Simulation',
+    'query.btn_running': 'Multi-agent analysis running...',
+    'query.suggested': 'Suggested Queries',
+    'query.sugg_1': 'I want to invest 25% of my portfolio in TSLA.',
+    'query.sugg_2': 'Build a balanced, diversified portfolio using low-cost ETFs.',
+    'query.sugg_3': 'Add 10% BTC-USD to boost overall portfolio return.',
+
+    // Scenarios Section
+    'scenarios.section_title': '3. Comparison of Simulated Scenarios',
+    'scenarios.most_consistent': 'Most consistent',
+    'scenarios.weights_title': 'Asset Allocation',
+    'scenarios.metrics_title': 'Key Risk Indicators',
+    'scenarios.asset_evaluated': '(evaluated asset)',
+    'scenarios.as_requested_title': 'Raw Requested Scenario',
+    'scenarios.as_requested_sub': 'Direct integration of your proposed idea',
+    'scenarios.capped_title': 'Capped Scenario',
+    'scenarios.capped_sub': 'Adjusted to fit your suitability limits',
+    'scenarios.baseline_title': 'Reference Baseline',
+    'scenarios.baseline_sub': 'Standard allocation without speculative tilt',
+    'scenarios.current_title': 'Current Portfolio',
+    'scenarios.current_sub': 'Declared client holdings',
+
+    // Metrics labels
+    'metric.volatility_ann': 'Annualized Volatility',
+    'metric.max_drawdown': 'Historical Max Loss',
+    'metric.stress_2022': '2022 Stress Test',
+    'metric.top_weight': 'Top Holding Weight',
+    'metric.sector_concentration_hhi': 'Concentration (HHI)',
+    'metric.us_exposure': 'US Exposure',
+    'metric.tax_drag': 'Estimated Tax Drag',
+
+    // Explanation Section
+    'explain.title': '4. Pedagogical Explanation & Synthesis (BNCD 4 Governance Questions)',
+    'explain.subtitle': 'Answers to the four BNCD governance questions, grounded in auditable numerical evidence.',
+    'explain.what_data': '1. What data did we use?',
+    'explain.what_data_sub': 'Adjusted historical price series, macro indicators, and dated news.',
+    'explain.why_choice': '2. Why this scenario choice?',
+    'explain.why_choice_sub': 'Consistency with declared objectives, risk tolerance, and capacity.',
+    'explain.limits': '3. What are the limits?',
+    'explain.limits_sub': 'Survivorship bias, backward-looking models, and distribution assumptions.',
+    'explain.what_change': '4. What would change the answer?',
+    'explain.what_change_sub': 'Sensitivity to interest rate shocks, economic recessions, or horizon changes.',
+    'explain.summary': 'Analysis Executive Summary:',
+    'explain.uncertainty': 'Uncertainty Note:',
+    'explain.most_consistent_scenario': 'Scenario most consistent with declared profile',
+    'explain.verification_passed': 'Formal verification succeeded',
+    'explain.verification_failed': 'Deterministic Formal Verifier Failed',
+    'explain.verification_failed_desc': 'The explanation generated by the model was rejected because it failed numeric integrity or compliance criteria (non-advice).',
+
+    // Profile Card
+    'profile.card_title': 'Investor Profile Hypotheses',
+    'profile.verified_by_a1': 'Verified by Agent 1',
+    'profile.in_progress': 'In Progress',
+    'profile.objective': 'Objective',
+    'profile.horizon': 'Investment Horizon',
+    'profile.tolerance': 'Risk Tolerance',
+    'profile.capacity': 'Financial Capacity',
+    'profile.constraints': 'Safeguards & Constraints',
+    'profile.preferences': 'Declared Preferences',
+    'profile.no_constraints': 'No strict constraint',
+    'profile.neutral': 'Neutral',
+    'profile.budget': 'Simulated Capital',
+    'profile.idea': 'Analyzed Idea',
+    'profile.account_type': 'Tax Account Type',
+    'profile.status': 'Profile Status',
+    'profile.growth': 'Capital Growth',
+    'profile.balanced': 'Balanced & Responsible',
+    'profile.capital_preservation': 'Capital Preservation',
+    'profile.income': 'Regular Income',
+    'profile.high': 'High',
+    'profile.moderate': 'Moderate',
+    'profile.low_moderate': 'Low to Moderate',
+    'profile.low': 'Low',
+
+    // Conflicts & Clarification
+    'conflicts.title': 'Tension or Inconsistency Identified in Request',
+    'conflicts.sub': 'The analysis continued by comparing your raw requested idea against a scenario capped according to your constraints.',
+    'clarification.title': 'Clarification Required to Proceed',
+    'clarification.label': 'Your answer:',
+    'clarification.placeholder': 'Clarify your choice or objective...',
+    'clarification.btn_send': 'Submit and Continue',
+    'clarification.sending': 'Sending...',
+
+    // Exclusions
+    'exclusions.title': 'Universe Screening & Exclusions',
+    'exclusions.none': 'No assets excluded for this profile.',
+
+    // Common
+    'common.years': 'years',
+    'common.year': 'year',
+    'common.loading': 'Loading...',
+    'common.error': 'An error occurred',
+  },
+};
+
+export function t(lang: Language, key: string, fallback?: string): string {
+  const dict = translations[lang] || translations.fr;
+  if (key in dict) {
+    return dict[key];
+  }
+  const frDict = translations.fr;
+  if (key in frDict) {
+    return frDict[key];
+  }
+  return fallback ?? key;
+}

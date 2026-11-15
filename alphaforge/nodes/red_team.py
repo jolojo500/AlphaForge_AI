@@ -51,6 +51,20 @@ SYSTEM = (
     "retirer un actif) ; sinon 'warning'. Aucun conseil, aucune prévision de rendement."
 )
 
+SYSTEM_EN = (
+    "You are the red team reviewer for an educational financial simulation tool. For each "
+    "scenario, find what breaks it for THIS person. You look for what "
+    "the rules do not see: a superficially 'diversified' portfolio concentrated in one "
+    "market or sector, ETF overlap, a scenario incompatible with the profile's horizon or "
+    "capacity, fictional data presented as real. "
+    "Answer in English. Maximum 4 objections, only if solid; otherwise an empty "
+    "list. Each objection cites at least one evidence id from the provided list and "
+    "contains no numbers that do not appear in the cited evidence. "
+    "severity='blocking' only if the scenario contradicts a constraint or profile capacity in a "
+    "way that the scenario builder can correct (tighten a cap, remove an asset); otherwise 'warning'. "
+    "No financial advice, no return forecast."
+)
+
 
 def describe_evidence(ev: Evidence) -> str:
     v = ev.value
@@ -68,8 +82,28 @@ def describe_evidence(ev: Evidence) -> str:
     return f"{ev.id} | {label} = {body} | {ev.source} | {ev.date} | {ev.confidence}"
 
 
-def _prompt(state: GraphState) -> str:
+def _prompt(state: GraphState, language: str = "fr") -> str:
     p = state.profile
+    if language == "en":
+        lines = [
+            f"Profile: tolerance={p.risk_tolerance}, capacity={p.risk_capacity}, horizon={p.horizon_years} years, "
+            f"constraints={p.constraints}, preferences={p.preferences}, conflicts={p.conflicts or 'none'}",
+            "Scenarios:",
+        ]
+        for sc in state.scenarios:
+            top = sorted(sc.weights.items(), key=lambda kv: -kv[1])[:8]
+            shown = f"top {len(top)} of {len(sc.weights)} positions, total 100%"
+            lines.append(
+                f"- {sc.name} ({shown}): " + ", ".join(f"{t} {w:.0%}" for t, w in top)
+                + " | metrics " + ", ".join(f"{m}={e}" for m, e in sc.metrics.items())
+            )
+        ids = {e for sc in state.scenarios for e in sc.metrics.values()}
+        ids |= {k for k in state.evidence if k[:2] in ("ES", "EM")}
+        ids |= {e["evidence_id"] for e in state.events if e.get("material")}
+        lines.append("Evidence (id | indicator = value | source | date | nature):")
+        lines += [describe_evidence(state.evidence[i]) for i in sorted(ids) if i in state.evidence]
+        return "\n".join(lines)
+
     lines = [
         f"Profil : tolérance={p.risk_tolerance}, capacité={p.risk_capacity}, horizon={p.horizon_years} ans, "
         f"contraintes={p.constraints}, préférences={p.preferences}, tensions={p.conflicts or 'aucune'}",
@@ -110,37 +144,70 @@ def clean_objections(review: Review, state: GraphState, first_pass: bool) -> lis
 
 @traced("red_team")
 def red_team_node(state: GraphState) -> dict:
+    lang = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
+    sys = SYSTEM_EN if lang == "en" else SYSTEM
     n = state.retries.get("red_team", 0)
     update: dict = {"retries": {"red_team": n + 1}}
     if not config.RED_TEAM_ENABLED:
-        return {**update, "objections": [], "summary": "Relecture critique désactivée (AF_RED_TEAM=off)."}
+        return {
+            **update,
+            "objections": [],
+            "summary": "Red team review disabled (AF_RED_TEAM=off)."
+            if lang == "en"
+            else "Relecture critique désactivée (AF_RED_TEAM=off).",
+        }
     if not state.scenarios or state.profile is None:
-        return {**update, "objections": [], "summary": "Aucune objection : pas de scénario à relire."}
+        return {
+            **update,
+            "objections": [],
+            "summary": "No objections: no scenarios to review."
+            if lang == "en"
+            else "Aucune objection : pas de scénario à relire.",
+        }
 
     if n == 0:
         try:
-            review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
+            review = llm.call_json(_prompt(state, language=lang), Review, kind="main", system=sys)
         except llm.LLMError:
-            return {**update, "objections": [], "summary": "Relecture critique indisponible : aucune objection."}
+            return {
+                **update,
+                "objections": [],
+                "summary": "Red team review unavailable: no objections."
+                if lang == "en"
+                else "Relecture critique indisponible : aucune objection.",
+            }
         objections = clean_objections(review, state, first_pass=True)
         blocking = sum(o["severity"] == "blocking" for o in objections)
         if not objections:
-            summary = "Aucune objection solide après relecture critique."
+            summary = (
+                "No solid objections after red team review."
+                if lang == "en"
+                else "Aucune objection solide après relecture critique."
+            )
         elif blocking:
-            summary = f"{len(objections)} objection(s) dont {blocking} bloquante(s) : retour au constructeur."
+            summary = (
+                f"{len(objections)} objection(s) including {blocking} blocking: returning to scenario builder."
+                if lang == "en"
+                else f"{len(objections)} objection(s) dont {blocking} bloquante(s) : retour au constructeur."
+            )
         else:
-            summary = f"{len(objections)} objection(s) signalée(s), aucune bloquante."
+            summary = (
+                f"{len(objections)} objection(s) raised, none blocking."
+                if lang == "en"
+                else f"{len(objections)} objection(s) signalée(s), aucune bloquante."
+            )
         return {**update, "objections": objections, "summary": summary}
 
     if n > 0 and not config.RED_TEAM_RECHECK:
         # Default (#90): keep objections as warnings without a new model call to preserve latency.
+        prefix = "Before revision: " if lang == "en" else "Avant révision : "
         kept = [
             {
                 **o,
                 "severity": "warning",
                 "objection": o["objection"]
-                if str(o.get("objection", "")).startswith("Avant révision")
-                else f"Avant révision : {o['objection']}",
+                if str(o.get("objection", "")).startswith(("Avant révision", "Before revision"))
+                else f"{prefix}{o['objection']}",
             }
             for o in state.objections
         ]
@@ -148,15 +215,16 @@ def red_team_node(state: GraphState) -> dict:
             **update,
             "objections": kept,
             "summary": (
-                "Scénarios reconstruits après objection ; "
-                f"{len(kept)} objection(s) conservée(s) comme avertissement."
+                f"Scenarios rebuilt after objection; {len(kept)} objection(s) kept as warning."
+                if lang == "en"
+                else f"Scénarios reconstruits après objection ; {len(kept)} objection(s) conservée(s) comme avertissement."
             ),
         }
 
     if n == 1:
         # Re-check with Sonnet on the rebuilt scenarios (AF_RED_TEAM_RECHECK=on)
         try:
-            review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
+            review = llm.call_json(_prompt(state, language=lang), Review, kind="main", system=sys)
             objections = clean_objections(review, state, first_pass=True)
             blocking = sum(o["severity"] == "blocking" for o in objections)
         except llm.LLMError:
@@ -164,23 +232,37 @@ def red_team_node(state: GraphState) -> dict:
             return {
                 **update,
                 "objections": kept,
-                "summary": "Relecture critique indisponible après révision ; objections conservées comme avertissement.",
+                "summary": "Red team review unavailable after revision; objections kept as warning."
+                if lang == "en"
+                else "Relecture critique indisponible après révision ; objections conservées comme avertissement.",
             }
 
         if blocking:
             # Sonnet returned a blocking objection twice -> Opus decides (tie-break)
             try:
-                opus_review = llm.call_json(_prompt(state), Review, kind="review", system=SYSTEM)
+                opus_review = llm.call_json(_prompt(state, language=lang), Review, kind="review", system=sys)
                 opus_objections = clean_objections(opus_review, state, first_pass=False)
             except llm.LLMError:
                 opus_objections = [{**o, "severity": "warning"} for o in objections]
-            summary = f"Arbitrage Opus 5.5 après deux blocages Sonnet : {len(opus_objections)} objection(s) retenue(s)."
+            summary = (
+                f"Opus 5.5 arbitration after two Sonnet blocks: {len(opus_objections)} objection(s) retained."
+                if lang == "en"
+                else f"Arbitrage Opus 5.5 après deux blocages Sonnet : {len(opus_objections)} objection(s) retenue(s)."
+            )
             return {**update, "objections": opus_objections, "summary": summary}
         else:
             summary = (
-                f"{len(objections)} objection(s) signalée(s) après révision, aucune bloquante."
-                if objections
-                else "Scénarios révisés validés sans objection."
+                (
+                    f"{len(objections)} objection(s) reported after revision, none blocking."
+                    if objections
+                    else "Revised scenarios validated without objection."
+                )
+                if lang == "en"
+                else (
+                    f"{len(objections)} objection(s) signalée(s) après révision, aucune bloquante."
+                    if objections
+                    else "Scénarios révisés validés sans objection."
+                )
             )
             return {**update, "objections": objections, "summary": summary}
 
@@ -189,5 +271,9 @@ def red_team_node(state: GraphState) -> dict:
     return {
         **update,
         "objections": kept,
-        "summary": f"Scénarios finalisés ; {len(kept)} objection(s) conservée(s) comme avertissement.",
+        "summary": (
+            f"Scenarios finalized; {len(kept)} objection(s) kept as warning."
+            if lang == "en"
+            else f"Scénarios finalisés ; {len(kept)} objection(s) conservée(s) comme avertissement."
+        ),
     }

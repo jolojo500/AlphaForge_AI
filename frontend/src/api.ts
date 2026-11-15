@@ -172,6 +172,7 @@ export async function createRun(
     body: JSON.stringify({
       persona,
       request_text: requestText,
+      language: extraPayload?.language || null,
       as_of_date: asOfDate || null,
       profile_data: extraPayload?.profile_data || null,
       user_profile: extraPayload?.user_profile || null,
@@ -332,7 +333,8 @@ import { UserOnboardingProfile, BackendRunPayload } from './types';
  */
 export function prepareBackendPayload(
   profile: UserOnboardingProfile,
-  requestText: string
+  requestText: string,
+  language?: 'fr' | 'en'
 ): BackendRunPayload {
   let objective = 'capital_preservation';
   if (profile.primaryObjective.includes('équilibrée')) {
@@ -488,6 +490,7 @@ export function prepareBackendPayload(
   const payload: BackendRunPayload = {
     persona: 'custom_user',
     request_text: fullRequestText,
+    language,
     user_profile: profile,
     current_holdings: profile.currentHoldings,
     profile_data: {

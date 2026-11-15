@@ -20,6 +20,23 @@ SECTIONS = CLAIM_SECTIONS  # kept for importers of the stub
 REQUIRED_TEXT = ("resume", "incertitude", "avertissement", "scenario_le_plus_coherent")
 SCENARIO_NAMES = ("as_requested", "capped", "profile_baseline")
 
+SECTION_ALIASES: dict[str, tuple[str, ...]] = {
+    "quelles_donnees": ("quelles_donnees", "what_data"),
+    "pourquoi_ce_choix": ("pourquoi_ce_choix", "why_this_choice"),
+    "limites": ("limites", "limits"),
+    "ce_qui_changerait_la_reponse": (
+        "ce_qui_changerait_la_reponse",
+        "what_would_change",
+        "what_would_change_the_answer",
+    ),
+}
+TEXT_ALIASES: dict[str, tuple[str, ...]] = {
+    "resume": ("resume", "summary"),
+    "incertitude": ("incertitude", "uncertainty"),
+    "avertissement": ("avertissement", "disclaimer", "warning"),
+    "scenario_le_plus_coherent": ("scenario_le_plus_coherent", "most_consistent_scenario"),
+}
+
 REL_TOL = 0.01
 
 # Advice and forecast phrasing, French and English (PRD 5.10). Matched on lowercase text.
@@ -77,10 +94,26 @@ _SCENARIO_ALIASES = {
 
 
 # --------------------------------------------------------------------------- helpers
+def _get_items(explanation: dict, section: str) -> list[dict] | None:
+    aliases = SECTION_ALIASES.get(section, (section,))
+    for a in aliases:
+        if a in explanation:
+            return explanation[a]
+    return None
+
+
+def _get_field(explanation: dict, key: str) -> str | None:
+    aliases = TEXT_ALIASES.get(key, (key,))
+    for a in aliases:
+        if a in explanation:
+            return explanation[a]
+    return None
+
+
 def _items(explanation: dict):
     """Yield (section, claim, evidence ids) for every claim item."""
     for section in CLAIM_SECTIONS:
-        for item in explanation.get(section) or []:
+        for item in _get_items(explanation, section) or []:
             if isinstance(item, dict):
                 yield section, str(item.get("claim", "")), list(item.get("evidence") or [])
 
@@ -89,7 +122,7 @@ def _number_items(explanation: dict):
     """Claim items plus the free-text summary and uncertainty, whose ids are cited inline (#114)."""
     yield from _items(explanation)
     for key in ("resume", "incertitude"):
-        text = explanation.get(key)
+        text = _get_field(explanation, key)
         if isinstance(text, str):
             yield key, text, EID_RE.findall(text)
 
@@ -103,8 +136,9 @@ def _all_text(explanation: dict) -> list[tuple[str, str]]:
     """(where, text) for all free text that the user will read, disclaimer excluded."""
     out = []
     for key in ("resume", "incertitude"):
-        if isinstance(explanation.get(key), str):
-            out.append((key, explanation[key]))
+        val = _get_field(explanation, key)
+        if isinstance(val, str):
+            out.append((key, val))
     for section, claim, _ in _items(explanation):
         out.append((section, claim))
     return out
@@ -214,7 +248,7 @@ def check_sections(explanation: dict) -> list[str]:
     """The four questions, the uncertainty and the disclaimer are present and non-empty."""
     errors = []
     for section in CLAIM_SECTIONS:
-        items = explanation.get(section)
+        items = _get_items(explanation, section)
         if not isinstance(items, list) or not items:
             errors.append(f"{section}: section manquante ou vide")
             continue
@@ -222,12 +256,12 @@ def check_sections(explanation: dict) -> list[str]:
             if not isinstance(item, dict) or not str(item.get("claim", "")).strip():
                 errors.append(f"{section}: affirmation vide")
     for key in REQUIRED_TEXT:
-        val = explanation.get(key)
+        val = _get_field(explanation, key)
         if not isinstance(val, str) or not val.strip():
             errors.append(f"{key}: champ manquant ou vide")
-    if explanation.get("scenario_le_plus_coherent") not in SCENARIO_NAMES:
+    if _get_field(explanation, "scenario_le_plus_coherent") not in SCENARIO_NAMES:
         errors.append("scenario_le_plus_coherent: nom de scénario invalide")
-    if "simulation" not in str(explanation.get("avertissement", "")).lower():
+    if "simulation" not in str(_get_field(explanation, "avertissement") or "").lower():
         errors.append("avertissement: mention de simulation absente")
     return errors
 

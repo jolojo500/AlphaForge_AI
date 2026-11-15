@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from alphaforge import config, llm
 from alphaforge.evidence import EvidenceRegistry
+from alphaforge.i18n import detect_language
 from alphaforge.nodes.scenarios import CAPS
 from alphaforge.personas import PERSONAS
 from alphaforge.state import (
@@ -41,9 +42,16 @@ TOLERANCE_FR = {
     "low_moderate": "faible à modérée",
     "low": "faible",
 }
+TOLERANCE_EN = {
+    "high": "high",
+    "moderate": "moderate",
+    "low_moderate": "low to moderate",
+    "low": "low",
+}
 CRYPTO_MIN_HORIZON_YEARS = 5
 
 ASK_GOAL = "Que souhaitez-vous faire : construire une allocation ou évaluer une idée précise ?"
+ASK_GOAL_EN = "What would you like to do: build an allocation or evaluate a specific investment idea?"
 
 # Weights written in words (FR and EN), checked before digits.
 _WORD_WEIGHTS = [
@@ -140,7 +148,7 @@ def _regex_extract(text: str) -> Extraction:
     if not ticker and weight is not None and re.search(r"\bcrypto\b", lowered):
         ticker = "BTC-USD"
     horizon = None
-    m_h = re.search(r"(\d+)\s*ans?\b", lowered)
+    m_h = re.search(r"(\d+)\s*(?:ans?|years?|yrs?)\b", lowered)
     if m_h:
         horizon = int(m_h.group(1))
     act = None
@@ -169,6 +177,7 @@ def extract_profile(
     *,
     kind: llm.ModelKind = "main",
     llm_client=None,
+    language: str = "fr",
 ) -> tuple[Extraction, bool]:
     """Read the request. Returns (extraction, used_fallback)."""
     if not text.strip():
@@ -180,14 +189,35 @@ def extract_profile(
     cap = persona.get("risk_capacity", "moderate")
     con = persona.get("constraints", [])
     pref = persona.get("preferences", [])
+    lang_label = "English" if language == "en" else "French"
     prompt = (
         f"Persona hypotheses: objective={obj}, horizon={hor} years, tolerance={tol}, capacity={cap}, "
         f"constraints={con}, preferences={pref}.\n"
         f"Allowed tickers: {', '.join(sorted(_universe()))}.\n"
-        f'Request (French): """{text}"""'
+        f'Request ({lang_label}): """{text}"""'
+    )
+    conflicts_inst = (
+        "conflicts: up to 2 short English sentences about a contradiction between the request and "
+        "the persona hypotheses, or an empty list. No advice, no forecast."
+        if language == "en"
+        else
+        "conflicts: up to 2 short French sentences about a contradiction between the request and "
+        "the persona hypotheses, or an empty list. No advice, no forecast."
+    )
+    system = (
+        "You read the request of a retail investor for an educational simulation tool. "
+        "Keep apart: horizon (when the money is needed), risk tolerance (what the person says they "
+        "accept) and risk capacity (what their situation can absorb); age alone sets none of them. "
+        "Extract only what the text says. Never invent a number, a ticker or a preference. "
+        "Weights in words count: 'un quart' = 25, 'la moitié' = 50, 'one quarter' = 25, 'half' = 50. "
+        "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
+        "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
+        "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
+        "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income). "
+        f"{conflicts_inst}"
     )
     try:
-        return llm.call_json(prompt, Extraction, kind=kind, system=SYSTEM, llm=llm_client), False
+        return llm.call_json(prompt, Extraction, kind=kind, system=system, llm=llm_client), False
     except llm.LLMError:
         return _regex_extract(text), True
 
@@ -200,48 +230,81 @@ def detect_conflict(
     idea: dict | None,
     max_loss_pct: float | None = None,
     capacity: str | None = None,
+    language: str = "fr",
 ) -> list[str]:
     """Contradictions between the requested idea and the stated profile (deterministic)."""
     out: list[str] = []
     level = effective_risk(tolerance, capacity) if capacity else tolerance
+    is_en = language == "en"
     if capacity and risk_gap(tolerance, capacity) >= 2:
-        out.append(
-            f"La tolérance au risque déclarée « {TOLERANCE_FR.get(tolerance, tolerance)} » dépasse "
-            f"nettement la capacité financière « {TOLERANCE_FR.get(capacity, capacity)} » : les "
-            "limites du profil suivent la capacité, la plus prudente des deux."
-        )
+        if is_en:
+            out.append(
+                f"Stated risk tolerance '{TOLERANCE_EN.get(tolerance, tolerance)}' exceeds "
+                f"financial capacity '{TOLERANCE_EN.get(capacity, capacity)}': profile limits "
+                "follow capacity, the more conservative of the two."
+            )
+        else:
+            out.append(
+                f"La tolérance au risque déclarée « {TOLERANCE_FR.get(tolerance, tolerance)} » dépasse "
+                f"nettement la capacité financière « {TOLERANCE_FR.get(capacity, capacity)} » : les "
+                "limites du profil suivent la capacité, la plus prudente des deux."
+            )
     if max_loss_pct is not None:
-        tol_fr = TOLERANCE_FR.get(tolerance, tolerance)
-        if max_loss_pct <= 5.0 and tolerance in ("high", "moderate"):
-            out.append(
-                f"Une tolérance de perte sur 12 mois de {max_loss_pct:.0f} % est en contradiction "
-                f"avec une tolérance au risque déclarée « {tol_fr} »."
-            )
-        elif max_loss_pct <= 15.0 and tolerance == "high":
-            out.append(
-                f"Une tolérance de perte sur 12 mois de {max_loss_pct:.0f} % est en contradiction "
-                f"avec une tolérance au risque déclarée « {tol_fr} »."
-            )
+        if is_en:
+            tol_en = TOLERANCE_EN.get(tolerance, tolerance)
+            if (max_loss_pct <= 5.0 and tolerance in ("high", "moderate")) or (
+                max_loss_pct <= 15.0 and tolerance == "high"
+            ):
+                out.append(
+                    f"A 12-month loss tolerance of {max_loss_pct:.0f}% is in contradiction "
+                    f"with stated risk tolerance '{tol_en}'."
+                )
+        else:
+            tol_fr = TOLERANCE_FR.get(tolerance, tolerance)
+            if (max_loss_pct <= 5.0 and tolerance in ("high", "moderate")) or (
+                max_loss_pct <= 15.0 and tolerance == "high"
+            ):
+                out.append(
+                    f"Une tolérance de perte sur 12 mois de {max_loss_pct:.0f} % est en contradiction "
+                    f"avec une tolérance au risque déclarée « {tol_fr} »."
+                )
     if not idea:
         return out
     ticker, weight = idea["ticker"], idea["weight"]
     cap = SINGLE_STOCK_CAP[level]
     asset = _universe().get(ticker, {})
     if asset.get("asset_class") == "equity" and weight > cap:
-        lvl_str = TOLERANCE_FR.get(level, level)
-        basis = "un niveau de risque retenu" if level != tolerance else "une tolérance au risque"
-        out.append(
-            f"{weight:.0%} dans {ticker} dépasse le plafond de référence de {cap:.0%} par action "
-            f"pour {basis} « {lvl_str} » et un horizon de {horizon_years} ans."
-        )
+        if is_en:
+            lvl_str = TOLERANCE_EN.get(level, level)
+            basis = "effective risk level" if level != tolerance else "risk tolerance"
+            out.append(
+                f"{weight:.0%} in {ticker} exceeds the reference ceiling of {cap:.0%} per stock "
+                f"for a '{lvl_str}' {basis} and a {horizon_years}-year horizon."
+            )
+        else:
+            lvl_str = TOLERANCE_FR.get(level, level)
+            basis = "un niveau de risque retenu" if level != tolerance else "une tolérance au risque"
+            out.append(
+                f"{weight:.0%} dans {ticker} dépasse le plafond de référence de {cap:.0%} par action "
+                f"pour {basis} « {lvl_str} » et un horizon de {horizon_years} ans."
+            )
     if asset.get("asset_class") == "crypto":
         if "no_crypto" in constraints:
-            out.append(f"{ticker} est un cryptoactif, exclu par les contraintes du profil.")
+            if is_en:
+                out.append(f"{ticker} is a crypto asset, excluded by the profile constraints.")
+            else:
+                out.append(f"{ticker} est un cryptoactif, exclu par les contraintes du profil.")
         elif horizon_years < CRYPTO_MIN_HORIZON_YEARS:
-            out.append(
-                f"{ticker} est très volatil pour un horizon de {horizon_years} ans "
-                f"(moins de {CRYPTO_MIN_HORIZON_YEARS} ans)."
-            )
+            if is_en:
+                out.append(
+                    f"{ticker} is very volatile for an investment horizon of {horizon_years} years "
+                    f"(less than {CRYPTO_MIN_HORIZON_YEARS} years)."
+                )
+            else:
+                out.append(
+                    f"{ticker} est très volatil pour un horizon de {horizon_years} ans "
+                    f"(moins de {CRYPTO_MIN_HORIZON_YEARS} ans)."
+                )
     return out
 
 
@@ -382,14 +445,18 @@ def get_next_clarification_question(
     ext: Extraction,
     asked: set[str],
     current_kyc: dict[str, Any],
+    language: str = "fr",
 ) -> tuple[str | None, str | None]:
     """Next clarification question ranked by impact on caps. Deterministic (no LLM call)."""
+    ask_goal = ASK_GOAL_EN if language == "en" else ASK_GOAL
     # Priority 1: Goal or idea weight
     if "goal" not in asked and not text.strip():
-        return "goal", ASK_GOAL
+        return "goal", ask_goal
     if "goal" not in asked and ext.ticker is None and not _INTENT_RE.search(text):
-        return "goal", ASK_GOAL
+        return "goal", ask_goal
     if "weight" not in asked and ext.ticker and ext.weight_pct is None:
+        if language == "en":
+            return "weight", f"What share of your portfolio would you like to allocate to {ext.ticker} (in %)?"
         return "weight", f"Quelle part de votre portefeuille souhaitez-vous consacrer à {ext.ticker} (en %) ?"
 
     # KYC fields check (ranking by impact on caps):
@@ -401,28 +468,44 @@ def get_next_clarification_question(
     if "emergency_fund" not in asked and combined.get("has_emergency_fund") is None:
         return (
             "emergency_fund",
-            "Disposez-vous d'un fonds d'urgence liquide (3 à 6 mois de dépenses courantes) pour couvrir vos besoins des 12 prochains mois ?",
+            (
+                "Do you have a liquid emergency fund (3 to 6 months of living expenses) to cover your needs for the next 12 months?"
+                if language == "en"
+                else "Disposez-vous d'un fonds d'urgence liquide (3 à 6 mois de dépenses courantes) pour couvrir vos besoins des 12 prochains mois ?"
+            ),
         )
 
     # Priority 3: High-interest debt
     if "high_interest_debt" not in asked and combined.get("has_high_interest_debt") is None:
         return (
             "high_interest_debt",
-            "Avez-vous des dettes, en particulier des dettes à taux d'intérêt élevé (cartes de crédit, prêts personnels) à rembourser en priorité ?",
+            (
+                "Do you have debts, especially high-interest debt (credit cards, personal loans) to pay off as a priority?"
+                if language == "en"
+                else "Avez-vous des dettes, en particulier des dettes à taux d'intérêt élevé (cartes de crédit, prêts personnels) à rembourser en priorité ?"
+            ),
         )
 
     # Priority 4: Net worth share
     if "net_worth_share" not in asked and combined.get("net_worth_share") is None:
         return (
             "net_worth_share",
-            "Quelle part approximative de votre patrimoine global cet investissement représente-t-il (ex. moins de 25 %, la moitié, la majorité) ?",
+            (
+                "Approximately what portion of your overall net worth does this investment represent (e.g. less than 25%, half, majority)?"
+                if language == "en"
+                else "Quelle part approximative de votre patrimoine global cet investissement représente-t-il (ex. moins de 25 %, la moitié, la majorité) ?"
+            ),
         )
 
     # Priority 5: Investment knowledge
     if "investment_knowledge" not in asked and combined.get("investment_knowledge") is None:
         return (
             "investment_knowledge",
-            "Quel est votre niveau d'expérience et de connaissance en matière d'investissements (débutant, intermédiaire, avancé) ?",
+            (
+                "What is your level of investment experience and knowledge (beginner, intermediate, advanced)?"
+                if language == "en"
+                else "Quel est votre niveau d'expérience et de connaissance en matière d'investissements (débutant, intermédiaire, avancé) ?"
+            ),
         )
 
     return None, None
@@ -613,13 +696,16 @@ def build_kyc_completeness_and_assumptions(
     return resolved, completeness, reg.items()
 
 
-def needs_clarification(text: str, ext: Extraction) -> str | None:
+def needs_clarification(text: str, ext: Extraction, language: str = "fr") -> str | None:
     """ONE targeted question when an essential field is missing, else None."""
+    ask_goal = ASK_GOAL_EN if language == "en" else ASK_GOAL
     if not text.strip():
-        return ASK_GOAL
+        return ask_goal
     if ext.ticker is None and not _INTENT_RE.search(text):
-        return ASK_GOAL  # e.g. "Je veux investir": no idea, no goal, no horizon
+        return ask_goal  # e.g. "Je veux investir": no idea, no goal, no horizon
     if ext.ticker and ext.weight_pct is None:
+        if language == "en":
+            return f"What share of your portfolio would you like to allocate to {ext.ticker} (in %)?"
         return f"Quelle part de votre portefeuille souhaitez-vous consacrer à {ext.ticker} (en %) ?"
     return None
 
@@ -641,6 +727,7 @@ def build_profile(
     kyc_completeness: KycCompleteness | None = None,
     resolved_kyc: dict[str, Any] | None = None,
     hard_gate_notes: list[str] | None = None,
+    language: Literal["fr", "en"] = "fr",
 ) -> Profile:
     p = persona_data or (PERSONAS[persona_id] if persona_id in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
@@ -668,6 +755,7 @@ def build_profile(
         idea=idea,
         max_loss_pct=p.get("max_loss_pct"),
         capacity=p.get("risk_capacity"),
+        language=language,
     )
     for c in ext.conflicts[:2]:
         c = c.strip()
@@ -675,7 +763,9 @@ def build_profile(
             conflicts.append(c)
     if used_fallback:
         conflicts.append(
-            "Hypothèse : la demande a été lue de façon simplifiée ; le profil repose sur les "
+            "Assumption: the request was read with fallback rules; the profile relies on persona hypotheses."
+            if language == "en"
+            else "Hypothèse : la demande a été lue de façon simplifiée ; le profil repose sur les "
             "hypothèses du persona."
         )
     current_holdings = None
@@ -730,6 +820,7 @@ def build_profile(
         income_stability=resolved.get("income_stability"),
         kyc_completeness=kyc_completeness,
         hard_gate_notes=gate_notes,
+        language=language,
     )
 
 
@@ -741,7 +832,15 @@ def is_contradictory_profile(
 ) -> bool:
     """True when a profile has an irreconcilable conflict (e.g. crypto on short horizon) needing clarification."""
     if not idea:
-        return bool(conflicts and any("exclu" in c or "volatil" in c for c in conflicts))
+        return bool(
+            conflicts
+            and any(
+                "exclu" in c.lower()
+                or "volatil" in c.lower()
+                or "exclud" in c.lower()
+                for c in conflicts
+            )
+        )
     ticker = idea.get("ticker", "")
     asset = _universe().get(ticker, {})
     if asset.get("asset_class") == "crypto":
@@ -752,8 +851,9 @@ def is_contradictory_profile(
 
 @traced("profile")
 def profile_node(state: GraphState) -> dict:
+    lang: Literal["fr", "en"] = getattr(state, "language", None) or detect_language(state.request_text)
     text = state.request_text.strip()
-    update: dict = {}
+    update: dict = {"language": lang}
     kyc_answers: dict[str, Any] = {}
     clarified_count = state.retries.get("clarify", 0)
     asked_keys: set[str] = set()
@@ -770,6 +870,7 @@ def profile_node(state: GraphState) -> dict:
             ext=ext_pre,
             asked=asked_keys,
             current_kyc=kyc_answers,
+            language=lang,
         )
         if not next_q or not next_key:
             break
@@ -778,12 +879,14 @@ def profile_node(state: GraphState) -> dict:
             answer = str(interrupt({"question": next_q})).strip()
             text = f"{text} {answer}".strip()
             clarified_count += 1
-            update = {"request_text": text, "retries": {"clarify": clarified_count}}
+            update = {"request_text": text, "retries": {"clarify": clarified_count}, "language": lang}
             apply_clarification_answer(next_key, answer, kyc_answers)
         except RuntimeError:
             break
 
-    ext, fallback = extract_profile(state.persona_data or state.persona, text, kind="main")
+    ext, fallback = extract_profile(
+        state.persona_data or state.persona, text, kind="main", language=lang
+    )
 
     p = state.persona_data or (PERSONAS[state.persona] if state.persona in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
@@ -803,11 +906,14 @@ def profile_node(state: GraphState) -> dict:
         constraints=constraints,
         idea=idea,
         capacity=p.get("risk_capacity"),
+        language=lang,
     )
 
     if is_contradictory_profile(conflicts, idea, horizon, constraints):
         # Contradictory free-text profile: second pass on Opus 5.5 before asking the clarifying question
-        ext, fallback = extract_profile(state.persona_data or state.persona, text, kind="review")
+        ext, fallback = extract_profile(
+            state.persona_data or state.persona, text, kind="review", language=lang
+        )
         ticker = _resolve_ticker(ext.ticker)
         idea = (
             {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
@@ -821,18 +927,25 @@ def profile_node(state: GraphState) -> dict:
             constraints=constraints,
             idea=idea,
             capacity=p.get("risk_capacity"),
+            language=lang,
         )
         if is_contradictory_profile(conflicts, idea, horizon, constraints) and not state.retries.get("clarify"):
-            target_asset = idea["ticker"] if idea else "cryptoactifs"
+            target_asset = idea["ticker"] if idea else ("crypto assets" if lang == "en" else "cryptoactifs")
             clarif_q = (
+                f"Your {horizon}-year horizon contradicts an investment in {target_asset}. "
+                "Would you prefer to prioritize security for retirement or adjust your horizon?"
+                if lang == "en"
+                else
                 f"Votre horizon de {horizon} ans contredit un investissement dans {target_asset}. "
                 "Souhaitez-vous privilégier la sécurité pour votre retraite ou ajuster votre horizon ?"
             )
             try:
                 answer = str(interrupt({"question": clarif_q})).strip()
                 text = f"{text} {answer}".strip()
-                update = {"request_text": text, "retries": {"clarify": 1}}
-                ext, fallback = extract_profile(state.persona_data or state.persona, text, kind="review")
+                update = {"request_text": text, "retries": {"clarify": 1}, "language": lang}
+                ext, fallback = extract_profile(
+                    state.persona_data or state.persona, text, kind="review", language=lang
+                )
             except RuntimeError:
                 pass
 
@@ -885,12 +998,25 @@ def profile_node(state: GraphState) -> dict:
         kyc_completeness=completeness,
         resolved_kyc=resolved,
         hard_gate_notes=hard_gate_notes,
+        language=lang,
     )
 
     if profile.request_type == "judge":
-        summary = f"Profil compris : évaluation de {profile.requested_idea['ticker']}."
+        summary = (
+            f"Profile understood: evaluation of {profile.requested_idea['ticker']}."
+            if lang == "en"
+            else f"Profil compris : évaluation de {profile.requested_idea['ticker']}."
+        )
     else:
-        summary = "Profil compris : construction d'une allocation."
+        summary = (
+            "Profile understood: constructing an allocation."
+            if lang == "en"
+            else "Profil compris : construction d'une allocation."
+        )
     if profile.conflicts:
-        summary += f" {len(profile.conflicts)} point(s) de tension relevé(s)."
+        summary += (
+            f" {len(profile.conflicts)} tension point(s) noted."
+            if lang == "en"
+            else f" {len(profile.conflicts)} point(s) de tension relevé(s)."
+        )
     return {**update, "evidence": kyc_evidence, "profile": profile, "summary": summary}

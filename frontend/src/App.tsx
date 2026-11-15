@@ -23,6 +23,8 @@ import {
 } from './api';
 import { ThemeProvider } from './components/ThemeProvider';
 import { ThemeToggle } from './components/ThemeToggle';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { LanguageToggle } from './components/LanguageToggle';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { QueryScreen } from './components/QueryScreen';
@@ -66,6 +68,7 @@ const STORAGE_KEY = 'alphaforge_user_profile';
 type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results' | 'compare';
 
 export const AppContent: React.FC = () => {
+  const { language, t } = useLanguage();
   const [view, setView] = useState<AppView>('welcome');
   const [userProfile, setUserProfile] = useState<UserOnboardingProfile | null>(null);
   const [runState, setRunState] = useState<GraphState | null>(null);
@@ -196,7 +199,7 @@ export const AppContent: React.FC = () => {
         payload.persona,
         payload.request_text,
         undefined,
-        payload
+        { ...payload, language: payload.language || language }
       );
       setCurrentRunId(run_id);
 
@@ -350,7 +353,7 @@ export const AppContent: React.FC = () => {
       <>
         <WelcomeScreen
           onStart={() => setView('onboarding')}
-          onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
+          onDemo={(persona, request_text) => handleStartRun({ persona, request_text, language })}
           onCompare={() => setView('compare')}
           onReplay={() => setIsReplayModalOpen(true)}
           currentUser={currentUser}
@@ -479,7 +482,7 @@ export const AppContent: React.FC = () => {
               className="gap-1.5 text-xs sm:text-sm font-medium cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Poser une autre question</span>
+              <span>{t('app.ask_another', 'Poser une autre question')}</span>
             </Button>
             <Logo size="sm" />
           </div>
@@ -503,8 +506,8 @@ export const AppContent: React.FC = () => {
               className="text-xs cursor-pointer gap-1.5"
             >
               <Columns2 className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">Comparer deux profils</span>
-              <span className="sm:hidden">Comparer</span>
+              <span className="hidden sm:inline">{t('app.compare_profiles', 'Comparer deux profils')}</span>
+              <span className="sm:hidden">{t('app.compare_short', 'Comparer')}</span>
             </Button>
 
             <Button
@@ -513,7 +516,7 @@ export const AppContent: React.FC = () => {
               onClick={() => setView('onboarding')}
               className="text-xs cursor-pointer"
             >
-              Modifier profil
+              {t('app.modify_profile', 'Modifier profil')}
             </Button>
 
             <Button
@@ -523,8 +526,8 @@ export const AppContent: React.FC = () => {
               className="gap-1.5 text-xs font-medium cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">Rejouer une analyse</span>
-              <span className="sm:hidden">Rejouer</span>
+              <span className="hidden sm:inline">{t('app.replay_analysis', 'Rejouer une analyse')}</span>
+              <span className="sm:hidden">{t('app.replay_short', 'Rejouer')}</span>
             </Button>
 
             {currentUser ? (
@@ -543,7 +546,7 @@ export const AppContent: React.FC = () => {
                   <span>{currentUser.username}</span>
                   {currentUser.is_advisor && (
                     <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1 py-0 h-4">
-                      Conseiller
+                      {t('app.advisor', 'Conseiller')}
                     </Badge>
                   )}
                 </Button>
@@ -551,7 +554,7 @@ export const AppContent: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  title="Déconnexion"
+                  title={t('app.logout', 'Déconnexion')}
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -565,10 +568,11 @@ export const AppContent: React.FC = () => {
                 className="gap-1.5 text-xs font-medium cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5 text-primary" />
-                <span>Connexion</span>
+                <span>{t('app.login', 'Connexion')}</span>
               </Button>
             )}
 
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>
@@ -768,9 +772,11 @@ export const AppContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground">
-        <p>AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026</p>
+        <p>{t('app.footer', 'AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026')}</p>
         <p className="mt-1 text-muted-foreground/70">
-          Les performances passées ne garantissent pas les résultats futurs.
+          {language === 'en'
+            ? 'Past performance does not guarantee future results.'
+            : 'Les performances passées ne garantissent pas les résultats futurs.'}
         </p>
       </footer>
     </div>
@@ -780,7 +786,9 @@ export const AppContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="alphaforge_theme">
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </ThemeProvider>
   );
 };

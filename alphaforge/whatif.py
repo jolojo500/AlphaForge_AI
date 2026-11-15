@@ -90,11 +90,13 @@ def prepare_whatif_inputs(
         as_of = state.as_of_date
         new_profile = apply_change(state.profile, field, value)
 
+    lang = getattr(state, "language", None) or getattr(state.profile, "language", "fr")
     return initial_state(
         persona=state.persona,
         request_text=state.request_text,
         as_of_date=as_of,
         profile=new_profile,
+        language=lang,
     )
 
 

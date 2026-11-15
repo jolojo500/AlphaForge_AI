@@ -52,6 +52,14 @@ SINGLE_SYSTEM = (
     "indicateurs sont historiques. Format JSON attendu : {\"notes\": [{\"claim\": \"...\", \"evidence\": [...]}]}"
 )
 
+SINGLE_SYSTEM_EN = (
+    "You write very short notes in English on a simulated portfolio scenario for an educational "
+    "tool. Write 1 or 2 short notes (1 or 2 sentences each) on what it trades off (e.g. less historical "
+    "loss against less exposure to the requested idea). Each note must cite at least one evidence id "
+    "(field evidence) from the scenario's list. Every written number must be copied exactly from a cited evidence. "
+    "No financial advice (never 'buy', 'you should'), no return forecast: metrics are historical. "
+    "Expected JSON format: {\"notes\": [{\"claim\": \"...\", \"evidence\": [...]}]}"
+)
 
 SYSTEM = (
     "Tu rédiges des notes courtes en français sur trois scénarios fictifs de portefeuille, pour un "
@@ -61,6 +69,14 @@ SYSTEM = (
     "scénario. Tout nombre écrit doit être recopié exactement depuis une preuve citée. "
     "Aucun conseil (jamais « achetez », « vous devriez »), aucune prévision de rendement : les "
     "indicateurs sont historiques."
+)
+
+SYSTEM_EN = (
+    "You write short notes in English on three simulated portfolio scenarios for an educational "
+    "tool. For each scenario, write one or two sentences on what it trades off (e.g. less historical "
+    "loss against less exposure to the requested idea). Each note must cite at least one evidence id "
+    "(field evidence) from the scenario's list. Every written number must be copied exactly from a cited evidence. "
+    "No financial advice (never 'buy', 'you should'), no return forecast: metrics are historical."
 )
 
 
@@ -126,12 +142,14 @@ def _draft_scenarios(
 ) -> list[Scenario]:
     if not scenarios:
         return scenarios
+    lang = getattr(profile, "language", "fr") if profile else "fr"
+    sys = SYSTEM_EN if lang == "en" else SYSTEM
     try:
         out = llm.call_json(
             _prompt(scenarios, evidence, profile),
             ScenarioNotes,
             kind="fast",
-            system=SYSTEM,
+            system=sys,
             llm=llm_client,
         )
     except llm.LLMError:
@@ -156,6 +174,8 @@ def _draft_single(
     *,
     llm_client=None,
 ) -> list[str]:
+    lang = getattr(profile, "language", "fr") if profile else "fr"
+    sys = SINGLE_SYSTEM_EN if lang == "en" else SINGLE_SYSTEM
     lines = []
     if profile:
         lines.append(
@@ -173,7 +193,7 @@ def _draft_single(
             prompt,
             SingleScenarioNotes,
             kind="fast",
-            system=SINGLE_SYSTEM,
+            system=sys,
             llm=llm_client,
         )
         notes: list[Note] = out.notes or getattr(out, sc.name, [])

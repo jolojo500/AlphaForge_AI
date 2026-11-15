@@ -88,6 +88,7 @@ class Profile(BaseModel):
     clarification_needed: str | None = None
     current_holdings: dict[str, float] | None = None
     not_analysed_holdings: list[str] = Field(default_factory=list)
+    language: Literal["fr", "en"] = "fr"
 
     # Extra KYC fields (#117, relation to #128)
     has_emergency_fund: bool | None = None
@@ -136,6 +137,7 @@ class GraphState(BaseModel):
     # Opaque id of the browser session that started the run; used for access control (#111).
     owner: str | None = None
     request_text: str = ""
+    language: Literal["fr", "en"] = "fr"
     profile: Profile | None = None
     eligible_universe: list[str] = Field(default_factory=list)
     exclusions: Annotated[list[dict], operator.add] = Field(default_factory=list)
