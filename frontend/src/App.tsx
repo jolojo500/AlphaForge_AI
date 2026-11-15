@@ -5,6 +5,7 @@ import {
   BackendRunPayload,
   TraceEntry,
   WhatIfDiff,
+  AuthUser,
 } from './types';
 import {
   createRun,
@@ -13,6 +14,11 @@ import {
   answerRun,
   createWhatIf,
   fetchRunDiff,
+  getStoredUser,
+  fetchCurrentUser,
+  logout,
+  getAuthToken,
+  updateUserProfile,
 } from './api';
 import { ThemeProvider } from './components/ThemeProvider';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -33,6 +39,8 @@ import { ClarificationBox } from './components/ClarificationBox';
 import { WhatIfControls } from './components/WhatIfControls';
 import { WhatIfDiffView } from './components/WhatIfDiffView';
 import { ReplayRunModal } from './components/ReplayRunModal';
+import { AuthModal } from './components/AuthModal';
+import { ProfileModal } from './components/ProfileModal';
 import {
   ArrowLeft,
   SlidersHorizontal,
@@ -42,6 +50,10 @@ import {
   CheckCircle2,
   RotateCcw,
   Columns2,
+  LogIn,
+  LogOut,
+  User as UserIcon,
+  ShieldCheck,
 } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { Button } from './components/ui/button';
@@ -73,8 +85,31 @@ export const AppContent: React.FC = () => {
   // Replay Saved Runs modal state
   const [isReplayModalOpen, setIsReplayModalOpen] = useState<boolean>(false);
 
+  // Authentication state
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+
   // Unsubscribe ref for SSE stream
   const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Verify auth session on mount
+  useEffect(() => {
+    if (getAuthToken()) {
+      fetchCurrentUser()
+        .then((res) => {
+          setCurrentUser(res.user);
+        })
+        .catch(() => {
+          setCurrentUser(null);
+        });
+    }
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setCurrentUser(null);
+  };
 
   // Check localStorage on mount
   useEffect(() => {
@@ -105,7 +140,24 @@ export const AppContent: React.FC = () => {
 
   // Handle questionnaire completion
   const handleOnboardingComplete = (profile: UserOnboardingProfile) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    } catch (e) {
+      console.warn('Error saving to localStorage:', e);
+    }
     setUserProfile(profile);
+    if (getAuthToken()) {
+      updateUserProfile({
+        profile: {
+          objective: profile.primaryObjective,
+          horizon_years: parseInt(profile.firstWithdrawalHorizon.match(/\d+/)?.[0] || '10', 10),
+          risk_tolerance: profile.riskTolerance,
+          budget_cad: profile.simulatedCapital,
+          notes: profile.additionalNotes,
+        },
+        account_type: profile.accountType || null,
+      }).catch((e) => console.warn('Server profile sync error:', e));
+    }
     setView('query');
   };
 
@@ -299,11 +351,27 @@ export const AppContent: React.FC = () => {
           onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
           onCompare={() => setView('compare')}
           onReplay={() => setIsReplayModalOpen(true)}
+          currentUser={currentUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onLogout={handleLogout}
         />
         <ReplayRunModal
           isOpen={isReplayModalOpen}
           onClose={() => setIsReplayModalOpen(false)}
           onSelectRun={handleReplayRun}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+          }}
+        />
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
         />
       </>
     );
@@ -331,11 +399,27 @@ export const AppContent: React.FC = () => {
           onRunQuery={handleStartRun}
           onCompare={() => setView('compare')}
           onReplay={() => setIsReplayModalOpen(true)}
+          currentUser={currentUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onLogout={handleLogout}
         />
         <ReplayRunModal
           isOpen={isReplayModalOpen}
           onClose={() => setIsReplayModalOpen(false)}
           onSelectRun={handleReplayRun}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+          }}
+        />
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
         />
       </>
     );
@@ -429,6 +513,48 @@ export const AppContent: React.FC = () => {
               <span className="hidden sm:inline">Rejouer une analyse</span>
               <span className="sm:hidden">Rejouer</span>
             </Button>
+
+            {currentUser ? (
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="gap-1.5 text-xs font-medium cursor-pointer"
+                >
+                  {currentUser.is_advisor ? (
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                  ) : (
+                    <UserIcon className="w-3.5 h-3.5 text-primary" />
+                  )}
+                  <span>{currentUser.username}</span>
+                  {currentUser.is_advisor && (
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1 py-0 h-4">
+                      Conseiller
+                    </Badge>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  title="Déconnexion"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAuthModalOpen(true)}
+                className="gap-1.5 text-xs font-medium cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5 text-primary" />
+                <span>Connexion</span>
+              </Button>
+            )}
 
             <ThemeToggle />
           </div>
@@ -597,6 +723,22 @@ export const AppContent: React.FC = () => {
         isOpen={isReplayModalOpen}
         onClose={() => setIsReplayModalOpen(false)}
         onSelectRun={handleReplayRun}
+      />
+
+      {/* Modal for Authentication */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(user) => {
+          setCurrentUser(user);
+        }}
+      />
+
+      {/* Modal for User Profile (Mon profil) */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={currentUser}
       />
 
       {/* Footer */}

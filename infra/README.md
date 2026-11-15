@@ -44,6 +44,9 @@ All created resources are tagged with `project=alphaforge`.
 | **ECR Repository** | `AWS::ECR::Repository` | `908027403910.dkr.ecr.us-east-1.amazonaws.com/alphaforge` | Stores Docker container images. |
 | **S3 Bucket** | `AWS::S3::Bucket` | `alphaforge-data-908027403910` | Versioned object storage for starter data, caches, and run states. |
 | **DynamoDB Table** | `AWS::DynamoDB::Table` | `alphaforge-traces` | On-demand table for run audit records, verification, and traces. |
+| **DynamoDB Table** | `AWS::DynamoDB::Table` | `alphaforge-users` | On-demand table for investor profiles, KYC records, and account types (#128). |
+| **Cognito User Pool** | `AWS::Cognito::UserPool` | `us-east-1_XjxuVar8b` (`alphaforge-users`) | User authentication directory with seeded demo personas and `advisor` group (#128). |
+| **Cognito App Client** | `AWS::Cognito::UserPoolClient` | `9lreq61mqkf01s9h9h48gkcfe` (`alphaforge-web`) | Web client for password-based and token-based authentication. |
 | **CloudWatch Log Group** | `AWS::Logs::LogGroup` | `/alphaforge/app` | Real-time container application logs. |
 
 ---
@@ -60,8 +63,69 @@ All created resources are tagged with `project=alphaforge`.
 | `AF_NEWS_MODE` | `cache` (local) / `live` (EC2) | News retrieval mode: `live` fetches fresh company news and web search; `cache` uses committed SEC filings/searches only. |
 | `FINNHUB_API_KEY` | *(None / SSM)* | Finnhub API key for live company news. Resolved from env or SSM Parameter Store `/alphaforge/finnhub_api_key`. |
 | `TAVILY_API_KEY` | *(None / SSM)* | Tavily Search API key for live web search. Resolved from env or SSM Parameter Store `/alphaforge/tavily_api_key`. |
+| `AF_USERS_TABLE` | `alphaforge-users` | DynamoDB table name for storing user profiles (#128). |
+| `AF_USERS_BACKEND` | `dynamodb` (AWS) / `local` (dev) | User store backend: `dynamodb` or in-memory `local`. |
+| `AF_COGNITO_USER_POOL_ID` | `us-east-1_XjxuVar8b` | Cognito User Pool ID for client authentication (#128). |
+| `AF_COGNITO_CLIENT_ID` | `9lreq61mqkf01s9h9h48gkcfe` | Cognito App Client ID for authentication (#128). |
+| `AF_AUTH` | `off` (local/dev/tests) / `on` (prod) | Authentication enforcement mode (#128). |
 | `AWS_REGION` | `us-east-1` | AWS region for all resources. |
 | `AWS_PROFILE` | `datathon` | AWS CLI / SDK profile (if using local named profile). |
+
+---
+
+### 4.2 Authentication & Seeded Demo Accounts (C-14, #128)
+
+Authentication uses Amazon Cognito (`us-east-1_XjxuVar8b`, client `9lreq61mqkf01s9h9h48gkcfe`).
+- **No-login Demo Mode**: The three demo personas (`robert`, `amira`, `mateo`) and the « Profils de démonstration » button picker remain completely functional without requiring login.
+- **Cognito Group `advisor`**: Registered advisors belong to the `advisor` group, which grants access to review and sign-off functionality (#121).
+- **Seeded Demo Accounts**:
+  - `amira` / `AlphaForge2026!` (Croissance, 15 ans) — Client demo account
+  - `mateo` / `AlphaForge2026!` (Équilibré ESG, 10 ans) — Client demo account
+  - `robert` / `AlphaForge2026!` (Prudent, 4 ans, idée TSLA) — Client demo account
+  - `advisor` — Registered advisor account in the `advisor` group. Per security requirements, the advisor password is never shipped in frontend bundles; it is provisioned via `AF_ADVISOR_PASSWORD` and managed in Cognito.
+- **Seeding Script**:
+  ```bash
+  export AWS_PROFILE=datathon
+  export AWS_REGION=us-east-1
+  export AF_ADVISOR_PASSWORD="<STRONG_ADVISOR_PASSWORD>"
+  uv run python scripts/seed_users.py --sync-cognito
+  ```
+
+#### Enabling Authentication in Production (`AF_AUTH=on`)
+
+The live EC2 container runs with `AF_AUTH=off` by default to allow judges and public visitors to test the platform without logging in. To enforce real Cognito authentication on the server:
+
+1. **Deploying via SSM Update**:
+   ```bash
+   export AWS_PROFILE=datathon
+   export AWS_REGION=us-east-1
+   export AF_AUTH=on
+   export AF_COGNITO_USER_POOL_ID="us-east-1_XjxuVar8b"
+   export AF_COGNITO_CLIENT_ID="9lreq61mqkf01s9h9h48gkcfe"
+   export AF_USERS_TABLE="alphaforge-users"
+   ./infra/deploy.sh update
+   ```
+
+2. **Standalone Docker Execution**:
+   ```bash
+   docker run -d --name alphaforge --restart always -p 80:8000 \
+     -e AF_AUTH=on \
+     -e AF_COGNITO_USER_POOL_ID="us-east-1_XjxuVar8b" \
+     -e AF_COGNITO_CLIENT_ID="9lreq61mqkf01s9h9h48gkcfe" \
+     -e AF_USERS_TABLE="alphaforge-users" \
+     -e AF_USERS_BACKEND="dynamodb" \
+     -e AF_S3_BUCKET="alphaforge-data-908027403910" \
+     -e AF_DYNAMODB_TABLE="alphaforge-traces" \
+     -e AF_TRACE_BACKEND="dynamodb" \
+     ${ECR_URI}:latest
+   ```
+
+When `AF_AUTH=on`:
+- FastAPI fetches and caches JWKS from `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XjxuVar8b/.well-known/jwks.json` and verifies RSA RS256 token signatures.
+- Authenticated requests attach `Authorization: Bearer <token>` in `frontend/src/api.ts` alongside `X-Client-Id`.
+- User runs are saved and queried with owner `u:<username>`, enabling cross-device profile and history persistence.
+- Advisor review endpoints strictly check the `advisor` group claim in the JWT.
+- Unauthenticated requests remain fully isolated with anonymous owner `c:<client_id>`.
 
 ---
 
