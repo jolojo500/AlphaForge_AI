@@ -184,10 +184,10 @@ def _valid(action: Action, state: GraphState, seen: set) -> tuple[str, str] | No
 # ----------------------------------------------------------------------- the loop
 def planner_enabled() -> bool:
     """The model picks lookups only when fresh data can be fetched; otherwise the fixed plan runs."""
-    import os
+    from alphaforge.secrets import get_secret
 
     live = (config.NEWS_MODE or "cache").lower() == "live"
-    return live and bool(os.getenv("FINNHUB_API_KEY") or os.getenv("TAVILY_API_KEY"))
+    return live and bool(get_secret("FINNHUB_API_KEY") or get_secret("TAVILY_API_KEY"))
 
 
 def gather(state: GraphState, llm_client=None) -> tuple[list[NewsItem], list[str], list[str], int]:
@@ -348,6 +348,14 @@ def events_node(state: GraphState) -> dict:
         method="count of news items kept after the as-of filter and classification",
         confidence="fact" if events else "assumption",
     )
+    for w in dict.fromkeys(warnings):  # one evidence entry per distinct warning
+        reg.add(
+            value={"metric": "news_warning", "warning": w},
+            source="alphaforge.tools",
+            date=state.as_of_date,
+            method="warning recorded during live news retrieval or fallback to cache",
+            confidence="assumption",
+        )
     if events:
         summary = f"{len(events)} actualité(s) retenue(s) sur {len(chosen)} lue(s), {calls} appel(s) d'outil."
     else:
