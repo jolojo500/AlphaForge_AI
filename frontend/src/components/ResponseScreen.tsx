@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-  RotateCcw,
   SlidersHorizontal,
 } from 'lucide-react';
 import {
@@ -40,11 +39,9 @@ interface ResponseScreenProps {
   userProfile: UserOnboardingProfile | null;
   customProfile?: UserOnboardingProfile | null;
   activePersonaId?: 'custom' | 'robert' | 'amira' | 'mateo';
-  onSelectPersona?: (personaId: 'custom' | 'robert' | 'amira' | 'mateo') => void;
   requestText: string;
   onAskAnother: () => void;
   onEditProfile: () => void;
-  onResetProfile?: () => void;
   onSelectEvidence: (evidenceId: string) => void;
   whatIfDiff: WhatIfDiff | null;
   onCloseWhatIfDiff: () => void;
@@ -53,7 +50,6 @@ interface ResponseScreenProps {
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
-  onOpenProfile?: () => void;
   onLogout?: () => void;
   onReviewed?: (updated: Partial<GraphState>) => void;
 }
@@ -63,11 +59,9 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   userProfile,
   customProfile,
   activePersonaId = 'custom',
-  onSelectPersona,
   requestText,
   onAskAnother,
   onEditProfile,
-  onResetProfile,
   onSelectEvidence,
   whatIfDiff,
   onCloseWhatIfDiff,
@@ -76,7 +70,6 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   onOpenHistory,
   currentUser,
   onOpenAuth,
-  onOpenProfile,
   onLogout,
   onReviewed,
 }) => {
@@ -133,27 +126,11 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
           userProfile={userProfile}
           customProfile={customProfile}
           activePersonaId={activePersonaId}
-          onSelectPersona={onSelectPersona}
           onEditProfile={onEditProfile}
           onOpenHistory={onOpenHistory}
           currentUser={currentUser}
           onOpenAuth={onOpenAuth}
-          onOpenProfile={onOpenProfile}
           onLogout={onLogout}
-          rightActions={
-            onResetProfile ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onResetProfile}
-                className="h-8 gap-1 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
-                title={isEn ? 'Reset profile and return to home' : "Réinitialiser et retourner à l'accueil"}
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isEn ? 'Reset' : 'Réinitialiser'}</span>
-              </Button>
-            ) : undefined
-          }
         />
 
         {/* Main Content Area */}

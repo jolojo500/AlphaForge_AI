@@ -40,7 +40,6 @@ export interface AppHeaderProps {
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
-  onOpenProfile?: () => void;
   onLogout?: () => void;
   rightActions?: React.ReactNode;
 }
@@ -54,7 +53,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenHistory,
   currentUser,
   onOpenAuth,
-  onOpenProfile,
   onLogout,
   rightActions,
 }) => {
@@ -135,34 +133,30 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {rightActions}
 
           {currentUser ? (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onOpenProfile}
-                className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
-              >
+            <div className="flex items-center gap-1.5">
+              <div className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-muted/40 text-foreground text-xs font-medium select-none">
                 {currentUser.is_advisor ? (
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 ) : (
-                  <User className="w-3.5 h-3.5 text-primary" />
+                  <User className="w-3.5 h-3.5 text-primary shrink-0" />
                 )}
-                <span className="hidden md:inline max-w-[90px] truncate">{currentUser.username}</span>
+                <span className="max-w-[120px] truncate">{currentUser.username}</span>
                 {currentUser.is_advisor && (
                   <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1 py-0 h-4">
                     {isEn ? 'Advisor' : 'Conseiller'}
                   </Badge>
                 )}
-              </Button>
+              </div>
               {onLogout && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onLogout}
-                  title={isEn ? 'Log out' : 'Déconnexion'}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                  title={isEn ? 'Log out and return to home' : "Déconnexion et retour à l'accueil"}
+                  className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{isEn ? 'Log out' : 'Déconnexion'}</span>
                 </Button>
               )}
             </div>

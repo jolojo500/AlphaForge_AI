@@ -15,6 +15,8 @@ import {
   createWhatIf,
   fetchRunDiff,
   getStoredUser,
+  setStoredUser,
+  setAuthToken,
   fetchCurrentUser,
   logout,
   getAuthToken,
@@ -31,7 +33,6 @@ import { ResponseScreen } from './components/ResponseScreen';
 import { EvidenceModal } from './components/EvidenceModal';
 import { ReplayRunModal } from './components/ReplayRunModal';
 import { AuthModal } from './components/AuthModal';
-import { ProfileModal } from './components/ProfileModal';
 import { AppHeader } from './components/AppHeader';
 import { DEMO_PERSONAS } from './lib/demoProfiles';
 import { Button } from './components/ui/button';
@@ -71,7 +72,6 @@ export const AppContent: React.FC = () => {
   // Authentication state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   // Unsubscribe ref for SSE stream
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -92,6 +92,15 @@ export const AppContent: React.FC = () => {
   const handleLogout = () => {
     logout();
     setCurrentUser(null);
+    setCustomProfile(null);
+    setActivePersonaId('custom');
+    setInitialQuery('');
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn('Error clearing localStorage:', e);
+    }
+    setView('welcome');
   };
 
   // Check localStorage on mount
@@ -170,13 +179,21 @@ export const AppContent: React.FC = () => {
     setView('welcome');
   };
 
-  // Pick demo persona and navigate to query screen with question pre-filled (NO auto-launch!)
+  // Pick demo persona: auto-authenticate as this demo persona and navigate to query screen with empty question
   const handleSelectDemo = (personaId: 'robert' | 'amira' | 'mateo') => {
-    setActivePersonaId(personaId);
     const demo = DEMO_PERSONAS[personaId];
-    if (demo) {
-      setInitialQuery(demo.canonicalQuestion);
-    }
+    const demoUser: AuthUser = {
+      user_id: personaId,
+      username: demo ? demo.name : personaId.charAt(0).toUpperCase() + personaId.slice(1),
+      email: `${personaId}@alphaforge.demo`,
+      groups: [],
+      is_advisor: false,
+    };
+    setStoredUser(demoUser);
+    setAuthToken(`demo-session-${personaId}`);
+    setCurrentUser(demoUser);
+    setActivePersonaId(personaId);
+    setInitialQuery(''); // Question input field is intentionally left empty
     setView('query');
   };
 
@@ -381,7 +398,6 @@ export const AppContent: React.FC = () => {
           onOpenHistory={currentUser ? () => setIsReplayModalOpen(true) : undefined}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
         />
         <ReplayRunModal
@@ -396,11 +412,6 @@ export const AppContent: React.FC = () => {
           onSuccess={(user) => {
             setCurrentUser(user);
           }}
-        />
-        <ProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          currentUser={currentUser}
         />
       </>
     );
@@ -432,7 +443,6 @@ export const AppContent: React.FC = () => {
           onOpenHistory={() => setIsReplayModalOpen(true)}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
           initialQuery={initialQuery}
         />
@@ -448,11 +458,6 @@ export const AppContent: React.FC = () => {
           onSuccess={(user) => {
             setCurrentUser(user);
           }}
-        />
-        <ProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          currentUser={currentUser}
         />
       </>
     );
@@ -540,11 +545,9 @@ export const AppContent: React.FC = () => {
             userProfile={activeProfile}
             customProfile={customProfile}
             activePersonaId={activePersonaId}
-            onSelectPersona={handleSelectPersona}
             requestText={lastPayload?.request_text || runState.request_text}
             onAskAnother={() => setView('query')}
             onEditProfile={() => setView('onboarding')}
-            onResetProfile={handleResetProfile}
             onSelectEvidence={setSelectedEvidenceId}
             whatIfDiff={whatIfDiff}
             onCloseWhatIfDiff={() => setWhatIfDiff(null)}
@@ -553,7 +556,6 @@ export const AppContent: React.FC = () => {
             onOpenHistory={() => setIsReplayModalOpen(true)}
             currentUser={currentUser}
             onOpenAuth={() => setIsAuthModalOpen(true)}
-            onOpenProfile={() => setIsProfileModalOpen(true)}
             onLogout={handleLogout}
             onReviewed={(updated) => {
               setRunState((prev) => (prev ? { ...prev, ...updated } : null));
@@ -575,11 +577,6 @@ export const AppContent: React.FC = () => {
             onSuccess={(user) => {
               setCurrentUser(user);
             }}
-          />
-          <ProfileModal
-            isOpen={isProfileModalOpen}
-            onClose={() => setIsProfileModalOpen(false)}
-            currentUser={currentUser}
           />
         </>
       );
