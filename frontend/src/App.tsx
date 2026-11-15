@@ -19,6 +19,7 @@ import {
   logout,
   getAuthToken,
   updateUserProfile,
+  getSuitabilityPdfUrl,
 } from './api';
 import { ThemeProvider } from './components/ThemeProvider';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -41,6 +42,7 @@ import { WhatIfDiffView } from './components/WhatIfDiffView';
 import { ReplayRunModal } from './components/ReplayRunModal';
 import { AuthModal } from './components/AuthModal';
 import { ProfileModal } from './components/ProfileModal';
+import { AdvisorReviewPanel } from './components/AdvisorReviewPanel';
 import {
   ArrowLeft,
   SlidersHorizontal,
@@ -451,9 +453,20 @@ export const AppContent: React.FC = () => {
   }
 
   // View 4: Live Analysis Results
+  const effectiveRunId = currentRunId || runState?.run_id || null;
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans transition-colors">
-      <SimulationBanner />
+      <SimulationBanner
+        isReviewed={runState?.reviewed}
+        reviewerId={runState?.reviewer_id}
+        reviewedAt={runState?.reviewed_at}
+        onDownloadPdf={
+          effectiveRunId
+            ? () => window.open(getSuitabilityPdfUrl(effectiveRunId), '_blank')
+            : undefined
+        }
+      />
 
       {/* Top Header */}
       <header className="bg-card border-b border-border sticky top-0 z-20 backdrop-blur-md">
@@ -659,6 +672,18 @@ export const AppContent: React.FC = () => {
         {/* Conflicts Alert */}
         {runState?.profile?.conflicts && runState.profile.conflicts.length > 0 && (
           <ConflictsAlert conflicts={runState.profile.conflicts} />
+        )}
+
+        {/* Advisor Review & Suitability Sign-off (PRD B-14, #121) */}
+        {runState && effectiveRunId && (
+          <AdvisorReviewPanel
+            runId={effectiveRunId}
+            graphState={runState}
+            currentUser={currentUser}
+            onReviewed={(updated) => {
+              setRunState((prev) => (prev ? { ...prev, ...updated } : null));
+            }}
+          />
         )}
 
         {/* What-If Module */}

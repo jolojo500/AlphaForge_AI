@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -28,6 +28,7 @@ from alphaforge.auth import (
     authenticate_user,
     get_current_user,
     get_current_user_from_request_or_none,
+    require_advisor,
 )
 from alphaforge.graph import (
     _cfg,
@@ -39,6 +40,7 @@ from alphaforge.graph import (
 )
 from alphaforge.personas import PERSONAS
 from alphaforge.state import GraphState
+from alphaforge.suitability import get_suitability_store
 from alphaforge.trace_store import get_trace_store
 from alphaforge.users import get_user_store
 from alphaforge.whatif import diff_scenarios, prepare_whatif_inputs
@@ -404,6 +406,8 @@ def _authorize(run: Run | None, request: Request, *, write: bool = False) -> Run
         return run
     user = get_current_user_from_request_or_none(request)
     if user and run.owner in (f"u:{user.username}", f"u:{user.user_id}"):
+        return run
+    if user and user.is_advisor and not write:
         return run
     raise HTTPException(status_code=404, detail="Run not found")
 
@@ -858,6 +862,14 @@ def get_run_state(run_id: str, request: Request):
             data["parent_run_id"] = run.parent_run_id
             data["change"] = run.change
         data["cost"] = run.cost or calculate_run_cost(data.get("trace"))
+        rec = get_suitability_store().get_record(run.run_id)
+        if rec:
+            data["reviewed"] = True
+            data["reviewer_id"] = rec.get("reviewer_id")
+            data["reviewed_at"] = rec.get("reviewed_at")
+            data["chosen_scenario"] = rec.get("chosen_scenario")
+            data["advisor_rationale"] = rec.get("rationale")
+            data["edited_assumptions"] = rec.get("edited_assumptions")
         return data
 
     try:
@@ -868,6 +880,14 @@ def get_run_state(run_id: str, request: Request):
             data["parent_run_id"] = run.parent_run_id
             data["change"] = run.change
         data["cost"] = run.cost or calculate_run_cost(data.get("trace"))
+        rec = get_suitability_store().get_record(run.run_id)
+        if rec:
+            data["reviewed"] = True
+            data["reviewer_id"] = rec.get("reviewer_id")
+            data["reviewed_at"] = rec.get("reviewed_at")
+            data["chosen_scenario"] = rec.get("chosen_scenario")
+            data["advisor_rationale"] = rec.get("rationale")
+            data["edited_assumptions"] = rec.get("edited_assumptions")
         return data
     except Exception:  # noqa: BLE001
         if run.status == "error":
@@ -877,6 +897,131 @@ def get_run_state(run_id: str, request: Request):
         return JSONResponse(
             content={"status": "running", "run_id": run.run_id}, status_code=202
         )
+
+
+class ReviewRunRequest(BaseModel):
+    chosen_scenario: str = Field(..., description="Chosen scenario name")
+    rationale: str = Field(..., min_length=5, description="Advisor professional rationale")
+    edited_assumptions: dict[str, Any] | None = None
+
+
+@app.post("/runs/{run_id}/review")
+def review_run(
+    run_id: str,
+    req: ReviewRunRequest,
+    user: Annotated[User, Depends(require_advisor)],
+) -> dict[str, Any]:
+    """Advisor review & sign-off creating an immutable suitability record and S3 PDF (PRD B-14, #121)."""
+    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    state = _final_state(run)
+    if state is None:
+        raise HTTPException(status_code=400, detail="Run must be completed before it can be reviewed")
+
+    scenarios = state.scenarios or []
+    scenario_names = [s.name for s in scenarios]
+    if req.chosen_scenario not in scenario_names:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid chosen_scenario '{req.chosen_scenario}'. Allowed: {scenario_names}",
+        )
+
+    # Build KYC snapshot
+    kyc_snapshot = {}
+    if state.profile:
+        kyc_snapshot = {
+            "persona": state.persona,
+            "objective": state.profile.objective,
+            "horizon_years": state.profile.horizon_years,
+            "risk_tolerance": state.profile.risk_tolerance,
+            "risk_capacity": state.profile.risk_capacity,
+            "budget_cad": state.profile.budget_cad,
+            "constraints": state.profile.constraints,
+            "preferences": state.profile.preferences,
+            "conflicts": state.profile.conflicts,
+        }
+    if state.persona_data:
+        kyc_snapshot["account_type"] = state.persona_data.get("account_type")
+
+    now_iso = dt.datetime.now(dt.UTC).isoformat()
+    record = {
+        "run_id": run_id,
+        "reviewer_id": user.username,
+        "reviewed_at": now_iso,
+        "chosen_scenario": req.chosen_scenario,
+        "rationale": req.rationale.strip(),
+        "edited_assumptions": req.edited_assumptions,
+        "kyc_snapshot": kyc_snapshot,
+        "scenarios": [s.model_dump() if hasattr(s, "model_dump") else s for s in scenarios],
+        "model_ids": {
+            "main": os.getenv("AF_MODEL_MAIN", "global.anthropic.claude-sonnet-5-5"),
+            "fast": os.getenv("AF_MODEL_FAST", "global.anthropic.claude-haiku-5-5"),
+        },
+        "data_dates": {
+            "as_of_date": str(state.as_of_date or dt.date.today()),
+        },
+        "verifier_result": state.verification or {},
+    }
+
+    saved_record = get_suitability_store().save_record(run_id, record)
+
+    state.reviewed = True
+    state.reviewer_id = user.username
+    state.reviewed_at = now_iso
+    state.chosen_scenario = req.chosen_scenario
+    state.advisor_rationale = req.rationale.strip()
+    if req.edited_assumptions:
+        state.edited_assumptions = req.edited_assumptions
+
+    if run.owner and getattr(state, "owner", None) is None:
+        state.owner = run.owner
+
+    run.state = state
+
+    try:
+        get_trace_store().save_run(
+            run_id=run.run_id,
+            state=state,
+            trace=run.events,
+            verification=state.verification,
+        )
+    except Exception:
+        pass
+
+    return {
+        "status": "reviewed",
+        "run_id": run_id,
+        "reviewer_id": user.username,
+        "reviewed_at": now_iso,
+        "chosen_scenario": req.chosen_scenario,
+        "suitability_record": saved_record,
+    }
+
+
+@app.get("/runs/{run_id}/suitability")
+def get_suitability_record(run_id: str, request: Request) -> dict[str, Any]:
+    """Retrieve immutable suitability determination record."""
+    _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
+    rec = get_suitability_store().get_record(run_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Dossier de convenance introuvable pour cette analyse.")
+    return rec
+
+
+@app.get("/runs/{run_id}/suitability/pdf")
+def get_suitability_pdf(run_id: str, request: Request) -> Response:
+    """Retrieve suitability record signed PDF."""
+    _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
+    pdf_bytes = get_suitability_store().get_pdf(run_id)
+    if not pdf_bytes:
+        raise HTTPException(status_code=404, detail="Document PDF de convenance introuvable.")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="dossier_convenance_{run_id}.pdf"'},
+    )
 
 
 @app.get("/{full_path:path}")
