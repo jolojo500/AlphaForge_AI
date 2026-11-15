@@ -17,6 +17,7 @@ dependencies = [
     "sse-starlette>=2.1",
     "yfinance>=0.2.40",
     "langgraph-checkpoint-aws>=1.2.7",
+    "pyjwt[crypto]>=2.8",
 ]
 
 [dependency-groups]

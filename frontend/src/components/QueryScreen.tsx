@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
-import { UserOnboardingProfile, BackendRunPayload } from '../types';
-import { ArrowUpRight, Settings, RotateCcw, Columns2 } from 'lucide-react';
+import { UserOnboardingProfile, BackendRunPayload, AuthUser } from '../types';
+import { ArrowUpRight, Settings, RotateCcw, Columns2, LogIn, LogOut, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { prepareBackendPayload } from '../api';
 import { DemoPersonas } from './DemoPersonas';
 import { PayloadModal } from './PayloadModal';
@@ -17,6 +17,10 @@ interface QueryScreenProps {
   onRunQuery: (payload: BackendRunPayload) => void;
   onCompare?: () => void;
   onReplay?: () => void;
+  currentUser?: AuthUser | null;
+  onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
+  onLogout?: () => void;
 }
 
 export const QueryScreen: React.FC<QueryScreenProps> = ({
@@ -26,6 +30,10 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   onRunQuery,
   onCompare,
   onReplay,
+  currentUser,
+  onOpenAuth,
+  onOpenProfile,
+  onLogout,
 }) => {
   const [query, setQuery] = useState<string>('');
   const [preparedPayload, setPreparedPayload] = useState<BackendRunPayload | null>(null);
@@ -102,8 +110,54 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
               className="h-8 gap-1.5 text-xs text-foreground border-border/80 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 text-primary" />
-              <span>Rejouer une analyse</span>
+              <span>Rejouer</span>
             </Button>
+          )}
+
+          {currentUser ? (
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenProfile}
+                className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+              >
+                {currentUser.is_advisor ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-primary" />
+                )}
+                <span>{currentUser.username}</span>
+                {currentUser.is_advisor && (
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1 py-0 h-4">
+                    Conseiller
+                  </Badge>
+                )}
+              </Button>
+              {onLogout && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  title="Déconnexion"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            onOpenAuth && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenAuth}
+                className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5 text-primary" />
+                <span>Connexion</span>
+              </Button>
+            )
           )}
 
           <div className="h-4 w-px bg-border/60 mx-1" />

@@ -469,3 +469,81 @@ def test_daily_global_run_cap(monkeypatch):
     a = TestClient(app, headers={"X-Client-Id": "a"})
     assert a.post("/runs", json=body).status_code == 200
     assert a.post("/runs", json=body).status_code == 429
+
+
+def test_auth_login_and_me():
+    client = TestClient(app)
+    # Login with seeded demo user
+    login_resp = client.post("/auth/login", json={"username": "amira", "password": "AlphaForge2026!"})
+    assert login_resp.status_code == 200
+    data = login_resp.json()
+    assert "access_token" in data
+    token = data["access_token"]
+
+    # Unauthenticated /auth/me -> 401
+    assert client.get("/auth/me").status_code == 401
+
+    # Authenticated /auth/me -> 200
+    auth_client = TestClient(app, headers={"Authorization": f"Bearer {token}"})
+    me_resp = auth_client.get("/auth/me")
+    assert me_resp.status_code == 200
+    me_data = me_resp.json()
+    assert me_data["user"]["username"] == "amira"
+    assert me_data["profile"]["objective"] == "growth"
+
+
+def test_user_profile_crud():
+    client = TestClient(app)
+    login_resp = client.post("/auth/login", json={"username": "mateo", "password": "AlphaForge2026!"})
+    token = login_resp.json()["access_token"]
+    auth_client = TestClient(app, headers={"Authorization": f"Bearer {token}"})
+
+    # Get profile
+    prof_resp = auth_client.get("/user/profile")
+    assert prof_resp.status_code == 200
+    assert prof_resp.json()["username"] == "mateo"
+
+    # Update profile
+    new_profile = dict(PERSONAS["mateo"], horizon_years=12)
+    update_resp = auth_client.put(
+        "/user/profile",
+        json={"profile": new_profile, "account_type": "REER", "current_holdings": {"XIU": 0.5}},
+    )
+    assert update_resp.status_code == 200
+    updated = update_resp.json()
+    assert updated["profile"]["horizon_years"] == 12
+    assert updated["current_holdings"] == {"XIU": 0.5}
+
+    # Verify updated profile persists
+    prof_resp2 = auth_client.get("/user/profile")
+    assert prof_resp2.json()["profile"]["horizon_years"] == 12
+
+
+def test_authenticated_run_ownership():
+    client = TestClient(app)
+    # User 1: amira
+    tok_amira = client.post(
+        "/auth/login", json={"username": "amira", "password": "AlphaForge2026!"}
+    ).json()["access_token"]
+    c_amira = TestClient(app, headers={"Authorization": f"Bearer {tok_amira}"})
+
+    # User 2: mateo
+    tok_mateo = client.post(
+        "/auth/login", json={"username": "mateo", "password": "AlphaForge2026!"}
+    ).json()["access_token"]
+    c_mateo = TestClient(app, headers={"Authorization": f"Bearer {tok_mateo}"})
+
+    body = {"persona": "amira", "request_text": PERSONAS["amira"]["example_request"]}
+    create_resp = c_amira.post("/runs", json=body)
+    assert create_resp.status_code == 200
+    run_id = create_resp.json()["run_id"]
+
+    # Amira can access run
+    assert c_amira.get(f"/runs/{run_id}").status_code == 200
+
+    # Mateo cannot access Amira's run (private run, 404)
+    assert c_mateo.get(f"/runs/{run_id}").status_code == 404
+
+    # Anonymous user without credentials cannot access run
+    anon = TestClient(app, headers={"X-Client-Id": "random_browser"})
+    assert anon.get(f"/runs/{run_id}").status_code == 404

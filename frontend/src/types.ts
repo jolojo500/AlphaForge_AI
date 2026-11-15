@@ -308,3 +308,30 @@ export interface BackendRunPayload {
     current_holdings?: Record<string, number>;
   };
 }
+
+export interface AuthUser {
+  user_id: string;
+  username: string;
+  email?: string | null;
+  groups?: string[];
+  is_advisor?: boolean;
+}
+
+export interface UserProfileData {
+  user_id: string;
+  username: string;
+  email?: string | null;
+  profile: Record<string, unknown>;
+  account_type?: string | null;
+  current_holdings?: Record<string, unknown> | null;
+  is_advisor?: boolean;
+  updated_at?: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  id_token?: string;
+  token_type: string;
+  expires_in: number;
+  user: AuthUser;
+}
