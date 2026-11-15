@@ -105,7 +105,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
                 title={isEn ? 'Same question, three profiles side by side' : 'Même question, trois profils côte à côte'}
               >
                 <Columns3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isEn ? 'Compare profiles' : 'Comparer les profils'}</span>
+                <span className="sr-only">{isEn ? 'Compare profiles' : 'Comparer les profils'}</span>
               </Button>
             )}
             {onResetProfile && (
@@ -117,7 +117,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
               title={isEn ? 'Reset profile and return to home' : "Réinitialiser et retourner à l'accueil"}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isEn ? 'Reset' : 'Réinitialiser'}</span>
+              <span className="hidden xl:inline">{isEn ? 'Reset' : 'Réinitialiser'}</span>
             </Button>
           )}
           </>
