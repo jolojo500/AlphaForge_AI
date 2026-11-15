@@ -108,6 +108,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'profile.moderate': 'Modérée',
     'profile.low_moderate': 'Faible à modérée',
     'profile.low': 'Faible',
+    'profile.download_dossier': 'Télécharger mon dossier',
+    'profile.downloading_dossier': 'Téléchargement...',
+    'profile.dossier_not_found': 'Aucun dossier trouvé pour ce compte.',
+    'profile.dossier_error': 'Erreur lors du téléchargement du dossier.',
 
     // Conflicts & Clarification
     'conflicts.title': 'Conflit ou incohérence détecté dans la demande',
@@ -235,6 +239,10 @@ export const translations: Record<Language, Record<string, string>> = {
     'profile.moderate': 'Moderate',
     'profile.low_moderate': 'Low to Moderate',
     'profile.low': 'Low',
+    'profile.download_dossier': 'Download my record',
+    'profile.downloading_dossier': 'Downloading...',
+    'profile.dossier_not_found': 'No record found for this account.',
+    'profile.dossier_error': 'Error downloading record.',
 
     // Conflicts & Clarification
     'conflicts.title': 'Tension or Inconsistency Identified in Request',

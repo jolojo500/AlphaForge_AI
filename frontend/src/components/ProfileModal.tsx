@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { AuthUser, UserProfileData } from '../types';
-import { fetchUserProfile, updateUserProfile } from '../api';
+import { apiFetch, fetchUserProfile, updateUserProfile } from '../api';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   User,
   ShieldCheck,
@@ -22,6 +23,7 @@ import {
   Loader2,
   Briefcase,
   Layers,
+  Download,
 } from 'lucide-react';
 
 interface ProfileModalProps {
@@ -37,9 +39,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   currentUser,
   onProfileUpdated,
 }) => {
+  const { t } = useLanguage();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -135,6 +139,36 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       setError(err instanceof Error ? err.message : 'Échec de l’enregistrement du profil.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDownloadDossier = async () => {
+    setIsDownloading(true);
+    setError(null);
+    try {
+      const res = await apiFetch('/users/me/dossier');
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(t('profile.dossier_not_found', 'Aucun dossier trouvé pour ce compte.'));
+        }
+        throw new Error(t('profile.dossier_error', 'Erreur lors du téléchargement du dossier.'));
+      }
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `dossier_${currentUser?.username || 'user'}.md`;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : t('profile.dossier_error', 'Erreur lors du téléchargement du dossier.')
+      );
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -326,23 +360,45 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
-                Fermer
-              </Button>
-              <Button type="submit" disabled={isSaving} className="flex items-center gap-2">
-                {isSaving ? (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDownloadDossier}
+                disabled={isDownloading || isSaving}
+                className="flex items-center justify-center gap-2"
+              >
+                {isDownloading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Enregistrement...
+                    <span>{t('profile.downloading_dossier', 'Téléchargement...')}</span>
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" />
-                    Enregistrer les modifications
+                    <Download className="h-4 w-4 text-primary" />
+                    <span>{t('profile.download_dossier', 'Télécharger mon dossier')}</span>
                   </>
                 )}
               </Button>
+
+              <div className="flex items-center justify-end gap-3">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+                  Fermer
+                </Button>
+                <Button type="submit" disabled={isSaving} className="flex items-center gap-2">
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Enregistrer les modifications
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         )}
