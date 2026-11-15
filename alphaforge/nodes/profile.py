@@ -1096,7 +1096,8 @@ def profile_node(state: GraphState) -> dict:
             "Avertissement préalable (Garde-fou : Absence de fonds d'urgence) : "
             "Vous avez indiqué ne pas disposer d'une réserve de liquidités équivalente à 3 à 6 mois de dépenses courantes. "
             "Tout investissement sur les marchés financiers comporte un risque de perte en capital. "
-            "Il est fortement recommandé de constituer une épargne de précaution avant d'immobiliser vos capitaux."
+            "Une épargne de précaution de 3 à 6 mois de dépenses se constitue habituellement avant d'immobiliser "
+            "des capitaux sur les marchés."
         )
         hard_gate_notes.append(note)
         conflicts.append("Garde-fou KYC : Fonds d'urgence manquant. Prioriser l'épargne de précaution.")
@@ -1105,8 +1106,8 @@ def profile_node(state: GraphState) -> dict:
         note = (
             "Avertissement préalable (Garde-fou : Dettes à taux élevé) : "
             "Vous avez déclaré des dettes à taux d'intérêt élevé (cartes de crédit, prêts personnels). "
-            "Rembourser une dette à taux élevé procure un rendement financier garanti équivalent aux intérêts économisés, "
-            "sans aucun risque de marché. Ce remboursement doit être priorisé avant tout investissement."
+            "Rembourser une dette à taux élevé évite des intérêts dont le taux est connu d'avance et ne dépend pas "
+            "des marchés. Dans un cadre de planification, ce remboursement passe habituellement avant tout investissement."
         )
         hard_gate_notes.append(note)
         conflicts.append("Garde-fou KYC : Dettes à taux élevé non soldées. Prioriser le remboursement des dettes.")
