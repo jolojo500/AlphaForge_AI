@@ -55,12 +55,15 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
     setFilterPrefix('ALL');
     setSearchQuery('');
     setFlashId(focus.id);
-    const scroll = window.setTimeout(() => {
+    const doScroll = () => {
       document.getElementById(`evidence-row-${focus.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 120);
+    };
+    const t1 = window.setTimeout(doScroll, 100);
+    const t2 = window.setTimeout(doScroll, 280);
     const clear = window.setTimeout(() => setFlashId(null), 3200);
     return () => {
-      window.clearTimeout(scroll);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
       window.clearTimeout(clear);
     };
   }, [focus]);

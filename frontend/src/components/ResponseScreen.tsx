@@ -146,39 +146,21 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   let sectionCounter = 0;
   const nextSection = () => ++sectionCounter;
 
-  // The pointer sentence of the explanation becomes a link to the detailed section.
+  // The pointer sentence is stripped because the details section is directly accessible below.
   const renderParagraph = (paragraph: string, idx: number) => {
     const pointer = isEn ? POINTER_EN : POINTER_FR;
     const hasPointer = paragraph.includes(pointer);
     const body = hasPointer ? paragraph.replace(pointer, '').trim() : paragraph;
+    if (!body) return null;
     return (
       <p key={idx} className="leading-relaxed">
-        {body && (
-          <RichText
-            text={body}
-            evidence={runState.evidence || {}}
-            onJump={handleJumpToEvidence}
-            lang={lang}
-            scenarioCount={scenarioCount}
-          />
-        )}
-        {hasPointer && (
-          <>
-            {body ? ' ' : ''}
-            <button
-              type="button"
-              onClick={() => {
-                if (!showDetails) handleToggleDetails();
-                else detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="text-primary underline decoration-dotted underline-offset-2 hover:decoration-solid cursor-pointer text-left"
-            >
-              {isEn
-                ? 'See the detailed allocation and the check of your limits.'
-                : 'Voir la répartition détaillée et la vérification de vos limites.'}
-            </button>
-          </>
-        )}
+        <RichText
+          text={body}
+          evidence={runState.evidence || {}}
+          onJump={handleJumpToEvidence}
+          lang={lang}
+          scenarioCount={scenarioCount}
+        />
       </p>
     );
   };

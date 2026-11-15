@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useLanguage } from '@/context/LanguageContext';
-import { EvidencePopover } from './EvidencePopover';
 import { humanize } from '@/lib/evidenceText';
 import { countWord, metricInfo, scenarioSubtitle, scenarioTitle } from '@/lib/labels';
 import { fmtNumber, fmtPct, fmtPoints, type Lang } from '@/lib/format';
@@ -199,16 +198,15 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
                               {info.tip && <InfoTooltip content={info.tip} className="mt-0.5" />}
                             </span>
                             {ev ? (
-                              <EvidencePopover id={eid} evidence={ev} lang={lang} onOpenRegistry={onOpenRegistry}>
-                                <button
-                                  type="button"
-                                  title={valueTitle}
-                                  aria-label={`${info.label} ${formatted}`}
-                                  className="font-semibold text-foreground block mt-0.5 underline decoration-dotted decoration-primary/40 underline-offset-2 hover:decoration-solid cursor-pointer text-left"
-                                >
-                                  {formatted}
-                                </button>
-                              </EvidencePopover>
+                              <button
+                                type="button"
+                                onClick={() => onOpenRegistry?.(eid)}
+                                title={valueTitle}
+                                aria-label={`${info.label} ${formatted}`}
+                                className="font-semibold text-foreground block mt-0.5 underline decoration-dotted decoration-primary/40 underline-offset-2 hover:decoration-solid cursor-pointer text-left"
+                              >
+                                {formatted}
+                              </button>
                             ) : (
                               <span className="font-semibold text-foreground block mt-0.5">{formatted}</span>
                             )}

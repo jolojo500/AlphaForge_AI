@@ -54,12 +54,11 @@ class CsvProvider(DataProvider):
 
     def universe(self, include_custom: Iterable[str] | None = None) -> pd.DataFrame:
         base = self._universe.copy()
-        if include_custom:
-            custom = get_custom_assets_df(tickers=list(include_custom))
-            if not custom.empty:
-                custom_new = custom[~custom["ticker"].isin(base["ticker"])]
-                if not custom_new.empty:
-                    base = pd.concat([base, custom_new], ignore_index=True)
+        custom = get_custom_assets_df(tickers=list(include_custom) if include_custom is not None else None)
+        if not custom.empty:
+            custom_new = custom[~custom["ticker"].isin(base["ticker"])]
+            if not custom_new.empty:
+                base = pd.concat([base, custom_new], ignore_index=True)
         return base
 
     def prices(

@@ -17,7 +17,12 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from alphaforge import llm
-from alphaforge.data.dynamic_ingestion import ensure_requested_asset
+from alphaforge.data.dynamic_ingestion import (
+    COMMON_ALIASES,
+    ensure_requested_asset,
+    ensure_ticker_in_db,
+    resolve_candidate_symbol,
+)
 from alphaforge.data.market_db import get_merged_universe_dict
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.i18n import detect_language
@@ -114,7 +119,11 @@ SYSTEM = (
     "Extract only what the text says. Never invent a number, a ticker or a preference. "
     "Weights in words count: 'un quart' = 25, 'la moitié' = 50. "
     "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
-    "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
+    "'build' when they want an allocation. "
+    "If the person names a specific asset, stock, ETF, or crypto (e.g. 'TSMC', 'NVDA', 'Dogecoin', 'Amazon', 'Bitcoin', 'Tesla', 'ASML', 'Palantir'), "
+    "extract its standard market ticker symbol (e.g. 'TSM' for TSMC, 'AMZN' for Amazon, 'TSLA' for Tesla, 'DOGE-USD' for Dogecoin, 'BTC-USD' for Bitcoin, 'PLTR' for Palantir). "
+    "If it is in the starter universe, use that exact ticker; if outside, return its standard Yahoo Finance ticker symbol so it can be dynamically ingested. "
+    "If no specific asset is named, ticker must be null. "
     "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
     "Strict wording ('sans énergies fossiles', 'uniquement ESG', 'exclure') maps to extra_constraints: esg_only. "
     "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income, esg_tilt). "
@@ -133,8 +142,17 @@ def _resolve_ticker(raw: str | None) -> str | None:
     """Map a model or regex ticker to a ticker of the starter universe or DB, else None."""
     if not raw:
         return None
+    raw_str = raw.strip()
+    alias_match = COMMON_ALIASES.get(raw_str.lower())
+    if alias_match:
+        ensure_ticker_in_db(alias_match)
+        return alias_match
+    key = raw_str.upper()
+    if key in ("DOGECOIN", "DOGERCOIN", "DODGECOIN", "DOGE"):
+        ensure_ticker_in_db("DOGE-USD")
+        return "DOGE-USD"
+    ensure_ticker_in_db(key)
     universe = _universe()
-    key = raw.strip().upper()
     for t in universe:
         if key in (t.upper(), t.upper().split(".")[0]):
             return t
@@ -214,6 +232,10 @@ def _regex_extract(text: str) -> Extraction:
             ticker = "AMZN"
         elif re.search(r"\b(?:shopify)\b", lowered):
             ticker = "SHOP.TO"
+        else:
+            cand = resolve_candidate_symbol(primary_text)
+            if cand:
+                ticker = _resolve_ticker(cand)
     horizon = None
     m_h = re.search(r"(\d+)\s*(?:ans?|years?|yrs?)\b", lowered)
     if m_h:
@@ -298,7 +320,7 @@ def extract_profile(
     prompt = (
         f"Persona hypotheses: objective={obj}, horizon={hor} years, tolerance={tol}, capacity={cap}, "
         f"constraints={con}, preferences={pref}.\n"
-        f"Allowed tickers: {', '.join(sorted(_universe()))}.\n"
+        f"Starter universe tickers: {', '.join(sorted(_universe()))}.\n"
         f'Request ({lang_label}): """{primary_text}"""'
     )
     conflicts_inst = (
@@ -316,7 +338,11 @@ def extract_profile(
         "Extract only what the text says. Never invent a number, a ticker or a preference. "
         "Weights in words count: 'un quart' = 25, 'la moitié' = 50, 'one quarter' = 25, 'half' = 50. "
         "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
-        "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
+        "'build' when they want an allocation. "
+        "If the person names a specific asset, stock, ETF, or crypto (e.g. 'TSMC', 'NVDA', 'Dogecoin', 'Amazon', 'Bitcoin', 'Tesla', 'ASML', 'Palantir'), "
+        "extract its standard market ticker symbol (e.g. 'TSM' for TSMC, 'AMZN' for Amazon, 'TSLA' for Tesla, 'DOGE-USD' for Dogecoin, 'BTC-USD' for Bitcoin, 'PLTR' for Palantir). "
+        "If it is in the starter universe, use that exact ticker; if outside, return its standard Yahoo Finance ticker symbol so it can be dynamically ingested. "
+        "If no specific asset is named, ticker must be null. "
         "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
         "Strict wording ('sans énergies fossiles', 'uniquement ESG', 'exclure') maps to extra_constraints: esg_only. "
         "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income, esg_tilt). "
@@ -1058,6 +1084,9 @@ def profile_node(state: GraphState) -> dict:
 
     p = state.persona_data or (PERSONAS[state.persona] if state.persona in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
+    if ext.requested_allocation:
+        for k in ext.requested_allocation:
+            _resolve_ticker(k)
     idea = (
         {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
         if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
@@ -1083,6 +1112,9 @@ def profile_node(state: GraphState) -> dict:
             state.persona_data or state.persona, text, kind="review", language=lang
         )
         ticker = _resolve_ticker(ext.ticker)
+        if ext.requested_allocation:
+            for k in ext.requested_allocation:
+                _resolve_ticker(k)
         idea = (
             {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
             if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100

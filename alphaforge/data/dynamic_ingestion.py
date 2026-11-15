@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 # Canonical aliases for quick resolution without network search
 COMMON_ALIASES: dict[str, str] = {
     "dogecoin": "DOGE-USD",
+    "dogercoin": "DOGE-USD",
+    "dodgecoin": "DOGE-USD",
+    "doge-coin": "DOGE-USD",
     "doge": "DOGE-USD",
     "solana": "SOL-USD",
     "sol": "SOL-USD",
@@ -53,6 +56,9 @@ COMMON_ALIASES: dict[str, str] = {
     "amd": "AMD",
     "netflix": "NFLX",
     "sofi": "SOFI",
+    "tsmc": "TSM",
+    "taiwan semiconductor": "TSM",
+    "taiwan semi": "TSM",
 }
 
 START_DATE = "2021-11-12"
@@ -186,3 +192,16 @@ def ensure_requested_asset(text: str) -> str | None:
 
     # Need to fetch and persist
     return fetch_and_persist_asset(cand_upper)
+
+
+def ensure_ticker_in_db(ticker: str) -> str | None:
+    """Ensure a specific ticker or alias is present in SQLite market.db; fetches via yfinance if missing."""
+    if not ticker:
+        return None
+    cleaned = ticker.strip()
+    alias_resolved = COMMON_ALIASES.get(cleaned.lower())
+    sym = (alias_resolved or cleaned).upper()
+    if has_custom_asset(sym):
+        return sym
+    return fetch_and_persist_asset(sym)
+
