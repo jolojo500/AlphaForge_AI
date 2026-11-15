@@ -9,9 +9,14 @@ import {
 } from './api';
 import { SimulationBanner } from './components/SimulationBanner';
 import { PersonaPicker } from './components/PersonaPicker';
+import { ConflictsAlert } from './components/ConflictsAlert';
 import { NodeTrace } from './components/NodeTrace';
 import { ClarificationBox } from './components/ClarificationBox';
 import { ScenarioCards } from './components/ScenarioCards';
+import { ExplanationSection } from './components/ExplanationSection';
+import { ExclusionsCard } from './components/ExclusionsCard';
+import { EvidenceTable } from './components/EvidenceTable';
+import { EvidenceModal } from './components/EvidenceModal';
 import { Compass, AlertTriangle } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -25,6 +30,7 @@ export const App: React.FC = () => {
   const [runState, setRunState] = useState<GraphState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -65,6 +71,7 @@ export const App: React.FC = () => {
     setTrace([]);
     setInterruptQuestion(null);
     setRunState(null);
+    setSelectedEvidenceId(null);
     setIsRunning(true);
 
     if (unsubRef.current) {
@@ -132,6 +139,10 @@ export const App: React.FC = () => {
     }
   }, [runId]);
 
+  const activeEvidence = selectedEvidenceId && runState?.evidence
+    ? runState.evidence[selectedEvidenceId] || null
+    : null;
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <SimulationBanner />
@@ -180,6 +191,11 @@ export const App: React.FC = () => {
           isRunning={isRunning}
         />
 
+        {/* Profile conflicts shown near the top if detected */}
+        {runState?.profile?.conflicts && (
+          <ConflictsAlert conflicts={runState.profile.conflicts} />
+        )}
+
         {interruptQuestion && (
           <ClarificationBox
             question={interruptQuestion}
@@ -191,13 +207,39 @@ export const App: React.FC = () => {
         <NodeTrace trace={trace} isRunning={isRunning} />
 
         {runState && (
-          <ScenarioCards
-            scenarios={runState.scenarios}
-            evidence={runState.evidence}
-            mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
-          />
+          <>
+            <ScenarioCards
+              scenarios={runState.scenarios}
+              evidence={runState.evidence}
+              mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
+            />
+
+            <ExplanationSection
+              explanation={runState.explanation}
+              verification={runState.verification}
+              evidence={runState.evidence}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+
+            <ExclusionsCard
+              exclusions={runState.exclusions}
+              evidence={runState.evidence}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+
+            <EvidenceTable
+              evidence={runState.evidence}
+              onSelectEvidence={setSelectedEvidenceId}
+            />
+          </>
         )}
       </main>
+
+      {/* Evidence detail modal */}
+      <EvidenceModal
+        evidence={activeEvidence}
+        onClose={() => setSelectedEvidenceId(null)}
+      />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-6 mt-auto text-center text-xs text-slate-500">
