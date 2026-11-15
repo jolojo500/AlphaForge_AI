@@ -134,6 +134,36 @@ def stress_2022(prices: pd.DataFrame, target: Target) -> dict[str, float] | None
     return {"return": float(v.iloc[-1] - 1), "drawdown": float((v / v.cummax() - 1).min())}
 
 
+def rolling_returns_stats(
+    prices: pd.DataFrame,
+    target: Target,
+    window_years: int = 1,
+    trading_days_per_year: int = 252,
+) -> dict[str, float] | None:
+    """Rolling-window historical returns over `window_years` (A-13 / #122).
+
+    Computes worst, median, best total return across rolling windows, and the share of
+    windows with a loss (< 0). Returns None if available history is shorter than window_days + 1.
+    All statistics are strictly historical, not forecasts.
+    """
+    v = value(prices, target)
+    window_days = int(window_years * trading_days_per_year)
+    if len(v) <= window_days:
+        return None
+    v_arr = v.to_numpy(dtype=float)
+    rolling = (v_arr[window_days:] / v_arr[:-window_days]) - 1.0
+    if len(rolling) == 0:
+        return None
+    return {
+        "worst": float(np.min(rolling)),
+        "median": float(np.median(rolling)),
+        "best": float(np.max(rolling)),
+        "loss_share": float(np.mean(rolling < 0.0)),
+        "windows_count": int(len(rolling)),
+        "window_years": window_years,
+    }
+
+
 # --- node ---------------------------------------------------------------------------------
 
 

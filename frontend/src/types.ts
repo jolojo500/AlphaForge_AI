@@ -55,6 +55,23 @@ export interface Trade {
   amount_cad?: number;
 }
 
+export interface HistoricalWindowStats {
+  worst: number;
+  median: number;
+  best: number;
+  loss_share: number;
+  windows_count: number;
+  window_years: number;
+}
+
+export interface HistoricalOutcomes {
+  '1y'?: HistoricalWindowStats;
+  '3y'?: HistoricalWindowStats;
+  horizon_years?: number;
+  horizon_covered?: boolean;
+  disclaimer: string;
+}
+
 export interface Scenario {
   name: ScenarioName;
   weights: Record<string, number>;
@@ -62,6 +79,7 @@ export interface Scenario {
   notes: string[];
   turnover?: number;
   trades?: Trade[];
+  historical_outcomes?: HistoricalOutcomes;
 }
 
 export interface TraceEntry {
