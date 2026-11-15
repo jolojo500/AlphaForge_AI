@@ -16,11 +16,12 @@ from pydantic import BaseModel, Field
 
 from alphaforge import llm
 from alphaforge.evidence import numeric
-from alphaforge.nodes.profile import TOLERANCE_FR
+from alphaforge.nodes.profile import TOLERANCE_EN, TOLERANCE_FR
 from alphaforge.state import Evidence, GraphState, Scenario
 from alphaforge.tracing import traced
 
 DISCLAIMER = "Simulation éducative. Aucun conseil personnalisé."
+DISCLAIMER_EN = "Educational simulation. No personalized advice."
 MAX_EVIDENCE_LINES = 100
 
 class Claim(BaseModel):
@@ -71,6 +72,34 @@ Règles strictes :
 - Si le profil contient des tensions (conflicts) ou si des objections existent, explique-les.
 - Pas de raisonnement interne : seulement des constats observables.
 - avertissement : « Simulation éducative. Aucun conseil personnalisé. »"""
+
+SYSTEM_EN = """You are the explainability agent for an educational financial simulation tool.
+You explain the COMPARISON of three simulated scenarios for an investor profile, in English.
+You answer the four BNCD workshop questions: which data, why this choice, which limits,
+what would change the answer. You distinguish risk tolerance (what the person says they accept)
+and risk capacity (what their situation can absorb). Named risk types are: market, credit,
+liquidity, interest rate and inflation, currency, concentration.
+
+Strict rules:
+- Respond using the exact schema keys (quelles_donnees, pourquoi_ce_choix, limites,
+  ce_qui_changerait_la_reponse, resume, incertitude, scenario_le_plus_coherent, avertissement).
+- Every claim must cite evidence ids (evidence field) taken ONLY from the provided list. Do not invent any id.
+- Every number you write must come from an evidence item cited in the same claim, copied exactly as printed after '='
+  (e.g. '38.0%'). Do not write any other number (except those from the user request), no invented years.
+- Consistency language, never advice: state which scenario is 'most consistent with the stated profile',
+  without telling to buy, sell, or invest. No return forecast, no promise. Statistics are historical.
+  NEVER use the roots 'recommend*' or 'advise*'.
+- Strict conciseness: 1 to 2 claims per section, ~25 to 30 words per claim. The summary must be 1 to 2 direct sentences (~30 words).
+- The summary and uncertainty are checked like claims: do not write a number unless followed by its id in brackets
+  (e.g. '23.2% [EP3]'). Otherwise write without figures.
+- Do not replace the three scenarios with a single one: compare them, then indicate the most consistent.
+- Distinguish facts ('fact' evidence), assumptions ('assumption'), and fictional data ('fictional').
+  If an evidence item is fictional or an assumption, state it in the limits.
+- quelles_donnees: what data was used. pourquoi_ce_choix: why this scenario is most consistent.
+  limites: what limits the analysis. ce_qui_changerait_la_reponse: what would change the comparison (horizon, tolerance, budget, exclusion, date).
+- If the profile has conflicts or if objections exist, explain them.
+- No internal reasoning: only observable observations.
+- avertissement: 'Educational simulation. No personalized advice.'"""
 
 
 # ----------------------------------------------------------------------- context building
@@ -162,7 +191,40 @@ def _scenario_block(sc: Scenario, evidence: dict[str, Evidence]) -> str:
 
 
 def build_prompt(state: GraphState) -> str:
+    lang = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
     p = state.profile
+    if lang == "en":
+        lines = [
+            f"Analysis date: {state.as_of_date}",
+            f"Request: {state.request_text!r}",
+            (
+                f"Profile: persona={p.persona}, objective={p.objective}, horizon={p.horizon_years} years, "
+                f"tolerance={p.risk_tolerance}, capacity={p.risk_capacity}, constraints={p.constraints}, "
+                f"preferences={p.preferences}, type={p.request_type}, idea={p.requested_idea}"
+            ),
+            f"Detected conflicts: {p.conflicts or 'none'}",
+            "",
+            "Simulated scenarios:",
+            *(_scenario_block(s, state.evidence) for s in state.scenarios),
+            "",
+            "Scenario notes: "
+            + " | ".join(f"{s.name}: {' '.join(s.notes)}" for s in state.scenarios if s.notes),
+            f"Excluded assets: {[(x['ticker'], x['reason'], x['evidence_id']) for x in state.exclusions]}",
+            f"Red team objections: {state.objections or 'none'}",
+            f"News & Events: {[(e['ticker'], e['headline'], e['risk_type'], e['evidence_id']) for e in state.events]}",
+            "",
+            "Available evidence (id = value to copy as is | indicator | method | source | date | nature):",
+            *(describe_evidence(ev) for ev in _select_evidence(state)),
+        ]
+        errors = (state.verification or {}).get("errors") if state.retries.get("explain") else None
+        if errors:
+            lines += [
+                "",
+                "Your previous response was rejected by the verifier. Correct exactly these points:",
+                *[f"- {e}" for e in errors],
+            ]
+        return "\n".join(lines)
+
     lines = [
         f"Date d'analyse : {state.as_of_date}",
         f"Demande : {state.request_text!r}",
@@ -203,6 +265,8 @@ def _metric_value(state: GraphState, sc: Scenario, metric: str) -> float | None:
 
 def template_explanation(state: GraphState) -> dict:
     """Explanation built from the evidence without a model (used when the LLM fails)."""
+    lang = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
+
     def risk(sc: Scenario) -> float:
         v = _metric_value(state, sc, "max_drawdown")
         return abs(v) if v is not None else 9.0
@@ -214,32 +278,86 @@ def template_explanation(state: GraphState) -> dict:
         vol = _metric_value(state, sc, "volatility_ann")
         mdd = _metric_value(state, sc, "max_drawdown")
         if vol is not None and mdd is not None:
-            donnees.append(
-                {
-                    "claim": (
-                        f"Scénario {sc.name} : volatilité annualisée historique de {_fr(abs(vol) * 100, 1)} %, "
-                        f"perte maximale historique de {_fr(abs(mdd) * 100, 1)} %."
-                    ),
-                    "evidence": ids,
-                }
-            )
+            if lang == "en":
+                donnees.append(
+                    {
+                        "claim": (
+                            f"Scenario {sc.name}: historical annualized volatility of {_fr(abs(vol) * 100, 1)} %, "
+                            f"historical maximum loss of {_fr(abs(mdd) * 100, 1)} %."
+                        ),
+                        "evidence": ids,
+                    }
+                )
+            else:
+                donnees.append(
+                    {
+                        "claim": (
+                            f"Scénario {sc.name} : volatilité annualisée historique de {_fr(abs(vol) * 100, 1)} %, "
+                            f"perte maximale historique de {_fr(abs(mdd) * 100, 1)} %."
+                        ),
+                        "evidence": ids,
+                    }
+                )
     bm = _metric_value(state, best, "max_drawdown")
     if bm is not None:
-        tol_str = (
-            TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
-            if state.profile
-            else ""
-        )
-        pourquoi.append(
-            {
-                "claim": (
-                    f"Le scénario {best.name} présente la plus faible perte maximale historique "
-                    f"({_fr(abs(bm) * 100, 1)} %) parmi les trois, ce qui est le plus cohérent avec une "
-                    f"tolérance au risque « {tol_str} »."
-                ),
-                "evidence": [best.metrics["max_drawdown"]],
-            }
-        )
+        if lang == "en":
+            tol_str = (
+                TOLERANCE_EN.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
+                if state.profile
+                else ""
+            )
+            pourquoi.append(
+                {
+                    "claim": (
+                        f"The {best.name} scenario shows the lowest historical maximum loss "
+                        f"({_fr(abs(bm) * 100, 1)} %) among the three, which is most consistent with a "
+                        f"'{tol_str}' risk tolerance."
+                    ),
+                    "evidence": [best.metrics["max_drawdown"]],
+                }
+            )
+        else:
+            tol_str = (
+                TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
+                if state.profile
+                else ""
+            )
+            pourquoi.append(
+                {
+                    "claim": (
+                        f"Le scénario {best.name} présente la plus faible perte maximale historique "
+                        f"({_fr(abs(bm) * 100, 1)} %) parmi les trois, ce qui est le plus cohérent avec une "
+                        f"tolérance au risque « {tol_str} »."
+                    ),
+                    "evidence": [best.metrics["max_drawdown"]],
+                }
+            )
+    if lang == "en":
+        if not donnees:
+            donnees = [{"claim": "No numerical metrics available.", "evidence": []}]
+        if not pourquoi:
+            pourquoi = [{"claim": "The choice is based on the declared profile.", "evidence": []}]
+        limites = [
+            {"claim": "This explanation was generated from a template, without a language model.", "evidence": []},
+            {"claim": "Historical statistics do not describe the future.", "evidence": []},
+        ]
+        if state.profile and state.profile.conflicts:
+            limites.append(
+                {"claim": "The profile has contradictions with the formulated request.", "evidence": []}
+            )
+        return {
+            "resume": "Comparison of three simulated scenarios with their historical risk metrics.",
+            "quelles_donnees": donnees,
+            "pourquoi_ce_choix": pourquoi,
+            "limites": limites,
+            "ce_qui_changerait_la_reponse": [
+                {"claim": "A different horizon, different risk tolerance, or asset exclusion.", "evidence": []}
+            ],
+            "incertitude": "Historical statistics do not describe the future.",
+            "scenario_le_plus_coherent": best.name,
+            "avertissement": DISCLAIMER_EN,
+        }
+
     if not donnees:
         donnees = [{"claim": "Aucun indicateur chiffré n'est disponible.", "evidence": []}]
     if not pourquoi:
@@ -283,25 +401,37 @@ def _explain_llm():
 def generate_explanation(state: GraphState, llm_client=None) -> tuple[dict, bool]:
     """Returns (explanation dict, used_template)."""
     client = llm_client if llm_client is not None else _explain_llm()
+    lang = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
+    sys = SYSTEM_EN if lang == "en" else SYSTEM
+    disclaimer = DISCLAIMER_EN if lang == "en" else DISCLAIMER
     try:
         out = llm.call_json(
-            build_prompt(state), Explanation, kind="main", system=SYSTEM, llm=client
+            build_prompt(state), Explanation, kind="main", system=sys, llm=client
         )
     except llm.LLMError:
         return template_explanation(state), True
     data = out.model_dump()
-    data["avertissement"] = DISCLAIMER
+    data["avertissement"] = disclaimer
     return data, False
 
 
 @traced("explain")
 def explain_node(state: GraphState) -> dict:
+    lang = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
     explanation, template = generate_explanation(state)
     retry = bool(state.retries.get("explain"))
-    summary = "Explication rédigée en quatre questions"
-    summary += " (gabarit sans modèle)." if template else "."
-    if retry:
-        summary = "Explication corrigée après la vérification" + (
-            " (gabarit sans modèle)." if template else "."
-        )
+    if lang == "en":
+        summary = "Explanation drafted across four questions"
+        summary += " (template without model)." if template else "."
+        if retry:
+            summary = "Explanation corrected after verification" + (
+                " (template without model)." if template else "."
+            )
+    else:
+        summary = "Explication rédigée en quatre questions"
+        summary += " (gabarit sans modèle)." if template else "."
+        if retry:
+            summary = "Explication corrigée après la vérification" + (
+                " (gabarit sans modèle)." if template else "."
+            )
     return {"explanation": explanation, "summary": summary}

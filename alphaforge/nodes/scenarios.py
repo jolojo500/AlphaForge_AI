@@ -370,41 +370,85 @@ def targeted_changes(
 
 
 def _template_notes(
-    name, weights, values, ids, caps_eid, requested, flagged, account_type: str = "non_registered"
+    name,
+    weights,
+    values,
+    ids,
+    caps_eid,
+    requested,
+    flagged,
+    account_type: str = "non_registered",
+    language: str = "fr",
 ) -> list[str]:
-    risk = (
-        f"Volatilité annualisée {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
-        f"perte maximale historique {_pct(values['max_drawdown'])} ({ids['max_drawdown']})."
-    )
-    if "tax_drag" in ids and values.get("tax_drag") is not None:
-        risk += f" Friction fiscale annuelle estimée {_pct(values['tax_drag'])} ({ids['tax_drag']})."
-    if name == "as_requested":
-        if requested in weights:
-            head = (
-                f"Idée telle que demandée : {weights[requested]:.0%} dans {requested}, "
-                "le reste selon l'allocation de référence."
-            )
+    is_en = language == "en"
+    if is_en:
+        risk = (
+            f"Annualized volatility {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
+            f"historical maximum loss {_pct(values['max_drawdown'])} ({ids['max_drawdown']})."
+        )
+        if "tax_drag" in ids and values.get("tax_drag") is not None:
+            risk += f" Estimated annual tax drag {_pct(values['tax_drag'])} ({ids['tax_drag']})."
+        if name == "as_requested":
+            if requested in weights:
+                head = (
+                    f"Idea as requested: {weights[requested]:.0%} in {requested}, "
+                    "the remainder according to the reference allocation."
+                )
+            else:
+                head = (
+                    f"Stated preferences taken as requested: equal weighting across "
+                    f"{len(weights)} assets, without risk management."
+                )
+            notes = [head, risk]
+            if flagged:
+                notes.append(
+                    "This asset is excluded by a profile constraint; it is included here for "
+                    "comparison purposes only."
+                )
+        elif name == "capped":
+            head = f"Same request brought within profile limits ({caps_eid})"
+            head += f": {requested} at {weights.get(requested, 0.0):.0%}." if requested else "."
+            notes = [head, risk]
         else:
-            head = (
-                f"Préférences déclarées prises telles quelles : pondération égale sur "
-                f"{len(weights)} actifs, sans gestion du risque."
-            )
-        notes = [head, risk]
-        if flagged:
-            notes.append(
-                "Cet actif est exclu par une contrainte du profil ; il figure ici uniquement "
-                "à titre de comparaison."
-            )
-    elif name == "capped":
-        head = f"Même demande ramenée aux limites du profil ({caps_eid})"
-        head += f" : {requested} à {weights.get(requested, 0.0):.0%}." if requested else "."
-        notes = [head, risk]
+            notes = [
+                f"Minimum variance allocation under profile limits ({caps_eid}), "
+                "without any return forecast.",
+                risk,
+            ]
     else:
-        notes = [
-            f"Allocation de variance minimale sous les limites du profil ({caps_eid}), "
-            "sans aucune prévision de rendement.",
-            risk,
-        ]
+        risk = (
+            f"Volatilité annualisée {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
+            f"perte maximale historique {_pct(values['max_drawdown'])} ({ids['max_drawdown']})."
+        )
+        if "tax_drag" in ids and values.get("tax_drag") is not None:
+            risk += f" Friction fiscale annuelle estimée {_pct(values['tax_drag'])} ({ids['tax_drag']})."
+        if name == "as_requested":
+            if requested in weights:
+                head = (
+                    f"Idée telle que demandée : {weights[requested]:.0%} dans {requested}, "
+                    "le reste selon l'allocation de référence."
+                )
+            else:
+                head = (
+                    f"Préférences déclarées prises telles quelles : pondération égale sur "
+                    f"{len(weights)} actifs, sans gestion du risque."
+                )
+            notes = [head, risk]
+            if flagged:
+                notes.append(
+                    "Cet actif est exclu par une contrainte du profil ; il figure ici uniquement "
+                    "à titre de comparaison."
+                )
+        elif name == "capped":
+            head = f"Même demande ramenée aux limites du profil ({caps_eid})"
+            head += f" : {requested} à {weights.get(requested, 0.0):.0%}." if requested else "."
+            notes = [head, risk]
+        else:
+            notes = [
+                f"Allocation de variance minimale sous les limites du profil ({caps_eid}), "
+                "sans aucune prévision de rendement.",
+                risk,
+            ]
 
     loc_note = asset_location_note(account_type)
     if loc_note and loc_note not in notes:
@@ -417,6 +461,7 @@ def _template_notes(
 
 @traced("scenarios")
 def scenarios_node(state: GraphState) -> dict:
+    lang: str = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
     reg = EvidenceRegistry("EP")
     profile = state.profile
     eligible = sorted(state.eligible_universe)
@@ -670,7 +715,6 @@ def scenarios_node(state: GraphState) -> dict:
                 method="0.5 * sum(abs(target_weight - current_weight))",
                 confidence="fact",
             )
-
         # Rolling returns over 1-year and 3-year windows (A-13 / #122)
         stats_1y = rolling_returns_stats(prices, w, window_years=1)
         stats_3y = rolling_returns_stats(prices, w, window_years=3)
@@ -716,29 +760,52 @@ def scenarios_node(state: GraphState) -> dict:
 
         sc.historical_outcomes = outcomes
         notes = _template_notes(
-            name, w, values, ids, caps_eid, requested, flagged, account_type=profile.account_type
+            name,
+            w,
+            values,
+            ids,
+            caps_eid,
+            requested,
+            flagged,
+            account_type=profile.account_type,
+            language=lang,
         )
         if stats_1y:
             notes.append(
+                f"Rolling 1-year historical returns (historical, not a forecast): "
+                f"worst {_pct(stats_1y['worst'])}, median {_pct(stats_1y['median'])}, "
+                f"best {_pct(stats_1y['best'])}, loss periods share {_pct(stats_1y['loss_share'])}."
+                if lang == "en"
+                else
                 f"Rendements historiques glissants sur 1 an (historique, pas une prévision) : "
                 f"pire {_pct(stats_1y['worst'])}, médiane {_pct(stats_1y['median'])}, "
                 f"meilleur {_pct(stats_1y['best'])}, part des périodes en perte {_pct(stats_1y['loss_share'])}."
             )
         if stats_3y:
             notes.append(
+                f"Rolling 3-year historical returns (historical, not a forecast): "
+                f"worst {_pct(stats_3y['worst'])}, median {_pct(stats_3y['median'])}, "
+                f"best {_pct(stats_3y['best'])}, loss periods share {_pct(stats_3y['loss_share'])}."
+                if lang == "en"
+                else
                 f"Rendements historiques glissants sur 3 ans (historique, pas une prévision) : "
                 f"pire {_pct(stats_3y['worst'])}, médiane {_pct(stats_3y['median'])}, "
                 f"meilleur {_pct(stats_3y['best'])}, part des périodes en perte {_pct(stats_3y['loss_share'])}."
             )
         if profile.horizon_years > 3:
             notes.append(
+                f"Available historical window (5 years) covers 1-year and 3-year windows; "
+                f"stated horizon of {profile.horizon_years} years is not fully covered by data "
+                "(historical, not a forecast)."
+                if lang == "en"
+                else
                 f"L'historique disponible (5 ans) permet de calculer les fenêtres de 1 an et 3 ans ; "
                 f"l'horizon déclaré de {profile.horizon_years} ans n'est pas couvert par les données "
                 "(historique, pas une prévision)."
             )
         if draft_notes is not None:
             try:
-                notes = list(draft_notes(sc, evidence_so_far | reg.items())) or notes
+                notes = list(draft_notes(sc, evidence_so_far | reg.items(), profile=state.profile)) or notes
             except Exception:
                 pass  # the LLM is optional here; templated notes are always valid
         if profile.hard_gate_notes:
@@ -805,17 +872,31 @@ def scenarios_node(state: GraphState) -> dict:
             outcomes_curr["1y"] = stats_1y_curr
         if stats_3y_curr:
             outcomes_curr["3y"] = stats_3y_curr
-        notes_curr = [
-            f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
-            f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
-            f"perte maximale historique {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
-        ]
-        if proxies_used:
-            notes_curr.append(f"Actifs avec proxy : {', '.join(proxies_used.keys())}.")
-        if not_analysed:
-            notes_curr.append(
-                f"Actifs non analysés ({_pct(unanalysed_share)}) : {', '.join(not_analysed)}."
-            )
+
+        if lang == "en":
+            notes_curr = [
+                f"Client's current portfolio composed of {len(w_curr)} analyzed asset(s).",
+                f"Annualized volatility {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
+                f"historical maximum loss {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
+            ]
+            if proxies_used:
+                notes_curr.append(f"Assets with proxy: {', '.join(proxies_used.keys())}.")
+            if not_analysed:
+                notes_curr.append(
+                    f"Unanalyzed assets ({_pct(unanalysed_share)}): {', '.join(not_analysed)}."
+                )
+        else:
+            notes_curr = [
+                f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
+                f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
+                f"perte maximale historique {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
+            ]
+            if proxies_used:
+                notes_curr.append(f"Actifs avec proxy : {', '.join(proxies_used.keys())}.")
+            if not_analysed:
+                notes_curr.append(
+                    f"Actifs non analysés ({_pct(unanalysed_share)}) : {', '.join(not_analysed)}."
+                )
         sc_curr = Scenario(
             name="current",
             weights=w_curr.to_dict(),
@@ -825,10 +906,20 @@ def scenarios_node(state: GraphState) -> dict:
         )
         scenarios.append(sc_curr)
 
-    if current_weights is not None:
-        summary = "Quatre scénarios construits : demandé, plafonné, référence, et portefeuille actuel."
+    if lang == "en":
+        summary = (
+            "Four scenarios built: requested, capped, reference, and current portfolio."
+            if current_weights is not None
+            else "Three scenarios built: requested, capped, reference."
+        )
+        if rounds:
+            summary += " Revised after objections: " + ("; ".join(changes) or "no changes") + "."
     else:
-        summary = "Trois scénarios construits : demandé, plafonné, référence."
-    if rounds:
-        summary += " Révisés après objections : " + ("; ".join(changes) or "aucun changement") + "."
+        summary = (
+            "Quatre scénarios construits : demandé, plafonné, référence, et portefeuille actuel."
+            if current_weights is not None
+            else "Trois scénarios construits : demandé, plafonné, référence."
+        )
+        if rounds:
+            summary += " Révisés après objections : " + ("; ".join(changes) or "aucun changement") + "."
     return {"scenarios": scenarios, "evidence": reg.items(), "summary": summary}

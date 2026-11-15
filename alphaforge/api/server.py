@@ -476,6 +476,7 @@ class RunCreateRequest(BaseModel):
     profile_data: dict[str, Any] | None = None
     user_profile: dict[str, Any] | None = None
     current_holdings: dict[str, Any] | str | None = None
+    language: Literal["fr", "en"] | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -705,6 +706,7 @@ def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
             run.as_of_date,
             persona_data=persona_data,
             owner=owner,
+            language=req.language,
         ),
         run.run_id,
     )

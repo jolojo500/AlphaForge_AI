@@ -12,6 +12,7 @@ import os
 import sys
 import uuid
 from collections.abc import Iterator
+from typing import Literal
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
@@ -176,7 +177,15 @@ def initial_state(
     *,
     persona_data: dict | None = None,
     owner: str | None = None,
+    language: Literal["fr", "en"] | None = None,
 ) -> dict:
+    from alphaforge.i18n import detect_language
+
+    lang = (
+        language
+        or (profile.language if profile and getattr(profile, "language", None) else None)
+        or detect_language(request_text)
+    )
     return {
         "persona": persona,
         "persona_data": persona_data,
@@ -184,6 +193,7 @@ def initial_state(
         "request_text": request_text,
         "as_of_date": as_of_date or config.DEFAULT_AS_OF,
         "profile": profile,
+        "language": lang,
     }
 
 

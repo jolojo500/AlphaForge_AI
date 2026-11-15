@@ -272,3 +272,62 @@ def test_points_are_checked_and_differences_allowed():
     bad = _doc114(quelles_donnees=[{"claim": "Un écart de 47 points.", "evidence": ["EP3", "EP9"]}])
     assert v.check_numbers(ok, _ev114()) == []
     assert v.check_numbers(bad, _ev114())
+
+
+# ---- English & French wording and i18n tests (#123)
+@pytest.mark.parametrize(
+    "en_forbidden",
+    [
+        "You should buy more technology equities.",
+        "We recommend allocating 25% to this asset.",
+        "I advise that you prioritize short-term notes.",
+        "A guaranteed return of 6% each year.",
+        "This is a risk-free investment opportunity.",
+        "Expected return for this strategy is 10%.",
+        "The portfolio will return double digits.",
+        "This asset will grow faster than inflation.",
+        "The fund will yield steady monthly profits.",
+        "The price will outperform the benchmark index.",
+    ],
+)
+def test_verifier_forbidden_wording_english(evidence, en_forbidden):
+    doc = mutate(resume=en_forbidden)
+    errs = v.check_wording(doc)
+    assert len(errs) > 0
+    assert any("formulation interdite" in err for err in errs)
+
+
+@pytest.mark.parametrize(
+    "en_clean",
+    [
+        "Educational simulation. No personalized advice.",
+        "No guaranteed return; past metrics do not forecast future performance.",
+        "The capped scenario is most consistent with the declared risk tolerance.",
+        "Historical statistics show a maximum drawdown of 15.2% without indicating future returns.",
+        "The comparison illustrates differences in volatility and diversification.",
+    ],
+)
+def test_verifier_clean_wording_english(evidence, en_clean):
+    doc = mutate(
+        resume=en_clean,
+        incertitude="No return is guaranteed; historical data does not predict the future.",
+        avertissement="Educational simulation. No personalized advice.",
+    )
+    assert v.check_wording(doc) == []
+
+
+def test_verifier_english_section_keys(evidence):
+    doc_en = {
+        "summary": "Comparison of three simulated scenarios.",
+        "what_data": [{"claim": "Volatilité de 18,5 %.", "evidence": ["EQ2"]}],
+        "why_this_choice": [{"claim": "Perte de 38,2 %.", "evidence": ["EQ1"]}],
+        "limits": [{"claim": "Statistiques historiques.", "evidence": []}],
+        "what_would_change": [{"claim": "Un autre horizon.", "evidence": []}],
+        "uncertainty": "No future guarantee.",
+        "most_consistent_scenario": "capped",
+        "disclaimer": "Educational simulation. No personalized advice.",
+    }
+    assert v.check_sections(doc_en) == []
+    assert v.check_wording(doc_en) == []
+    assert v.check_eids(doc_en, evidence) == []
+
