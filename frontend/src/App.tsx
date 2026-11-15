@@ -26,6 +26,7 @@ import { EvidenceTable } from './components/EvidenceTable';
 import { EvidenceModal } from './components/EvidenceModal';
 import { NodeTrace } from './components/NodeTrace';
 import { ResolvedProfileCard } from './components/ResolvedProfileCard';
+import { PersonaComparisonView } from './components/PersonaComparisonView';
 import { ConflictsAlert } from './components/ConflictsAlert';
 import { SimulationBanner } from './components/SimulationBanner';
 import { ClarificationBox } from './components/ClarificationBox';
@@ -40,6 +41,7 @@ import {
   Loader2,
   CheckCircle2,
   RotateCcw,
+  Columns2,
 } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { Button } from './components/ui/button';
@@ -47,7 +49,7 @@ import { Badge } from './components/ui/badge';
 
 const STORAGE_KEY = 'alphaforge_user_profile';
 
-type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results';
+type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results' | 'compare';
 
 export const AppContent: React.FC = () => {
   const [view, setView] = useState<AppView>('welcome');
@@ -295,6 +297,7 @@ export const AppContent: React.FC = () => {
         <WelcomeScreen
           onStart={() => setView('onboarding')}
           onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
+          onCompare={() => setView('compare')}
           onReplay={() => setIsReplayModalOpen(true)}
         />
         <ReplayRunModal
@@ -326,6 +329,7 @@ export const AppContent: React.FC = () => {
           onEditProfile={() => setView('onboarding')}
           onResetProfile={handleResetProfile}
           onRunQuery={handleStartRun}
+          onCompare={() => setView('compare')}
           onReplay={() => setIsReplayModalOpen(true)}
         />
         <ReplayRunModal
@@ -334,6 +338,31 @@ export const AppContent: React.FC = () => {
           onSelectRun={handleReplayRun}
         />
       </>
+    );
+  }
+
+  // View 5: Persona Side-by-Side Comparison (C-9)
+  if (view === 'compare') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col font-sans transition-colors">
+        <SimulationBanner />
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+          <PersonaComparisonView
+            onBack={() => setView(userProfile ? 'query' : 'welcome')}
+            userProfile={userProfile}
+            onSelectEvidence={setSelectedEvidenceId}
+          />
+        </main>
+
+        <EvidenceModal
+          evidence={activeEvidence}
+          onClose={() => setSelectedEvidenceId(null)}
+        />
+
+        <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground">
+          <p>AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026</p>
+        </footer>
+      </div>
     );
   }
 
@@ -370,6 +399,17 @@ export const AppContent: React.FC = () => {
                 </span>
               </Badge>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setView('compare')}
+              className="text-xs cursor-pointer gap-1.5"
+            >
+              <Columns2 className="w-3.5 h-3.5 text-primary" />
+              <span className="hidden sm:inline">Comparer deux profils</span>
+              <span className="sm:hidden">Comparer</span>
+            </Button>
+
             <Button
               variant="ghost"
               size="sm"

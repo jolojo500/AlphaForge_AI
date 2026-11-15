@@ -496,7 +496,7 @@ Canonical requests (used by fixtures, the e2e test and the demo):
 - Mateo: "Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées."
 - Robert: "Je veux mettre 25 % de mon portefeuille dans TSLA."
 
-Demo (5 min): Robert asks about TSLA → challenged with the capped alternative. Amira asks for a proposal → crypto capped, overlap flagged. Move one what-if control → the answer changes coherently.
+Demo (5 min): Robert asks about TSLA → challenged with the capped alternative. Amira asks for a proposal → crypto capped, overlap flagged. Move one what-if control → the answer changes coherently. Side-by-side comparison (C-9): compare Robert vs Amira on the same TSLA 25 % request → shows Robert's 5 % cap and capital preservation vs Amira's 10 % cap and 15-year horizon side by side with weight and metric deltas highlighted.
 
 ---
 
