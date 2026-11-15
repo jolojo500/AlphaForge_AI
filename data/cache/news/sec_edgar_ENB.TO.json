@@ -1,0 +1,421 @@
+{
+ "provider": "sec_edgar",
+ "key": "ENB.TO",
+ "fetched_at": "2026-11-15T01:22:53+00:00",
+ "items": [
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926126219/tm2626007d10_424b5.htm",
+   "published_at": "2026-11-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926126215/tm2626007d9_424b5.htm",
+   "published_at": "2026-11-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926124204/tm2626007d1_424b5.htm",
+   "published_at": "2026-11-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926124202/tm2626007d5_424b5.htm",
+   "published_at": "2026-11-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526450714/enb-20260930.htm",
+   "published_at": "2026-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526450711/enb-20261106.htm",
+   "published_at": "2026-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K/A, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926123587/tm2629103d1_8ka.htm",
+   "published_at": "2026-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526398771/enb-20251231.htm",
+   "published_at": "2026-09-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926107292/tm2624881d7_8k.htm",
+   "published_at": "2026-09-14T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926106571/tm2624881d4_424b5.htm",
+   "published_at": "2026-09-10T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926106404/tm2624881d5_8k.htm",
+   "published_at": "2026-09-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926106346/tm2624881d1_424b5.htm",
+   "published_at": "2026-09-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926106344/tm2624881d6_8k.htm",
+   "published_at": "2026-09-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926105899/tm2624881d2_8k.htm",
+   "published_at": "2026-09-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526326752/enb-20260630.htm",
+   "published_at": "2026-07-31T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526326744/enb-20260731.htm",
+   "published_at": "2026-07-31T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526213266/enb-20260331.htm",
+   "published_at": "2026-05-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526213263/enb-20260508.htm",
+   "published_at": "2026-05-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 3.03 Material Modification to Rights of Security Holders; 5.07 Submission of Matters to a Vote of Security Holders; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526212007/enb-20260506.htm",
+   "published_at": "2026-05-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926036134/tm269416d2_8k.htm",
+   "published_at": "2026-03-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926035215/tm269416d4_424b5.htm",
+   "published_at": "2026-03-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926033629/tm269416d1_424b5.htm",
+   "published_at": "2026-03-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526117636/enb-20260320.htm",
+   "published_at": "2026-03-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526100395/enb-20260310.htm",
+   "published_at": "2026-03-10T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526049810/enb-20251231.htm",
+   "published_at": "2026-02-13T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526049808/enb-20260213.htm",
+   "published_at": "2026-02-13T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525306723/d85502d8k.htm",
+   "published_at": "2025-12-03T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465925114619/tm2531408d5_8k.htm",
+   "published_at": "2025-11-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465925114102/tm2531408d2_424b5.htm",
+   "published_at": "2025-11-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465925112992/tm2531408d3_424b5.htm",
+   "published_at": "2025-11-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525270991/enb-20250930.htm",
+   "published_at": "2025-11-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525270987/enb-20251107.htm",
+   "published_at": "2025-11-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525230205/d95292d8k.htm",
+   "published_at": "2025-10-03T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000095017025101102/enb-20250630.htm",
+   "published_at": "2025-08-01T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000095017025101101/enb-20250801.htm",
+   "published_at": "2025-08-01T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465925061164/tm2517955d4_8k.htm",
+   "published_at": "2025-06-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465925060642/tm2517955d2_424b5.htm",
+   "published_at": "2025-06-18T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465925059675/tm2517955d1_424b5.htm",
+   "published_at": "2025-06-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000089572825000012/enb-20250331.htm",
+   "published_at": "2025-05-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000089572825000011/enb-20250509.htm",
+   "published_at": "2025-05-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 5.07 Submission of Matters to a Vote of Security Holders",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525115979/d937128d8k.htm",
+   "published_at": "2025-05-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525060242/d915080d8k.htm",
+   "published_at": "2025-03-21T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525052056/d915082d8k.htm",
+   "published_at": "2025-03-11T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K/A, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312525027290/d857524d8ka.htm",
+   "published_at": "2025-02-14T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000089572825000006/enb-20241231.htm",
+   "published_at": "2025-02-14T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "ENB.TO",
+   "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/895728/000089572825000005/enb-20250214.htm",
+   "published_at": "2025-02-14T00:00:00Z",
+   "provider": "sec_edgar"
+  }
+ ]
+}

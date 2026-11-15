@@ -1,0 +1,871 @@
+{
+ "provider": "sec_edgar",
+ "key": "TSLA",
+ "fetched_at": "2026-11-15T01:22:52+00:00",
+ "items": [
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926124575/tm267596d11_defa14a.htm",
+   "published_at": "2026-11-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926123945/tm267596d10_defa14a.htm",
+   "published_at": "2026-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926121458/tm267596d9_defa14a.htm",
+   "published_at": "2026-11-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926120263/tm267596d8_defa14a.htm",
+   "published_at": "2026-10-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026066775/tsla-20260930.htm",
+   "published_at": "2026-10-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026066738/tsla-20261021.htm",
+   "published_at": "2026-10-21T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926116948/tm267596d7_defa14a.htm",
+   "published_at": "2026-10-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926116716/tm267596d6_defa14a.htm",
+   "published_at": "2026-10-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926116713/tm267596d5_defa14a.htm",
+   "published_at": "2026-10-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926116707/tm267596d3_defa14a.htm",
+   "published_at": "2026-10-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEF 14A, definitive proxy statement (shareholder vote)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926116700/tm267596-1_def14a.htm",
+   "published_at": "2026-10-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/tsla-20261002.htm",
+   "published_at": "2026-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 1.02 Termination of a Material Definitive Agreement; 2.03 Creation of a Direct Financial Obligation; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026063820/tsla-20260929.htm",
+   "published_at": "2026-09-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049270/tsla-20260630.htm",
+   "published_at": "2026-07-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049213/tsla-20260722.htm",
+   "published_at": "2026-07-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/tsla-20260702.htm",
+   "published_at": "2026-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465926068275/tm2615395d1_sd.htm",
+   "published_at": "2026-05-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026026673/tsla-20260331.htm",
+   "published_at": "2026-04-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026026551/tsla-20260422.htm",
+   "published_at": "2026-04-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/tsla-20260402.htm",
+   "published_at": "2026-04-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/tsla-20251231.htm",
+   "published_at": "2026-01-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003837/tsla-20260128.htm",
+   "published_at": "2026-01-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026000016/tsla-20260102.htm",
+   "published_at": "2026-01-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 5.07 Submission of Matters to a Vote of Security Holders; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925108507/tm2530590d1_8k.htm",
+   "published_at": "2025-11-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925107871/tm252289d50_defa14a.htm",
+   "published_at": "2025-11-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925107096/tm252289d49_defa14a.htm",
+   "published_at": "2025-11-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000109690625001748/bowy_px14a6g.htm",
+   "published_at": "2025-11-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000109690625001745/bowy_px14a6g.htm",
+   "published_at": "2025-11-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925106380/tm252289d48_defa14a.htm",
+   "published_at": "2025-11-04T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925105632/tm252289d47_defa14a.htm",
+   "published_at": "2025-11-03T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925104992/tm252289d46_defa14a.htm",
+   "published_at": "2025-10-31T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925104464/tm252289d45_defa14a.htm",
+   "published_at": "2025-10-30T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925103800/tm252289d44_defa14a.htm",
+   "published_at": "2025-10-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925015407/i1028250px14a6g.htm",
+   "published_at": "2025-10-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925103255/tm252289d43_defa14a.htm",
+   "published_at": "2025-10-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925015361/o1027253px14a6g.htm",
+   "published_at": "2025-10-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925102658/tm252289d42_defa14a.htm",
+   "published_at": "2025-10-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000093807625000017/fsbateslase.htm",
+   "published_at": "2025-10-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025045968/tsla-20250930.htm",
+   "published_at": "2025-10-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925101876/tm252289d41_defa14a.htm",
+   "published_at": "2025-10-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025045861/tsla-20251022.htm",
+   "published_at": "2025-10-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925101559/tm252289d40_defa14a.htm",
+   "published_at": "2025-10-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925101278/tm252289d39_defa14a.htm",
+   "published_at": "2025-10-21T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925100890/tm252289d38_defa14a.htm",
+   "published_at": "2025-10-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925100451/tm252289d37_defa14a.htm",
+   "published_at": "2025-10-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925015003/g1016251px14a6g.htm",
+   "published_at": "2025-10-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925099767/tm252289d36_defa14a.htm",
+   "published_at": "2025-10-15T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925099333/tm252289d35_defa14a.htm",
+   "published_at": "2025-10-14T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925098750/tm252289d34_defa14a.htm",
+   "published_at": "2025-10-10T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925098386/tm252289d33_defa14a.htm",
+   "published_at": "2025-10-09T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925014757/i108250px14a6g.htm",
+   "published_at": "2025-10-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925097534/tm252289d32_defa14a.htm",
+   "published_at": "2025-10-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925097170/tm252289d31_defa14a.htm",
+   "published_at": "2025-10-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925097147/tm252289d30_defa14a.htm",
+   "published_at": "2025-10-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925096699/tm252289d29_defa14a.htm",
+   "published_at": "2025-10-03T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025043530/tsla-20251002.htm",
+   "published_at": "2025-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925014515/o102255px14a6g.htm",
+   "published_at": "2025-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925014509/j102251px14a6g.htm",
+   "published_at": "2025-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925096138/tm252289d28_defa14a.htm",
+   "published_at": "2025-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925095672/tm252289d27_defa14a.htm",
+   "published_at": "2025-10-01T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925095099/tm252289d26_defa14a.htm",
+   "published_at": "2025-09-30T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925094562/tm252289d25_defa14a.htm",
+   "published_at": "2025-09-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925093905/tm252289d24_defa14a.htm",
+   "published_at": "2025-09-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925093411/tm252289d23_defa14a.htm",
+   "published_at": "2025-09-25T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000121465925014113/p924253px14a6g.htm",
+   "published_at": "2025-09-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925092988/tm252289d22_defa14a.htm",
+   "published_at": "2025-09-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925092572/tm252289d21_defa14a.htm",
+   "published_at": "2025-09-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925092175/tm252289d20_defa14a.htm",
+   "published_at": "2025-09-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000109690625001550/ncppr_px14a6g.htm",
+   "published_at": "2025-09-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925091707/tm252289d19_defa14a.htm",
+   "published_at": "2025-09-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925091323/tm252289d18_defa14a.htm",
+   "published_at": "2025-09-18T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090888/tm252289d17_defa14a.htm",
+   "published_at": "2025-09-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090886/tm252289d16_defa14a.htm",
+   "published_at": "2025-09-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090884/tm252289d15_defa14a.htm",
+   "published_at": "2025-09-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090868/tm252289d14_defa14a.htm",
+   "published_at": "2025-09-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEF 14A, definitive proxy statement (shareholder vote)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090866/tm252289-12_def14a.htm",
+   "published_at": "2025-09-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090460/tm2525295d5_defa14a.htm",
+   "published_at": "2025-09-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925090043/tm2525295d4_defa14a.htm",
+   "published_at": "2025-09-15T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925089587/tm2525295d3_defa14a.htm",
+   "published_at": "2025-09-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925088250/tm2525295d2_defa14a.htm",
+   "published_at": "2025-09-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925087882/tm2525295d1_defa14a.htm",
+   "published_at": "2025-09-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925087862/tm2525337d1_8k.htm",
+   "published_at": "2025-09-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925073263/tm2522385d1_8k.htm",
+   "published_at": "2025-08-04T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025035806/tsla-20250630.htm",
+   "published_at": "2025-07-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025035738/tsla-20250723.htm",
+   "published_at": "2025-07-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 5.08",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025034692/tsla-20250709.htm",
+   "published_at": "2025-07-10T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025033842/tsla-20250702.htm",
+   "published_at": "2025-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925054953/tm2516234d1_sd.htm",
+   "published_at": "2025-05-30T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025026148/tsla-20250515.htm",
+   "published_at": "2025-05-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 5.03 Amendments to Articles of Incorporation or Bylaws; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925050072/tm2515421d1_8k.htm",
+   "published_at": "2025-05-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025018911/tsla-20250331.htm",
+   "published_at": "2025-04-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025018851/tsla-20250422.htm",
+   "published_at": "2025-04-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025016070/tsla-20250402.htm",
+   "published_at": "2025-04-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025003063/tsla-20241231.htm",
+   "published_at": "2025-01-30T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025002993/tsla-20250129.htm",
+   "published_at": "2025-01-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "Tesla: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025000007/tsla-20250102.htm",
+   "published_at": "2025-01-02T00:00:00Z",
+   "provider": "sec_edgar"
+  }
+ ]
+}

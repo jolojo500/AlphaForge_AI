@@ -1,0 +1,358 @@
+{
+ "provider": "sec_edgar",
+ "key": "NVDA",
+ "fetched_at": "2026-11-15T01:22:52+00:00",
+ "items": [
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000082/nvda-20261111.htm",
+   "published_at": "2026-11-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 8.01 Other Events",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000078/nvda-20260902.htm",
+   "published_at": "2026-09-03T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/nvda-20260726.htm",
+   "published_at": "2026-08-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/nvda-20260826.htm",
+   "published_at": "2026-08-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 2.03 Creation of a Direct Financial Obligation; 7.01 Regulation FD Disclosure",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000069/nvda-20260817.htm",
+   "published_at": "2026-08-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000060/nvda-20260628.htm",
+   "published_at": "2026-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.07 Submission of Matters to a Vote of Security Holders",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000056/nvda-20260624.htm",
+   "published_at": "2026-06-30T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 8.01 Other Events; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000119312526275783/d48176d8k.htm",
+   "published_at": "2026-06-18T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000119312526273139/d118718d424b5.htm",
+   "published_at": "2026-06-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 424B5, prospectus supplement for a debt or securities offering",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000119312526270302/d118718d424b5.htm",
+   "published_at": "2026-06-15T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000052/nvda-20260426.htm",
+   "published_at": "2026-05-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/nvda-20260520.htm",
+   "published_at": "2026-05-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000043/a2026formsd.htm",
+   "published_at": "2026-05-15T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000121465926006075/b513262px14a6g.htm",
+   "published_at": "2026-05-13T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000037/noticeof2026annualmeeting.htm",
+   "published_at": "2026-05-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form DEF 14A, definitive proxy statement (shareholder vote)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000036/nvda-20260512.htm",
+   "published_at": "2026-05-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000028/nvda-20260507.htm",
+   "published_at": "2026-05-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000026/nvda-20260424.htm",
+   "published_at": "2026-04-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000024/nvda-20260302.htm",
+   "published_at": "2026-03-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+   "published_at": "2026-02-25T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000019/nvda-20260225.htm",
+   "published_at": "2026-02-25T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000003/nvda-20260120.htm",
+   "published_at": "2026-01-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000230/nvda-20251026.htm",
+   "published_at": "2025-11-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000228/nvda-20251119.htm",
+   "published_at": "2025-11-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000209/nvda-20250727.htm",
+   "published_at": "2025-08-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000207/nvda-20250827.htm",
+   "published_at": "2025-08-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000197/nvda-20250731.htm",
+   "published_at": "2025-08-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.07 Submission of Matters to a Vote of Security Holders",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000179/nvda-20250625.htm",
+   "published_at": "2025-07-01T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000120/a2025formsd.htm",
+   "published_at": "2025-06-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-Q, quarterly report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000116/nvda-20250427.htm",
+   "published_at": "2025-05-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000115/nvda-20250528.htm",
+   "published_at": "2025-05-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form PX14A6G, notice of exempt solicitation by a shareholder group",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000121465925008150/o520256px14a6g.htm",
+   "published_at": "2025-05-21T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form DEFA14A, additional proxy soliciting materials",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000097/noticeof2025annualmeeting1.htm",
+   "published_at": "2025-05-13T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form DEF 14A, definitive proxy statement (shareholder vote)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000095/nvda-20250512.htm",
+   "published_at": "2025-05-13T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 8.01 Other Events",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000082/nvda-20250409.htm",
+   "published_at": "2025-04-15T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000039/nvda-20250303.htm",
+   "published_at": "2025-03-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 10-K, annual report",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000023/nvda-20250126.htm",
+   "published_at": "2025-02-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000021/nvda-20250226.htm",
+   "published_at": "2025-02-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVIDIA: Form 8-K, items 8.01 Other Events",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000007/nvda-20250113.htm",
+   "published_at": "2025-01-17T00:00:00Z",
+   "provider": "sec_edgar"
+  }
+ ]
+}
