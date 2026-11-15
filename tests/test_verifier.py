@@ -356,3 +356,37 @@ def test_verifier_blocks_internal_identifiers_hold_and_orders(evidence, internal
     assert len(errs) > 0
     assert any("formulation interdite" in err for err in errs)
 
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Exposure is capped at 5 % in the adjusted version.",
+        "US equity exposure was capped at 40 %.",
+        "Single positions are capped to 10 % each.",
+        "The assets you currently hold are mostly Canadian.",
+        "The positions you hold in a TFSA are listed ETFs.",
+        "What you hold today is concentrated in one market.",
+        "This is a buy-and-hold simulation, not a forecast.",
+    ],
+)
+def test_english_capped_and_hold_as_plain_verbs_pass(text):
+    """#186 item 6: the plain verbs are not the scenario name or a hold recommendation."""
+    assert v.check_text_wording([("resume", text)]) == []
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hold TSLA until the next quarter.",
+        "A hold recommendation applies to this position.",
+        "We suggest you hold this equity.",
+        "Scenario capped reduces the risk.",
+        "The capped scenario reduces the risk.",
+        "Compare capped and profile_baseline.",
+        "Le scénario capped réduit le risque.",
+    ],
+)
+def test_english_capped_name_and_hold_recommendation_still_fail(text):
+    errs = v.check_text_wording([("resume", text)])
+    assert errs and all("formulation interdite" in e for e in errs)

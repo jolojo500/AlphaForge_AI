@@ -76,11 +76,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <button
               type="button"
               onClick={() => setIsDetailsOpen(true)}
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors cursor-pointer group shrink-0"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-background text-foreground hover:bg-accent text-xs font-medium transition-colors cursor-pointer group shrink min-w-0"
               title={isEn ? 'View profile details' : 'Afficher les détails de ce profil'}
+              aria-label={isEn ? 'View profile details' : 'Afficher les détails de ce profil'}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="truncate max-w-[100px] sm:max-w-[150px]">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" aria-hidden="true" />
+              <span className="truncate max-w-[140px] sm:max-w-[260px] md:max-w-none">
                 {demoMeta ? (
                   <>
                     <span className="font-semibold">{demoMeta.name}</span>
@@ -106,7 +107,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               onClick={() => setIsSwitcherOpen(true)}
               className="h-8 w-8 rounded-md cursor-pointer shrink-0"
               title={isEn ? 'Switch investor profile' : "Changer de profil d'analyse (démo ou personnalisé)"}
-              aria-label="Changer de profil d'analyse"
+              aria-label={isEn ? 'Switch investor profile' : "Changer de profil d'analyse"}
             >
               <Users className="w-3.5 h-3.5" />
             </Button>
@@ -119,7 +120,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               onClick={onOpenHistory}
               className="h-8 w-8 rounded-md cursor-pointer shrink-0"
               title={isEn ? 'Simulation history' : 'Historique des simulations'}
-              aria-label="Historique des simulations"
+              aria-label={isEn ? 'Simulation history' : 'Historique des simulations'}
             >
               <History className="w-3.5 h-3.5" />
             </Button>
@@ -142,6 +143,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 size="sm"
                 onClick={onOpenProfile}
                 className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+                aria-label={isEn ? `Account of ${currentUser.username}` : `Compte de ${currentUser.username}`}
               >
                 {currentUser.is_advisor ? (
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
@@ -161,6 +163,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   size="sm"
                   onClick={onLogout}
                   title={isEn ? 'Log out' : 'Déconnexion'}
+                  aria-label={isEn ? 'Log out' : 'Se déconnecter'}
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -174,6 +177,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 size="sm"
                 onClick={onOpenAuth}
                 className="h-8 gap-1.5 text-xs font-medium cursor-pointer"
+                aria-label={isEn ? 'Log in' : 'Se connecter'}
               >
                 <LogIn className="w-3.5 h-3.5 text-primary" />
                 <span className="hidden sm:inline">{isEn ? 'Log in' : 'Connexion'}</span>

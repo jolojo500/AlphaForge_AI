@@ -18,10 +18,12 @@ from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState, Profile
 from alphaforge.tax import (
+    ACCOUNT_LABEL_FR,
     QUALIFIED_INVESTMENTS_SOURCE,
     REGISTERED_ACCOUNT_URLS,
     REGISTERED_ACCOUNTS,
     SPOT_CRYPTO_REASON_FR,
+    listed_crypto_vehicles,
 )
 from alphaforge.tracing import traced
 
@@ -85,17 +87,24 @@ def class_and_geo_filters(profile: Profile, universe: pd.DataFrame) -> list[Hit]
     return hits
 
 
-def account_eligibility_filter(profile: Profile, universe: pd.DataFrame) -> list[Hit]:
+def account_eligibility_filter(
+    profile: Profile, universe: pd.DataFrame
+) -> tuple[list[Hit], list[str]]:
     """Spot cryptoassets are not qualified investments in a TFSA, RRSP or FHSA (finding 4).
 
     Non-registered and mixed accounts are unchanged. The rule has no dedicated source URL
     in `alphaforge.tax`, so it is recorded as an assumption against the CRA account page.
+
+    Crypto held or asked for through a listed ETF (BTCC.B.TO, IBIT, "15 % Bitcoin via
+    BTCC.B") is analysed through its spot proxy but stays eligible: the ETF is a qualified
+    investment (#186, item 2). Each such proxy gives a coverage note instead of a Hit.
     """
     account = (profile.account_type or "").lower()
     if account not in REGISTERED_ACCOUNTS:
-        return []
+        return [], []
+    vehicles = listed_crypto_vehicles(profile.current_holdings, profile.requested_vehicle)
     reason = SPOT_CRYPTO_REASON_FR[0].upper() + SPOT_CRYPTO_REASON_FR[1:] + "."
-    return [
+    hits = [
         Hit(
             row["ticker"],
             reason,
@@ -105,8 +114,18 @@ def account_eligibility_filter(profile: Profile, universe: pd.DataFrame) -> list
             url=REGISTERED_ACCOUNT_URLS.get(account),
         )
         for _, row in universe.iterrows()
-        if row["asset_class"] == "crypto"
+        if row["asset_class"] == "crypto" and row["ticker"] not in vehicles
     ]
+    tickers = set(universe["ticker"])
+    notes = [
+        f"Admissibilité {ACCOUNT_LABEL_FR[account]} : {proxy} est conservé parce que le "
+        f"cryptoactif est détenu ou demandé via un FNB coté ({', '.join(etfs)}), placement "
+        f"admissible ; le FNB est analysé à travers son sous-jacent {proxy} (hypothèse : "
+        "mêmes rendements, frais du FNB non comptés)."
+        for proxy, etfs in sorted(vehicles.items())
+        if proxy in tickers
+    ]
+    return hits, notes
 
 
 def load_esgv(
@@ -204,10 +223,12 @@ def apply_constraints(
         if t in set(universe["ticker"])
     ]
     # Account eligibility comes before the profile's own constraints: it is the legal reason.
-    hits += account_eligibility_filter(profile, universe)
+    elig_hits, notes = account_eligibility_filter(profile, universe)
+    hits += elig_hits
     hits += class_and_geo_filters(profile, universe)
-    esg_hits, notes = esg_exclusions(profile, universe, holdings_dir=holdings_dir, as_of=as_of)
+    esg_hits, esg_notes = esg_exclusions(profile, universe, holdings_dir=holdings_dir, as_of=as_of)
     hits += esg_hits
+    notes += esg_notes
 
     first: dict[str, Hit] = {}
     for h in hits:

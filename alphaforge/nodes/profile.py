@@ -229,7 +229,12 @@ def _regex_extract(text: str) -> Extraction:
     if ticker and weight is not None and 0 < weight <= 100:
         req_alloc = {ticker: round(weight / 100.0, 4)}
     else:
-        m_crypto = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:%|pour\s*cent)?\s*(?:en\s+|de\s+)?crypto", lowered)
+        # A weight needs a "%"/"pour cent" or an "en/de crypto" context: "je détiens 2
+        # cryptos" is a count, not a 2 % target (#186, item 10).
+        m_crypto = re.search(
+            r"(\d+(?:[.,]\d+)?)\s*(?:(?:%|pour\s*cent)\s*(?:en\s+|de\s+|d')?|en\s+|de\s+|d')crypto",
+            lowered,
+        )
         if m_crypto:
             w_c = float(m_crypto.group(1).replace(",", ".")) / 100.0
             if 0 < w_c <= 1:
@@ -878,6 +883,7 @@ def build_profile(
     current_holdings = None
     holdings_unanalysed: dict[str, float] = {}
     holdings_cash: float | None = None
+    budget_inferred = False
     if p.get("current_holdings"):
         from alphaforge.holdings import parse_holdings
 
@@ -885,11 +891,14 @@ def build_profile(
         holdings_unanalysed = dict(getattr(current_holdings, "unanalysed", {}))
         holdings_cash = getattr(current_holdings, "cash", None)
         if budget is None:
+            # A balance, not a contribution: used for sizing, never compared with TFSA room.
             total_amt = getattr(current_holdings, "total_amount", None)
             if total_amt is not None and total_amt > 0:
                 budget = float(total_amt)
+                budget_inferred = True
             elif current_holdings and sum(current_holdings.values()) > 100:
                 budget = float(sum(current_holdings.values()))
+                budget_inferred = True
 
     from alphaforge.personas import declared_limits
     limits = declared_limits(persona_data or p)
@@ -915,7 +924,9 @@ def build_profile(
                 conflicts.append(f"Hypothèse KYC ({f.evidence_id}) : {f.assumption_note}")
 
     age_band_val = limits.get("age_band")
-    if account_type == "tfsa" and budget and age_band_val:
+    # Only a stated amount is compared with the room: a TFSA balance inferred from the
+    # holdings can exceed the cumulative room through growth (#186, item 3).
+    if account_type == "tfsa" and budget and age_band_val and not budget_inferred:
         from alphaforge.tax import tfsa_room_check, tfsa_room_sentences
         room_chk = tfsa_room_check(account_type, budget, age_band_val)
         if room_chk:
@@ -932,6 +943,7 @@ def build_profile(
         constraints=constraints,
         preferences=preferences,
         budget_cad=budget,
+        budget_inferred=budget_inferred,
         account_type=account_type,
         request_type="judge" if idea else "build",
         requested_idea=idea,
@@ -1142,7 +1154,12 @@ def profile_node(state: GraphState) -> dict:
         language=lang,
     )
 
-    if profile.account_type == "tfsa" and profile.budget_cad and profile.age_band:
+    if (
+        profile.account_type == "tfsa"
+        and profile.budget_cad
+        and profile.age_band
+        and not profile.budget_inferred
+    ):
         from alphaforge.evidence import EvidenceRegistry
         from alphaforge.tax import tfsa_room_check, tfsa_room_evidence
 

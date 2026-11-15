@@ -14,7 +14,13 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
-from alphaforge.data.holdings import holdings_date, holdings_weights, is_complete, load_holdings
+from alphaforge.data.holdings import (
+    holdings_date,
+    holdings_weights,
+    is_complete,
+    load_holdings,
+    look_through,
+)
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState
@@ -81,21 +87,79 @@ def correlation(prices: pd.DataFrame, a: Target, b: Target) -> float:
     return float(returns(prices, a).corr(returns(prices, b)))
 
 
-def concentration(target: Target, info: pd.DataFrame) -> dict[str, float]:
-    """Sector HHI, US-listed exposure and top weight. `info` is DataProvider.asset_info().
+OTHER_SECTOR = "Autres"  # ETF holdings outside the universe have no sector label
+GICS_SECTORS = 11  # the undocumented remainder of a broad index fund is spread evenly over them
 
-    HHI uses the universe's sector labels (an ETF counts as its own sector; look-through
-    comes with the ETF holdings in A-4). US exposure = weight in US-listed assets; crypto
-    has no country and is not counted.
+
+def _lookthrough_weights(
+    w: pd.Series, holdings_dir=None, as_of: dt.date | str | None = None
+) -> dict[str, float]:
+    return look_through(w.to_dict(), holdings_dir=holdings_dir, as_of=as_of)
+
+
+def _sector_of(name: str, info: pd.DataFrame) -> str:
+    """Universe sector label where present, otherwise "Autres" (holdings carry no sector field)."""
+    if name in info.index:
+        return str(info.at[name, "sector"])
+    return OTHER_SECTOR
+
+
+def _is_us(name: str, info: pd.DataFrame) -> bool:
+    if name in info.index:
+        return info.at[name, "market"] in US_MARKETS
+    etf = name.split(":other")[0] if name.endswith(":other") else None
+    if etf in info.index:
+        return info.at[etf, "market"] in US_MARKETS
+    return not name.endswith(".TO")
+
+
+def _is_canada(name: str, info: pd.DataFrame) -> bool:
+    if name in info.index:
+        return info.at[name, "market"] == "TSX"
+    etf = name.split(":other")[0] if name.endswith(":other") else None
+    if etf in info.index:
+        return info.at[etf, "market"] == "TSX"
+    return name.endswith(".TO")
+
+
+def concentration(
+    target: Target,
+    info: pd.DataFrame,
+    holdings_dir=None,
+    as_of: dt.date | str | None = None,
+) -> dict[str, float | str | None]:
+    """Sector HHI, country exposure and single-name exposure, looking through ETF holdings (#173).
+
+    An ETF with cached holdings (SPY, QQQ, ESGV, XIU.TO) is replaced by its holdings; each
+    holding takes the universe sector label when it is in the universe, otherwise "Autres".
+    The "Autres" share is not one sector: it is assumed spread evenly across the 11 GICS
+    sectors, so HHI = sum(known sector share^2) + other_share^2 / 11 (reported as
+    `other_sector_share`, cited as an assumption by the scenario node).
+    `us_exposure` / `canada_exposure` count the look-through weight in US- / TSX-listed names
+    (crypto has no country). `top_weight` stays the largest line of the portfolio (the UI
+    metric); `top_name_exposure` is the largest look-through exposure to one name, e.g. AAPL
+    held directly plus via SPY and QQQ. `effective_sectors` = 1 / HHI.
     """
     w = pd.Series({target: 1.0} if isinstance(target, str) else target, dtype=float)
     w = w / w.sum()
-    sectors = w.groupby(info.loc[w.index, "sector"]).sum()
-    us = info.loc[w.index, "market"].isin(US_MARKETS).to_numpy()
+    lt = _lookthrough_weights(w, holdings_dir, as_of)
+    sectors: dict[str, float] = {}
+    for name, x in lt.items():
+        s = _sector_of(name, info)
+        sectors[s] = sectors.get(s, 0.0) + x
+    other = sectors.pop(OTHER_SECTOR, 0.0)
+    hhi = float(sum(v * v for v in sectors.values()) + other * other / GICS_SECTORS)
+    names = {n: x for n, x in lt.items() if not n.endswith(":other")}
+    top_name = max(sorted(names), key=lambda n: names[n]) if names else None
     return {
-        "sector_hhi": float((sectors**2).sum()),
-        "us_exposure": float(w[us].sum()),
+        "sector_hhi": hhi,
+        "effective_sectors": 1.0 / hhi if hhi > 0 else float("nan"),
+        "us_exposure": float(sum(x for n, x in lt.items() if _is_us(n, info))),
+        "canada_exposure": float(sum(x for n, x in lt.items() if _is_canada(n, info))),
         "top_weight": float(w.max()),
+        "top_name_exposure": float(names[top_name]) if top_name else 0.0,
+        "top_name": top_name,
+        "other_sector_share": float(other),
     }
 
 
@@ -110,10 +174,11 @@ def usd_exposure(target: Target, info: pd.DataFrame) -> float:
     return float(w[usd].sum())
 
 
-def effective_sectors(target: Target, info: pd.DataFrame) -> float:
-    """1 / Herfindahl index of sector weights."""
-    hhi = concentration(target, info)["sector_hhi"]
-    return 1.0 / hhi if hhi > 0 else float("nan")
+def effective_sectors(
+    target: Target, info: pd.DataFrame, holdings_dir=None, as_of: dt.date | str | None = None
+) -> float:
+    """1 / Herfindahl index of the look-through sector weights ("≈ N secteurs effectifs")."""
+    return float(concentration(target, info, holdings_dir, as_of)["effective_sectors"])
 
 
 def etf_overlap(

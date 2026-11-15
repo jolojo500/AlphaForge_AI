@@ -13,17 +13,19 @@ returns no objection.
 """
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from alphaforge import config, llm
 from alphaforge.evidence import EID_RE, numeric
-from alphaforge.nodes.verifier import check_numbers, check_wording
+from alphaforge.nodes.verifier import check_numbers, check_text_wording
 from alphaforge.state import Evidence, GraphState
 from alphaforge.tracing import traced
 
 MAX_OBJECTIONS = 4
+log = logging.getLogger(__name__)
 
 
 class Objection(BaseModel):
@@ -124,21 +126,45 @@ def _prompt(state: GraphState, language: str = "fr") -> str:
     return "\n".join(lines)
 
 
+def reword_objection(text: str, language: str = "fr") -> str | None:
+    """The objection text with internal terms replaced by their plain wording, or None when
+    it still fails the wording rules after that substitution.
+
+    Objections are shown next to the answer and checked by the verifier, but never
+    regenerated: a forbidden word left here would make the explain step retry for nothing
+    (#186, item 5). Plain-term substitution is deterministic; advice wording ("nous
+    recommandons de vendre") has no safe rewrite and drops the objection.
+    """
+    from alphaforge.nodes.explain import plain_terms
+
+    errors = check_text_wording([("objection", text)])
+    if not errors:
+        return text
+    rewritten = plain_terms(text, language).strip()
+    if rewritten != text and not check_text_wording([("objection", rewritten)]):
+        log.info("red team objection reworded: %s -> %s", text, rewritten)
+        return rewritten
+    log.warning("red team objection dropped (wording): %s | %s", text, "; ".join(errors))
+    return None
+
+
 def clean_objections(review: Review, state: GraphState, first_pass: bool) -> list[dict]:
     """Keep only objections backed by existing evidence; enforce the blocking policy."""
     out = []
+    language = getattr(state.profile, "language", None) or "fr"
     for o in review.objections[:MAX_OBJECTIONS]:
         ids = [e for e in dict.fromkeys(o.evidence + EID_RE.findall(o.objection)) if e in state.evidence]
         if not ids or not o.objection.strip():
             continue
         # Same deterministic checks as the explanation: no invented number, no advice wording.
         probe = {"pourquoi_ce_choix": [{"claim": o.objection, "evidence": ids}]}
-        if check_numbers(probe, state.evidence) or check_wording({"resume": o.objection}):
+        if check_numbers(probe, state.evidence):
+            continue
+        text = reword_objection(o.objection.strip(), language)
+        if text is None:
             continue
         severity = o.severity if first_pass else "warning"
-        out.append(
-            {"scenario": o.scenario, "objection": o.objection.strip(), "evidence": ids, "severity": severity}
-        )
+        out.append({"scenario": o.scenario, "objection": text, "evidence": ids, "severity": severity})
     return out
 
 

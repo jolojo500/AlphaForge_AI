@@ -164,6 +164,15 @@ export interface SavedRunSummary {
   status: string;
   verification_passed?: boolean;
   is_golden?: boolean;
+  /** Set on a what-if run (the server fills it when it lists runs). */
+  parent_run_id?: string | null;
+  /** The what-if change, when this run is one. */
+  change?: WhatIfChange | null;
+  /** Short profile summary for the history list ("Horizon 10 ans · tolérance modérée · CELI"). */
+  profile_summary?: string | null;
+  horizon_years?: number | null;
+  risk_tolerance?: string | null;
+  account_type?: string | null;
 }
 
 export interface Exclusion {
