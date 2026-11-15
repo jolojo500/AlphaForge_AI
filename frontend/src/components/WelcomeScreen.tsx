@@ -23,6 +23,7 @@ interface WelcomeScreenProps {
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
   onLogout?: () => void;
 }
 
@@ -32,6 +33,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onOpenHistory,
   currentUser,
   onOpenAuth,
+  onOpenProfile,
   onLogout,
 }) => {
   const { language } = useLanguage();
@@ -59,7 +61,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         <div className="flex items-center gap-2">
           {currentUser ? (
             <div className="flex items-center gap-1.5">
-              <div className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-muted/40 text-foreground text-xs font-medium select-none">
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-muted/40 hover:bg-muted text-foreground text-xs font-medium cursor-pointer transition-colors"
+                title={isEn ? 'View and edit profile' : 'Voir et modifier mon profil'}
+              >
                 {currentUser.is_advisor ? (
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 ) : (
@@ -71,7 +78,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                     {isEn ? 'Advisor' : 'Conseiller'}
                   </Badge>
                 )}
-              </div>
+              </button>
               {onLogout && (
                 <Button
                   type="button"

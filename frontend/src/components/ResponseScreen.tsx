@@ -50,6 +50,7 @@ interface ResponseScreenProps {
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
   onLogout?: () => void;
   onReviewed?: (updated: Partial<GraphState>) => void;
 }
@@ -70,6 +71,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   onOpenHistory,
   currentUser,
   onOpenAuth,
+  onOpenProfile,
   onLogout,
   onReviewed,
 }) => {
@@ -130,6 +132,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
           onOpenHistory={onOpenHistory}
           currentUser={currentUser}
           onOpenAuth={onOpenAuth}
+          onOpenProfile={onOpenProfile}
           onLogout={onLogout}
         />
 

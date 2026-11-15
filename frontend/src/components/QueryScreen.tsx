@@ -20,6 +20,7 @@ interface QueryScreenProps {
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
   onLogout?: () => void;
   initialQuery?: string;
 }
@@ -34,6 +35,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   onOpenHistory,
   currentUser,
   onOpenAuth,
+  onOpenProfile,
   onLogout,
   initialQuery = '',
 }) => {
@@ -87,6 +89,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
         onOpenHistory={onOpenHistory}
         currentUser={currentUser}
         onOpenAuth={onOpenAuth}
+        onOpenProfile={onOpenProfile}
         onLogout={onLogout}
       />
 

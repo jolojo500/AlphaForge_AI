@@ -15,8 +15,6 @@ import {
   createWhatIf,
   fetchRunDiff,
   getStoredUser,
-  setStoredUser,
-  setAuthToken,
   fetchCurrentUser,
   logout,
   getAuthToken,
@@ -33,6 +31,7 @@ import { ResponseScreen } from './components/ResponseScreen';
 import { EvidenceModal } from './components/EvidenceModal';
 import { ReplayRunModal } from './components/ReplayRunModal';
 import { AuthModal } from './components/AuthModal';
+import { ProfileModal } from './components/ProfileModal';
 import { AppHeader } from './components/AppHeader';
 import { DEMO_PERSONAS } from './lib/demoProfiles';
 import { Button } from './components/ui/button';
@@ -72,6 +71,7 @@ export const AppContent: React.FC = () => {
   // Authentication state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   // Unsubscribe ref for SSE stream
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -179,19 +179,8 @@ export const AppContent: React.FC = () => {
     setView('welcome');
   };
 
-  // Pick demo persona: auto-authenticate as this demo persona and navigate to query screen with empty question
+  // Pick demo persona and navigate to query screen with empty question
   const handleSelectDemo = (personaId: 'robert' | 'amira' | 'mateo') => {
-    const demo = DEMO_PERSONAS[personaId];
-    const demoUser: AuthUser = {
-      user_id: personaId,
-      username: demo ? demo.name : personaId.charAt(0).toUpperCase() + personaId.slice(1),
-      email: `${personaId}@alphaforge.demo`,
-      groups: [],
-      is_advisor: false,
-    };
-    setStoredUser(demoUser);
-    setAuthToken(`demo-session-${personaId}`);
-    setCurrentUser(demoUser);
     setActivePersonaId(personaId);
     setInitialQuery(''); // Question input field is intentionally left empty
     setView('query');
@@ -398,6 +387,7 @@ export const AppContent: React.FC = () => {
           onOpenHistory={currentUser ? () => setIsReplayModalOpen(true) : undefined}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
         />
         <ReplayRunModal
@@ -412,6 +402,11 @@ export const AppContent: React.FC = () => {
           onSuccess={(user) => {
             setCurrentUser(user);
           }}
+        />
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
         />
       </>
     );
@@ -443,6 +438,7 @@ export const AppContent: React.FC = () => {
           onOpenHistory={() => setIsReplayModalOpen(true)}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
           initialQuery={initialQuery}
         />
@@ -458,6 +454,11 @@ export const AppContent: React.FC = () => {
           onSuccess={(user) => {
             setCurrentUser(user);
           }}
+        />
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
         />
       </>
     );
@@ -556,6 +557,7 @@ export const AppContent: React.FC = () => {
             onOpenHistory={() => setIsReplayModalOpen(true)}
             currentUser={currentUser}
             onOpenAuth={() => setIsAuthModalOpen(true)}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
             onLogout={handleLogout}
             onReviewed={(updated) => {
               setRunState((prev) => (prev ? { ...prev, ...updated } : null));
@@ -577,6 +579,11 @@ export const AppContent: React.FC = () => {
             onSuccess={(user) => {
               setCurrentUser(user);
             }}
+          />
+          <ProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => setIsProfileModalOpen(false)}
+            currentUser={currentUser}
           />
         </>
       );
