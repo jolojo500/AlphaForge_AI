@@ -97,6 +97,75 @@ def test_template_is_consistent_with_evidence(state):
         assert e[sec]
 
 
+@pytest.mark.parametrize(
+    ("ticker", "weight", "asset_class"),
+    [
+        ("BTC-USD", 0.05, "crypto"),
+        ("SHOP.TO", 0.10, "equity"),
+        ("NVDA", 0.10, "equity"),
+        ("SPY", 0.20, "etf_equity"),
+        ("GLD", 0.20, "etf_commodity"),
+    ],
+)
+def test_direct_assessment_is_asset_agnostic_and_does_not_invent_holdings(
+    state, ticker, weight, asset_class
+):
+    profile = state.profile.model_copy(
+        update={
+            "requested_idea": {"ticker": ticker, "weight": weight},
+            "request_type": "judge",
+            "current_holdings": None,
+        }
+    )
+    reviewed = state.model_copy(update={"profile": profile})
+
+    answer = ex.template_explanation(reviewed)
+    assert ticker in answer["resume"]
+    assert "hypothétique" in answer["resume"]
+    assert asset_class in ex.build_prompt(reviewed)
+    assert any("capitalisation boursière" in item["claim"] for item in answer["limites"])
+
+
+def test_low_capacity_profile_rejects_crypto_weight_clearly(state):
+    profile = state.profile.model_copy(
+        update={
+            "risk_tolerance": "low_moderate",
+            "risk_capacity": "low",
+            "requested_idea": {"ticker": "BTC-USD", "weight": 0.05},
+            "request_type": "judge",
+            "conflicts": [],
+            "current_holdings": None,
+        }
+    )
+    answer = ex.template_explanation(state.model_copy(update={"profile": profile}))
+
+    assert "peu cohérente" in answer["resume"]
+    assert answer["scenario_le_plus_coherent"] == "profile_baseline"
+    assert "votre portefeuille" in answer["resume"]
+
+
+def test_subpercent_request_is_not_rounded_to_zero(state):
+    profile = state.profile.model_copy(
+        update={
+            "requested_idea": {"ticker": "BTC-USD", "weight": 0.005},
+            "request_type": "judge",
+            "current_holdings": None,
+        }
+    )
+    answer = ex.template_explanation(state.model_copy(update={"profile": profile}))
+
+    assert "0,5 %" in answer["resume"]
+
+
+def test_best_scenario_never_selects_current_holdings(state):
+    from alphaforge.state import Scenario
+
+    current = Scenario(name="current", weights={"TSLA": 1.0}, metrics={})
+    reviewed = state.model_copy(update={"scenarios": [*state.scenarios, current]})
+
+    assert ex.template_explanation(reviewed)["scenario_le_plus_coherent"] in SCENARIO_NAMES
+
+
 def test_node_offline_uses_template_and_traces(state):
     out = ex.explain_node(state)
     assert out["explanation"]["scenario_le_plus_coherent"] in SCENARIO_NAMES

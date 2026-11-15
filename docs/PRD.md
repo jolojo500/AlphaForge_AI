@@ -430,6 +430,9 @@ See §3.4 and §3.5.
 ```
 
 - **Wording.** Consistency language, not advice. No future returns. Facts, assumptions and fictional scenarios distinguished.
+- **Decision-first answer.** Start with a clear assessment of the requested asset against both risk tolerance and capacity, objective, and horizon. Apply the relevant evidence to any supported asset class; do not make a ticker-specific workflow for crypto.
+- **No assumed wallet.** When no current holdings are supplied, label the unprovided portfolio remainder as hypothetical. The simulated comparison must not be presented as the client's actual wallet or as the actual portfolio-level effect of the trade.
+- **Asset-specific evidence and limits.** Use available asset-level historical risk, trading-volume proxy, news, ETF look-through and macro evidence where relevant. Never invent market capitalization, valuation, market cycles or an asset-specific macro effect. State when these data are unavailable.
 - **Tests.** Mocked LLM: schema validates; a malformed reply is repaired or fails cleanly. Live test (marked) on Robert.
 
 ### 5.10 Verifier (Python) · Track B

@@ -148,10 +148,69 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
 
           {/* Direct Answer Card */}
           {runState.explanation && (
-            <div className="p-5 bg-card border border-border rounded-xl shadow-2xs space-y-3.5 text-left">
-              <p className="text-xs sm:text-sm leading-relaxed text-foreground whitespace-pre-line font-normal">
-                {runState.explanation.resume}
-              </p>
+            <div className="p-5 sm:p-6 bg-card border border-border rounded-2xl shadow-sm space-y-4 text-left">
+              {/* Profile Context Badges */}
+              {runState.profile && (
+                <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-border/50 text-xs">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                    {isEn ? 'Profile-based assessment' : 'Évaluation selon le profil'}
+                  </span>
+                  {runState.profile.horizon_years && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-foreground font-medium text-[11px]">
+                      {isEn ? `Horizon: ${runState.profile.horizon_years} yrs` : `Horizon : ${runState.profile.horizon_years} ans`}
+                    </span>
+                  )}
+                  {runState.profile.risk_tolerance && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-foreground font-medium text-[11px]">
+                      {isEn
+                        ? `Tolerance: ${runState.profile.risk_tolerance}`
+                        : `Risque : ${
+                            runState.profile.risk_tolerance === 'high'
+                              ? 'Élevé'
+                              : runState.profile.risk_tolerance === 'low_moderate'
+                              ? 'Faible à modéré'
+                              : runState.profile.risk_tolerance === 'low'
+                              ? 'Faible'
+                              : 'Modéré'
+                          }`}
+                    </span>
+                  )}
+                  {runState.profile.risk_capacity && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-foreground font-medium text-[11px]">
+                      {isEn
+                        ? `Capacity: ${runState.profile.risk_capacity}`
+                        : `Capacité : ${
+                            runState.profile.risk_capacity === 'high'
+                              ? 'Élevée'
+                              : runState.profile.risk_capacity === 'low'
+                              ? 'Faible'
+                              : 'Modérée'
+                          }`}
+                    </span>
+                  )}
+                  {runState.profile.objective && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-foreground font-medium text-[11px]">
+                      {isEn
+                        ? `Objective: ${runState.profile.objective}`
+                        : `Objectif : ${
+                            runState.profile.objective === 'capital_preservation'
+                              ? 'Préservation du capital'
+                              : runState.profile.objective === 'growth'
+                              ? 'Croissance'
+                              : 'Équilibré'
+                          }`}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-3.5 text-xs sm:text-sm leading-relaxed text-foreground font-normal">
+                {runState.explanation.resume.split('\n\n').map((paragraph, idx) => (
+                  <p key={idx} className="leading-relaxed">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
 
               {runState.explanation.avertissement &&
                 !runState.explanation.avertissement.toLowerCase().includes('simulation éducative') &&
@@ -161,17 +220,6 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
                     <p className="leading-relaxed">{runState.explanation.avertissement}</p>
                   </div>
                 )}
-            </div>
-          )}
-
-          {/* Verified Scenario Comparison (Directly Visible) */}
-          {runState.scenarios && runState.scenarios.length > 0 && (
-            <div className="space-y-2">
-              <ScenarioCards
-                scenarios={runState.scenarios}
-                evidence={runState.evidence}
-                mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
-              />
             </div>
           )}
 
@@ -240,6 +288,17 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
             {/* Conflicts Alert if any detected */}
             {runState.profile?.conflicts && runState.profile.conflicts.length > 0 && (
               <ConflictsAlert conflicts={runState.profile.conflicts} />
+            )}
+
+            {/* Verified Scenario Comparison (Directly Visible inside technical details) */}
+            {runState.scenarios && runState.scenarios.length > 0 && (
+              <div className="space-y-2">
+                <ScenarioCards
+                  scenarios={runState.scenarios}
+                  evidence={runState.evidence}
+                  mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
+                />
+              </div>
             )}
 
             {/* 4-Question BNCD Explanation with Clickable Evidence Badges (PRD 5.4) */}

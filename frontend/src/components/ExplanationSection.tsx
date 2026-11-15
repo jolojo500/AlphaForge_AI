@@ -73,7 +73,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
             <h2 className="text-sm sm:text-base font-semibold text-foreground">
-              {t('explain.title', '4. Explicabilité de la décision (Les 4 questions BNCD)')}
+              {t('explain.title', 'Explicabilité & Gouvernance (Les 4 piliers BNCD)')}
             </h2>
           </div>
 

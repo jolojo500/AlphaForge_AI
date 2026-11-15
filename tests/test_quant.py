@@ -125,3 +125,6 @@ def test_requested_ticker_is_analysed_and_correlated():
     assert find_one(ev, metric="volatility_ann", ticker="TSLA") is not None
     corr = find_one(ev, metric="correlation", tickers=["SPY", "TSLA"])
     assert corr is not None and not math.isnan(numeric(corr))
+    traded_value = find_one(ev, metric="avg_daily_traded_value_20d_cad", ticker="TSLA")
+    assert traded_value is not None and numeric(traded_value) > 0
+    assert traded_value.value["observations"] <= 20
