@@ -3,7 +3,7 @@ import datetime as dt
 
 from alphaforge.i18n import detect_language
 from alphaforge.nodes.explain import template_explanation
-from alphaforge.nodes.profile import Extraction, detect_conflict, needs_clarification
+from alphaforge.nodes.profile import Extraction, _regex_extract, detect_conflict, needs_clarification
 from alphaforge.nodes.scenarios import _template_notes
 from alphaforge.state import Evidence, GraphState, Profile, Scenario
 
@@ -96,3 +96,23 @@ def test_template_explanation_english():
     assert "Comparison of three" in exp["resume"]
     assert "Educational simulation. No personalized advice." == exp["avertissement"]
     assert "Historical statistics do not describe the future." == exp["incertitude"]
+
+
+def test_demo_personas_no_clarification_both_languages():
+    from alphaforge.personas import PERSONAS
+
+    for persona_id, p in PERSONAS.items():
+        req_fr = p.get("example_request", "")
+        if req_fr:
+            q_fr = needs_clarification(req_fr, _regex_extract(req_fr), language="fr")
+            assert q_fr is None, f"Persona {persona_id} asked question in French: {q_fr}"
+
+    en_requests = {
+        "amira": "I want to invest $100,000 with a focus on tech and crypto for a 15-year horizon.",
+        "mateo": "I want to build a balanced ESG portfolio with a 10-year horizon.",
+        "robert": "I want to preserve my capital with a 4-year horizon before retirement.",
+    }
+    for persona_id, req_en in en_requests.items():
+        q_en = needs_clarification(req_en, _regex_extract(req_en), language="en")
+        assert q_en is None, f"Persona {persona_id} asked question in English: {q_en}"
+
