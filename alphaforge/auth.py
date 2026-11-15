@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import os
+import re
 import threading
 from typing import Annotated, Any
 
@@ -119,19 +120,19 @@ def verify_token(token: str) -> User:
         unverified_header = jwt.get_unverified_header(token)
         alg = unverified_header.get("alg")
 
-        if alg == "HS256":
-            payload = jwt.decode(token, LOCAL_DEV_SECRET, algorithms=["HS256"])
-        else:
-            client = get_jwks_client()
-            signing_key = client.get_signing_key_from_jwt(token)
-            issuer = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}"
-            payload = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256"],
-                issuer=issuer,
-                options={"verify_aud": False},
-            )
+        if alg != "RS256":
+            # Locally signed dev tokens use a secret that is in the repository: never valid here.
+            raise ValueError("unsupported token algorithm")
+        client = get_jwks_client()
+        signing_key = client.get_signing_key_from_jwt(token)
+        issuer = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}"
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=issuer,
+            options={"verify_aud": False},
+        )
     except Exception as e:
         logger.warning("Token verification failed: %s", e)
         raise HTTPException(status_code=401, detail=f"Jeton invalide ou expiré: {e}") from e
@@ -233,58 +234,67 @@ def authenticate_user(username: str, password: str) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail=f"Erreur d'authentification: {e}") from e
 
 
+def _dev_bundle(user: User) -> dict[str, Any]:
+    token = create_dev_token(user)
+    return {
+        "access_token": token,
+        "id_token": token,
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "user": user.model_dump(),
+    }
+
+
 def register_user(username: str, password: str, email: str | None = None) -> dict[str, Any]:
-    """Register a new user account (in offline dev mode or Cognito if configured)."""
+    """Create an account: Cognito sign-up when auth is on, a dev token when it is off.
+
+    A failed sign-up is an error. It never falls back to a locally signed token, which would
+    let anyone obtain a session for an existing username.
+    """
     username = username.strip()
-    if not username:
-        raise HTTPException(status_code=400, detail="Nom d'utilisateur requis.")
-    if len(password) < 6:
-        raise HTTPException(status_code=400, detail="Le mot de passe doit comporter au moins 6 caractères.")
+    if not re.fullmatch(r"[A-Za-z0-9._-]{3,64}", username):
+        raise HTTPException(
+            status_code=400,
+            detail="Nom d'utilisateur invalide (3 à 64 caractères : lettres, chiffres, . _ -).",
+        )
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit comporter au moins 8 caractères.")
 
     if not is_auth_enabled():
-        user = User(
-            user_id=username,
-            username=username,
-            email=email or f"{username}@alphaforge.demo",
-            groups=["advisor"] if username == "advisor" else [],
-        )
-        token = create_dev_token(user)
-        return {
-            "access_token": token,
-            "id_token": token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "user": user.model_dump(),
-        }
+        # Dev mode only: no group is ever granted at registration.
+        return _dev_bundle(User(user_id=username, username=username, email=email or f"{username}@alphaforge.demo"))
 
+    profile = os.getenv("AWS_PROFILE")
+    session = (
+        boto3.Session(profile_name=profile, region_name=COGNITO_REGION)
+        if profile
+        else boto3.Session(region_name=COGNITO_REGION)
+    )
+    client = session.client("cognito-idp", region_name=COGNITO_REGION)
     try:
-        profile = os.getenv("AWS_PROFILE")
-        session = boto3.Session(profile_name=profile, region_name=COGNITO_REGION) if profile else boto3.Session(region_name=COGNITO_REGION)
-        client = session.client("cognito-idp", region_name=COGNITO_REGION)
-        user_attrs = [{"Name": "email", "Value": email or f"{username}@alphaforge.demo"}]
-        client.sign_up(
+        resp = client.sign_up(
             ClientId=COGNITO_CLIENT_ID,
             Username=username,
             Password=password,
-            UserAttributes=user_attrs,
+            UserAttributes=[{"Name": "email", "Value": email}] if email else [],
         )
-        return authenticate_user(username, password)
+    except client.exceptions.UsernameExistsException as e:
+        raise HTTPException(status_code=409, detail="Ce nom d'utilisateur est déjà pris.") from e
+    except (client.exceptions.InvalidPasswordException, client.exceptions.InvalidParameterException) as e:
+        raise HTTPException(
+            status_code=400,
+            detail="Mot de passe ou courriel refusé : 8 caractères minimum, avec majuscule, minuscule, "
+            "chiffre et symbole.",
+        ) from e
     except Exception as e:
-        logger.warning("Cognito sign_up fallback to dev token: %s", e)
-        user = User(
-            user_id=username,
-            username=username,
-            email=email or f"{username}@alphaforge.demo",
-            groups=[],
+        logger.warning("Cognito sign_up failed: %s", e)
+        raise HTTPException(status_code=503, detail="La création de compte est indisponible pour le moment.") from e
+    if not resp.get("UserConfirmed"):
+        raise HTTPException(
+            status_code=403,
+            detail="Compte créé, mais il doit être confirmé avant la première connexion.",
         )
-        token = create_dev_token(user)
-        return {
-            "access_token": token,
-            "id_token": token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "user": user.model_dump(),
-        }
+    return authenticate_user(username, password)
 
 
 def extract_token_from_request(request: Request) -> str | None:

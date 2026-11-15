@@ -39,30 +39,6 @@ import { DEMO_PERSONAS } from './lib/demoProfiles';
 import { Button } from './components/ui/button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 
-// Verified analysis components referenced and rendered inside ResponseScreen:
-import { ScenarioCards } from './components/ScenarioCards';
-import { ExplanationSection } from './components/ExplanationSection';
-import { ExclusionsCard } from './components/ExclusionsCard';
-import { EvidenceTable } from './components/EvidenceTable';
-import { NodeTrace } from './components/NodeTrace';
-import { ConflictsAlert } from './components/ConflictsAlert';
-import { WhatIfControls } from './components/WhatIfControls';
-import { AdvisorReviewPanel } from './components/AdvisorReviewPanel';
-
-// Export for direct test verification
-export {
-  ScenarioCards,
-  ExplanationSection,
-  ExclusionsCard,
-  EvidenceTable,
-  NodeTrace,
-  ConflictsAlert,
-  WhatIfControls,
-  AdvisorReviewPanel,
-  PersonaComparisonView,
-  ReplayRunModal,
-};
-
 const STORAGE_KEY = 'alphaforge_user_profile';
 
 type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results' | 'compare';
@@ -82,7 +58,7 @@ export const AppContent: React.FC = () => {
   // Live Backend execution state
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [, setActiveTrace] = useState<TraceEntry[]>([]);
+  const [activeTrace, setActiveTrace] = useState<TraceEntry[]>([]);
   const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState<boolean>(false);
   const [runError, setRunError] = useState<string | null>(null);
@@ -461,6 +437,7 @@ export const AppContent: React.FC = () => {
           onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
           initialQuery={initialQuery}
+          onCompare={() => setView('compare')}
         />
         <ReplayRunModal
           isOpen={isReplayModalOpen}
@@ -532,7 +509,7 @@ export const AppContent: React.FC = () => {
     if (isRunning && !runState) {
       return (
         <>
-          <LoadingScreen onCancel={handleCancelRun} />
+          <LoadingScreen onCancel={handleCancelRun} trace={activeTrace} />
           <EvidenceModal
             evidence={activeEvidence}
             onClose={() => setSelectedEvidenceId(null)}

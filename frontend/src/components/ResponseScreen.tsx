@@ -71,7 +71,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   onLogout,
   onReviewed,
 }) => {
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(true);
   const detailsRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
   const isEn = language === 'en';

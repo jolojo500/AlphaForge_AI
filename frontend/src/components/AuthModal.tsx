@@ -57,11 +57,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       );
       return;
     }
-    if (mode === 'register' && password.length < 6) {
+    if (mode === 'register' && password.length < 8) {
       setError(
         isEn
-          ? 'Password must be at least 6 characters.'
-          : 'Le mot de passe doit comporter au moins 6 caractères.'
+          ? 'Password must be at least 8 characters.'
+          : 'Le mot de passe doit comporter au moins 8 caractères.'
       );
       return;
     }

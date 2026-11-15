@@ -400,18 +400,18 @@ def template_explanation(state: GraphState) -> dict:
     )
     if ticker and weight_pct:
         resume = (
-            f"Votre souhait d'investir {weight_pct} % sur {ticker} a été analysé à travers trois scénarios face à votre profil {tol_str} (horizon de {horizon} ans). "
+            f"Votre souhait d'investir {weight_pct} % sur {ticker} a été analysé à travers trois scénarios face à votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
             f"{scenario_label.capitalize()} ressort comme le plus cohérent avec votre capacité financière et vos objectifs."
         )
     elif ticker:
         resume = (
-            f"L'exposition à {ticker} a été analysée à travers trois scénarios face à votre profil {tol_str} (horizon de {horizon} ans). "
+            f"L'exposition à {ticker} a été analysée à travers trois scénarios face à votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
             f"{scenario_label.capitalize()} ressort comme le plus cohérent avec votre profil de risque."
         )
     else:
         resume = (
-            f"Trois scénarios d'allocation ont été simulés pour votre profil {tol_str} (horizon de {horizon} ans). "
-            f"{scenario_label.capitalize()} présente le profil de risque le plus adapté."
+            f"Trois scénarios d'allocation ont été simulés pour votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
+            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec le profil déclaré."
         )
 
     if not donnees:

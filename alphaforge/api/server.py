@@ -26,9 +26,9 @@ from sse_starlette.sse import EventSourceResponse
 from alphaforge.auth import (
     User,
     authenticate_user,
-    register_user,
     get_current_user,
     get_current_user_from_request_or_none,
+    register_user,
     require_advisor,
 )
 from alphaforge.graph import (
@@ -559,9 +559,25 @@ class LoginRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    password: str
-    email: str | None = None
+    username: str = Field(max_length=64)
+    password: str = Field(max_length=256)
+    email: str | None = Field(default=None, max_length=254)
+
+
+REGISTER_LIMIT = int(os.getenv("AF_RATE_LIMIT_REGISTER", "5"))
+
+
+def _register_rate_limit(request: Request) -> None:
+    """At most REGISTER_LIMIT sign-ups per client IP per window (separate from the run budget)."""
+    key = f"reg:{_client_ip(request)}"
+    now = time.monotonic()
+    with _rate_lock:
+        q = _rate[key]
+        while q and now - q[0] > RATE_LIMIT_WINDOW_S:
+            q.popleft()
+        if len(q) >= REGISTER_LIMIT:
+            raise HTTPException(status_code=429, detail="Trop de créations de compte. Réessayez plus tard.")
+        q.append(now)
 
 
 @app.post("/auth/login")
@@ -571,14 +587,10 @@ def login_endpoint(req: LoginRequest) -> dict[str, Any]:
 
 
 @app.post("/auth/register")
-def register_endpoint(req: RegisterRequest) -> dict[str, Any]:
-    """Register a new user account."""
-    res = register_user(req.username, req.password, req.email)
-    get_user_store().save_user_profile(
-        req.username.strip(),
-        {"profile": {}, "account_type": None, "current_holdings": None},
-    )
-    return res
+def register_endpoint(req: RegisterRequest, request: Request) -> dict[str, Any]:
+    """Create an account. An existing user's saved profile is never touched."""
+    _register_rate_limit(request)
+    return register_user(req.username, req.password, req.email)
 
 
 @app.get("/auth/me")
