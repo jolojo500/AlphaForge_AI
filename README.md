@@ -105,7 +105,7 @@ L'application propose trois profils types représentatifs issus des cas d'usage 
 | Persona | Caractéristiques & Hypothèses | Requête type recommandée | Comportement attendu du système |
 |---|---|---|---|
 | **Amira** (26 ans) | Horizon 15+ ans, tolérance élevée, capacité élevée. Préfère les technos et cryptos, mais recherche la diversification. | *« J'ai 100 000 $ CAD, un horizon de 15 ans et plus. J'aime la techno et la crypto mais je veux rester diversifiée. »* | Les 31 actifs sont admissibles. L'exposition crypto est plafonnée à 10 %. Le chevauchement QQQ / SPY est mis en évidence. Le scénario `capped` réduit la perte maximale historique de -47,5 % à -38,4 %. |
-| **Mateo** (41 ans) | Horizon 10 ans, tolérance modérée, capacité modérée. Portefeuille équilibré, critères ESG stricts, évitement des controverses. | *« Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées. »* | Exclusion stricte des cryptoactifs (`no_crypto`) et du secteur énergétique fossile (ENB.TO, CNQ.TO, XOM). Validation du filtre ESG par les détentions de Vanguard ESGV. Scénario plafonné modéré (`capped`, volatilité de 12,2 %) et scénario de référence équilibré (`profile_baseline`, volatilité de 5,5 %). |
+| **Mateo** (41 ans) | Horizon 10 ans, tolérance modérée, capacité modérée. Portefeuille équilibré, critères ESG stricts, évitement des controverses. | *« Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées. »* | Exclusion stricte des cryptoactifs (`no_crypto`), du secteur énergétique fossile (ENB.TO, CNQ.TO, XOM) et de JNJ, absent de la composition complète de Vanguard ESGV. Scénario plafonné modéré (`capped`, volatilité de 12,8 %) et scénario de référence équilibré (`profile_baseline`, volatilité de 5,7 %). |
 | **Robert** (59 ans) | Horizon 4 ans, tolérance faible à modérée, capacité faible. Objectif de préservation du capital, attiré par un titre volatil. | *« Je veux mettre 25 % de mon portefeuille dans TSLA. »* | L'Agent 1 relève le conflit : 25 % dans TSLA excède le plafond de tolérance de 5 % pour un horizon court de 4 ans. Comparaison du choc de 2022 : -21,2 % pour la demande brute contre -4,9 % pour le scénario plafonné. Langage de cohérence sans aucun refus brutal. |
 
 ### Ce qu'il faut tester (Démonstration interactive)
@@ -146,8 +146,8 @@ Toutes les données utilisées sont publiques, horodatées et documentées :
 | **`macro_rates.csv`** | 2021-11-12 au 2026-11-12 (~8 300 lignes) | Séries de la Banque du Canada (taux directeur V39079, rendements 2y/10y, IPC) et de FRED (fonds fédéraux DFF, rendements 2y/10y, IPC, chômage US UNRATE). | Application d'un délai de publication réaliste (*publication lag*) par série pour éviter tout biais de prévoyance. |
 | **FNB SPY** (`SPY.json`) | 2026-11-12 | Composition intégrale (503 titres, couverture 99,87 %). Source : State Street. | Normalisation des pondérations, extraction des titres pour le calcul de chevauchement indiciel. |
 | **FNB XIU.TO** (`XIU.TO.json`) | 2026-11-12 | Composition intégrale (60 titres TSX, couverture actions 100 %). Source : BlackRock iShares Canada. | Normalisation des symboles avec suffixe `.TO`. |
-| **FNB QQQ** (`QQQ.json`) | 2026-11-13 | 25 premières positions sur 104 (71,3 % du fonds). Source : stockanalysis.com. | Liste partielle signalée comme borne inférieure lors des calculs de chevauchement. |
-| **FNB ESGV** (`ESGV.json`) | 2026-09-30 | 25 premières positions sur 1 220 (55,9 % du fonds). Source : stockanalysis.com. | Utilisé pour corroborer le filtrage ESG des grandes capitalisations américaines pour Mateo. |
+| **FNB QQQ** (`QQQ.json`, `QQQ/<date>.json`) | 2026-06-30 (instantanés datés 2026-03-31 et 2026-06-30) | Composition complète : 101 titres (99,43 % du fonds). Source : formulaire SEC EDGAR NPORT-P (CIK 0001067839), CUSIP résolus par OpenFIGI. | Chevauchements exacts ; l'instantané utilisé est le dernier publié avant la date d'analyse. |
+| **FNB ESGV** (`ESGV.json`, `ESGV/<date>.json`) | 2026-09-30 | Composition complète : 1 206 titres (99,96 % du fonds). Source : API publique de Vanguard. | Filtre ESG de Mateo : un titre américain absent d'ESGV est exclu avec une preuve sourcée. |
 | **Dépôts SEC EDGAR** (`sec_edgar_*.json`) | Extraits au 2026-11-15 (données 2025–2026) | Déclarations réglementaires officielles SEC (Form 8-K, 10-Q, 10-K, proxy statements) pour TSLA, NVDA, XOM, ENB.TO et BTC-USD (ETF IBIT CIK 1980994). | Extraction des rubriques matérielles (ex. item 1.01 engagement financier, 2.02 résultats financiers) et horodatage à la date de publication. |
 
 ---
@@ -155,9 +155,9 @@ Toutes les données utilisées sont publiques, horodatées et documentées :
 ## 8. Limites Connues
 
 Conformément aux normes d'intégrité de l'exercice :
-1. **Compositions partielles de FNB** : Seules les 25 premières détentions sont répertoriées pour QQQ et ESGV ; les chevauchements calculés représentent des bornes inférieures.
+1. **Instantanés de composition** : Les compositions de FNB sont des instantanés datés ; pour une date d'analyse antérieure au premier instantané, le plus ancien est utilisé et une hypothèse le signale.
 2. **Dépôts réglementaires plutôt que fil de presse** : En mode cache autonome, les événements reposent sur les dépôts SEC EDGAR sans analyse de la presse économique générale.
-3. **Absence du chômage canadien** : Le jeu de données macroéconomiques ne comprend pas le taux de chômage canadien.
+3. **Données de départ étendues** : Le fichier `macro_rates.csv` fourni par les organisateurs a été complété par le taux de chômage canadien (Statistique Canada, tableau 14-10-0287-01, vecteur v2062815, désaisonnalisé), documenté dans `sources_metadata.csv`.
 4. **Biais du survivant** : L'univers de 31 actifs regroupe des entreprises liquides et en activité en 2026.
 5. **Date fixe des FNB** : La composition des FNB est figée à l'instantané de fin 2026.
 
