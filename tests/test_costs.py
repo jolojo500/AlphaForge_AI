@@ -132,3 +132,24 @@ def test_scenarios_node_includes_fee_drag_and_assumptions():
     # Foreign bond cap entry exists for capital preservation
     bond_cap_entries = [e for e in ev.values() if isinstance(e.value, dict) and e.value.get("rule") == "foreign_fixed_income_cap"]
     assert len(bond_cap_entries) == 1
+
+
+def test_all_in_cost_calculation():
+    from alphaforge.costs import all_in_cost, fx_conversion_cost
+
+    assert fx_conversion_cost(0.40) == 0.0060
+    assert fx_conversion_cost(0.0) == 0.0
+    assert fx_conversion_cost(-0.1) == 0.0
+
+    res = all_in_cost(0.0015, 0.0060, 0.0025)
+    assert res["value"] == 0.0100
+    assert res["components"] == {
+        "fee_drag": 0.0015,
+        "fx_conversion_cost": 0.0060,
+        "tax_drag": 0.0025,
+    }
+
+    res_none = all_in_cost(None, 0.0060, None)
+    assert res_none["value"] == 0.0060
+    assert res_none["components"]["fee_drag"] == 0.0
+

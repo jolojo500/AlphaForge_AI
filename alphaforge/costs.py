@@ -89,7 +89,6 @@ NORBERTS_GAMBIT_NOTE = (
     "Pour les montants importants, la manœuvre de Norbert (Norbert's Gambit) via un titre intercoté "
     "(comme DLR/DLR.U) permet de réduire ce coût à environ 0,10 % - 0,20 %."
 )
-
 # Currency cap for capital preservation profiles
 CAPITAL_PRESERVATION_FOREIGN_BOND_CAP = 0.125
 FOREIGN_BOND_SOURCE = "Règle de conception AlphaForge (hypothèse) ; contexte : gestion du risque de change, CFA Institute"
@@ -151,23 +150,47 @@ def etf_mer_evidence(as_of: dt.date) -> list[dict]:
     return entries
 
 
+def fx_conversion_cost(usd_share: float) -> float:
+    """One-time retail conversion cost, as a share of the portfolio, for its USD-priced part."""
+    return round(max(float(usd_share), 0.0) * RETAIL_FX_SPREAD, 4)
+
+
 def fx_conversion_evidence(as_of: dt.date, usd_share: float, scenario: str) -> dict:
-    """Generate assumption evidence entry for FX conversion cost for the USD share of a scenario."""
+    """Assumption evidence for the FX conversion cost of the USD-priced share of a scenario.
+
+    `value` carries a top-level number (`value`, with `unit`) so that it renders as a figure;
+    `estimated_fx_drag` is kept as an alias for older readers.
+    """
+    cost = fx_conversion_cost(usd_share)
     return {
         "value": {
+            "metric": "fx_conversion_cost",
             "assumption": "fx_conversion_cost",
             "scenario": scenario,
+            "value": cost,
+            "unit": "ratio",
             "usd_share": round(usd_share, 4),
             "retail_spread": RETAIL_FX_SPREAD,
-            "estimated_fx_drag": round(usd_share * RETAIL_FX_SPREAD, 4),
+            "estimated_fx_drag": cost,
             "norberts_gambit": NORBERTS_GAMBIT_NOTE,
         },
         "source": FX_SPREAD_SOURCE,
         "url": FX_SPREAD_URL,
         "date": as_of,
-        "method": "retail CAD/USD foreign exchange conversion spread assumption (1.50 % on USD share)",
+        "method": "retail CAD/USD conversion spread assumption (1.50 %) applied once to the share "
+        "of the scenario priced in USD",
         "confidence": "assumption",
     }
+
+
+def all_in_cost(fee_drag: float | None, fx_cost: float | None, tax_drag: float | None) -> dict:
+    """Fees + FX conversion cost + tax drag, with the components (ratios of the portfolio)."""
+    parts = {
+        "fee_drag": round(float(fee_drag or 0.0), 4),
+        "fx_conversion_cost": round(float(fx_cost or 0.0), 4),
+        "tax_drag": round(float(tax_drag or 0.0), 4),
+    }
+    return {"value": round(sum(parts.values()), 4), "components": parts}
 
 
 def capital_preservation_foreign_bond_evidence(as_of: dt.date) -> dict:
