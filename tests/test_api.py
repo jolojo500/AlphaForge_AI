@@ -452,3 +452,15 @@ def test_security_headers_on_every_response():
         assert h["x-content-type-options"] == "nosniff"
         assert "frame-ancestors 'none'" in h["content-security-policy"]
         assert h["strict-transport-security"].startswith("max-age=")
+
+
+def test_daily_global_run_cap(monkeypatch):
+    from alphaforge.api import server
+
+    monkeypatch.setattr(server, "DAILY_RUN_CAP", 1)
+    monkeypatch.setattr(server, "_daily", {"day": None, "count": 0})
+    monkeypatch.setattr(server, "_rate", server.defaultdict(server.deque))
+    body = {"persona": "robert", "request_text": PERSONAS["robert"]["example_request"]}
+    a = TestClient(app, headers={"X-Client-Id": "a"})
+    assert a.post("/runs", json=body).status_code == 200
+    assert a.post("/runs", json=body).status_code == 429

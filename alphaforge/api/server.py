@@ -341,11 +341,24 @@ def _owner(request: Request) -> str:
     return f"c:{cid}" if cid else f"ip:{_client_ip(request)}"
 
 
+DAILY_RUN_CAP = int(os.getenv("AF_DAILY_RUN_CAP", "300"))
+_daily = {"day": None, "count": 0}
+
+
 def _rate_limit(request: Request) -> None:
-    """At most RATE_LIMIT_RUNS model-backed runs per client IP per window."""
+    """At most RATE_LIMIT_RUNS model-backed runs per client IP per window, and at most
+    DAILY_RUN_CAP runs per UTC day for the whole service (Bedrock budget guard, #111)."""
     key = _client_ip(request)
     now = time.monotonic()
+    today = dt.datetime.now(dt.UTC).date()
     with _rate_lock:
+        if _daily["day"] != today:
+            _daily["day"], _daily["count"] = today, 0
+        if _daily["count"] >= DAILY_RUN_CAP:
+            raise HTTPException(
+                status_code=429,
+                detail="Limite quotidienne d'analyses atteinte pour la démonstration. Réessayez demain.",
+            )
         q = _rate[key]
         while q and now - q[0] > RATE_LIMIT_WINDOW_S:
             q.popleft()
@@ -355,6 +368,7 @@ def _rate_limit(request: Request) -> None:
                 detail="Trop d'analyses lancées depuis cette adresse. Réessayez dans quelques minutes.",
             )
         q.append(now)
+        _daily["count"] += 1
 
 
 def _is_golden(run: Run) -> bool:
