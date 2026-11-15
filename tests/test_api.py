@@ -442,3 +442,13 @@ def test_rate_limit_per_ip(monkeypatch):
     body = {"persona": "robert", "request_text": PERSONAS["robert"]["example_request"]}
     codes = [client.post("/runs", json=body).status_code for _ in range(3)]
     assert codes == [200, 200, 429]
+
+
+def test_security_headers_on_every_response():
+    client = TestClient(app)
+    for path in ("/health", "/personas"):
+        h = client.get(path).headers
+        assert h["x-frame-options"] == "DENY"
+        assert h["x-content-type-options"] == "nosniff"
+        assert "frame-ancestors 'none'" in h["content-security-policy"]
+        assert h["strict-transport-security"].startswith("max-age=")

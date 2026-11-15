@@ -28,9 +28,9 @@ Chaque chiffre avancé dans l'explication est audité par un **vérificateur dé
 
 L'application est entièrement déployée et accessible publiquement sur AWS :
 
-- **Application Web & API REST** : [http://18.206.125.42/](http://18.206.125.42/)
-- **Vérification d'état (*Health check*)** : [http://18.206.125.42/health](http://18.206.125.42/health) (`{"status":"ok"}`)
-- **Liste des Personas** : [http://18.206.125.42/personas](http://18.206.125.42/personas)
+- **Application Web & API REST** : [https://d1br9rnvwb43a5.cloudfront.net/](https://d1br9rnvwb43a5.cloudfront.net/)
+- **Vérification d'état (*Health check*)** : [https://d1br9rnvwb43a5.cloudfront.net/health](https://d1br9rnvwb43a5.cloudfront.net/health) (`{"status":"ok"}`)
+- **Liste des Personas** : [https://d1br9rnvwb43a5.cloudfront.net/personas](https://d1br9rnvwb43a5.cloudfront.net/personas)
 - **Documentation technique détaillée** : [docs/TECHNICAL.md](docs/TECHNICAL.md)
 
 ---
