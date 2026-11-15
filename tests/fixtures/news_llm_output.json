@@ -1,0 +1,302 @@
+[
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "opinion",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "concentration",
+  "material": true
+ },
+ {
+  "relevant": false,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "opinion",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": true
+ },
+ {
+  "relevant": false,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "rates_inflation",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "opinion",
+  "risk_type": "rates_inflation",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "currency",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "liquidity",
+  "material": false
+ },
+ {
+  "relevant": false,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "concentration",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "liquidity",
+  "material": true
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "controversy",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "market",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "fact",
+  "risk_type": "credit",
+  "material": false
+ },
+ {
+  "relevant": true,
+  "kind": "opinion",
+  "risk_type": "market",
+  "material": false
+ }
+]
