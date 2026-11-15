@@ -62,6 +62,7 @@ Règles strictes :
 - Langage de cohérence, jamais de conseil réglementé : dis quel scénario est « le plus cohérent avec le profil déclaré », sans dire d'acheter, de vendre ou d'investir. Aucune prévision de rendement futur, aucune promesse. Les statistiques sont historiques.
   N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » : utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
 - Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives (« fictional »). Si une preuve est fictive ou une hypothèse, mentionne-le dans les limites.
+- Contexte crypto DefiLlama : s'il est fourni dans les preuves (ex. TVL Ethereum, offre de stablecoins), tu peux le citer de manière purement descriptive dans « quelles_donnees » ou « limites » avec son identifiant de preuve (par exemple « la valeur totale bloquée sur Ethereum était de ... au ... »), sans prévision, sans signal et sans conseil.
 - Pas de raisonnement interne : seulement des constats observables.
 - avertissement : « Simulation éducative. Aucun conseil personnalisé. »"""
 
@@ -84,6 +85,7 @@ Strict rules:
 - Consistency language, never advice: state which scenario is 'most consistent with the stated profile', without telling to buy, sell, or invest. No return forecast, no promise.
   NEVER use the roots 'recommend*' or 'advise*'.
 - Distinguish facts ('fact' evidence), assumptions ('assumption'), and fictional data ('fictional').
+- DefiLlama crypto context: if provided in the evidence (e.g. Ethereum TVL, stablecoin supply), you may cite it purely descriptively in 'quelles_donnees' or 'limites' with its evidence id (e.g. 'the total value locked on Ethereum was ... as of ...'), with no forecast, no signal, and no advice.
 - avertissement: 'Educational simulation. No personalized advice.'"""
 
 
@@ -514,6 +516,36 @@ def template_explanation(state: GraphState) -> dict:
                         "evidence": ids,
                     }
                 )
+    # DefiLlama crypto context when present in evidence
+    ev_tvl = next(
+        (
+            e
+            for e in state.evidence.values()
+            if isinstance(e.value, dict) and e.value.get("metric") == "eth_tvl"
+        ),
+        None,
+    )
+    if ev_tvl is not None:
+        if lang == "en":
+            donnees.append(
+                {
+                    "claim": (
+                        f"According to DefiLlama, the total value locked on Ethereum was "
+                        f"{printable(ev_tvl)} USD as of {ev_tvl.date}."
+                    ),
+                    "evidence": [ev_tvl.id],
+                }
+            )
+        else:
+            donnees.append(
+                {
+                    "claim": (
+                        f"Selon DefiLlama, la valeur totale bloquée sur Ethereum était de "
+                        f"{printable(ev_tvl)} USD au {ev_tvl.date}."
+                    ),
+                    "evidence": [ev_tvl.id],
+                }
+            )
     bm = _metric_value(state, best, "max_drawdown")
     if bm is not None:
         caps_evidence = [
@@ -607,6 +639,24 @@ def template_explanation(state: GraphState) -> dict:
             {"claim": "Historical statistics do not describe the future.", "evidence": []},
             {"claim": "Market capitalization, fundamental valuation, and a reliable market-cycle assessment are not available in this dataset.", "evidence": []},
         ]
+        ev_cross = next(
+            (
+                e
+                for e in state.evidence.values()
+                if isinstance(e.value, dict) and e.value.get("metric") == "btc_price_cross_check"
+            ),
+            None,
+        )
+        if ev_cross is not None:
+            limites.append(
+                {
+                    "claim": (
+                        f"DefiLlama's Bitcoin price shows a relative gap of {printable(ev_cross)} "
+                        f"compared to the data provider close as of {ev_cross.date}."
+                    ),
+                    "evidence": [ev_cross.id],
+                }
+            )
         if state.profile and state.profile.conflicts:
             limites.append(
                 {"claim": "The profile has contradictions with the formulated request.", "evidence": []}
@@ -672,6 +722,24 @@ def template_explanation(state: GraphState) -> dict:
         {"claim": "Les statistiques sont historiques et ne décrivent pas l'avenir.", "evidence": []},
         {"claim": "La capitalisation boursière, la valorisation fondamentale et une analyse fiable du cycle de marché ne sont pas disponibles dans ces données.", "evidence": []},
     ]
+    ev_cross = next(
+        (
+            e
+            for e in state.evidence.values()
+            if isinstance(e.value, dict) and e.value.get("metric") == "btc_price_cross_check"
+        ),
+        None,
+    )
+    if ev_cross is not None:
+        limites.append(
+            {
+                "claim": (
+                    f"Le cours Bitcoin de DefiLlama présente un écart relatif de {printable(ev_cross)} "
+                    f"par rapport au cours de clôture du fournisseur au {ev_cross.date}."
+                ),
+                "evidence": [ev_cross.id],
+            }
+        )
     if state.profile and state.profile.conflicts:
         limites.append(
             {"claim": "Le profil comporte des tensions avec la demande formulée.", "evidence": []}
