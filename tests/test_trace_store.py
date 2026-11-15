@@ -1,3 +1,5 @@
+import json
+
 """Tests for TraceStore (local JSON and DynamoDB) and S3 sync (C-5)."""
 
 import os
@@ -200,7 +202,7 @@ def test_golden_runs_survive_the_limit(tmp_path):
     store = LocalJsonTraceStore(storage_dir=tmp_path)
     for i in range(60):
         (tmp_path / f"r{i}.json").write_text(
-            '{"run_id": "r%d", "persona": "robert", "verification": {"passed": true}}' % i,
+            json.dumps({"run_id": f"r{i}", "persona": "robert", "verification": {"passed": True}}),
             encoding="utf-8",
         )
     runs = store.list_runs(limit=50, include_golden=True)
