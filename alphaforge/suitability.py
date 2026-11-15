@@ -18,6 +18,10 @@ from alphaforge.suitability_pdf import generate_suitability_pdf
 logger = logging.getLogger(__name__)
 
 
+class RecordExistsError(Exception):
+    """A suitability record already exists for this run; records are immutable."""
+
+
 def _to_dynamodb_friendly(obj: Any) -> Any:
     if isinstance(obj, float):
         return Decimal(str(obj))
@@ -65,6 +69,9 @@ class LocalSuitabilityStore(SuitabilityStore):
         self._pdfs: dict[str, bytes] = {}
 
     def save_record(self, run_id: str, record: dict[str, Any]) -> dict[str, Any]:
+        json_path = self.storage_dir / f"{run_id}.json"
+        if run_id in self._records or json_path.exists():
+            raise RecordExistsError(run_id)
         pdf_bytes = generate_suitability_pdf(record)
         self._records[run_id] = json.loads(json.dumps(record))
         self._pdfs[run_id] = pdf_bytes
@@ -172,8 +179,11 @@ class DynamoDBSuitabilityStore(SuitabilityStore):
         # Save record in DynamoDB
         db_item = _to_dynamodb_friendly(record_to_save)
         try:
-            self._table.put_item(Item=db_item)
-        except Exception:
+            # Write-once: a reviewed run's record can never be replaced.
+            self._table.put_item(Item=db_item, ConditionExpression="attribute_not_exists(run_id)")
+        except Exception as exc:
+            if "ConditionalCheckFailed" in type(exc).__name__ or "ConditionalCheckFailed" in str(exc):
+                raise RecordExistsError(run_id) from exc
             logger.exception("Failed to save suitability record to DynamoDB table %s", self.table_name)
             raise
 

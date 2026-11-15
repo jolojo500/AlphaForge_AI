@@ -13,3 +13,4 @@ frontend/dist/
 
 # local traces
 data/traces/
+.storage/

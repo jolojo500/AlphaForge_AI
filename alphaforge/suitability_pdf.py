@@ -121,15 +121,15 @@ def generate_suitability_pdf(record: dict[str, Any]) -> bytes:
     pdf = PDFBuilder()
 
     # Document Header Banner
-    pdf.add_text("BANQUE NATIONALE COURTAGE DIRECT · DOSSIER DE CONVENANCE", 50, 745, font_idx=2, size=14, r=0.08, g=0.20, b=0.45)
-    pdf.add_text("DOSSIER D'ADVISEMENT ET DE RECOMMANDATION CONFORME (PRD B-14)", 50, 730, font_idx=1, size=9, r=0.4, g=0.4, b=0.4)
+    pdf.add_text("ALPHAFORGE AI · DOSSIER DE REVUE (SIMULATION EDUCATIVE)", 50, 745, font_idx=2, size=14, r=0.08, g=0.20, b=0.45)
+    pdf.add_text("Projet etudiant PolyFinances 2026. Document fictif : aucun conseil personnalise, aucune operation reelle.", 50, 730, font_idx=1, size=9, r=0.6, g=0.1, b=0.1)
 
     run_id = str(record.get("run_id", "N/A"))
     reviewed_at = str(record.get("reviewed_at", dt.datetime.now(dt.UTC).isoformat()))
-    reviewer_id = str(record.get("reviewer_id", "Conseiller agre"))
+    reviewer_id = str(record.get("reviewer_id", "Reviseur"))
 
     pdf.add_text(f"Identifiant de l'analyse : {run_id}", 50, 705, font_idx=2, size=10)
-    pdf.add_text(f"Conseiller signataire : {reviewer_id}", 350, 705, font_idx=2, size=10)
+    pdf.add_text(f"Reviseur : {reviewer_id}", 350, 705, font_idx=2, size=10)
     pdf.add_text(f"Date et heure de validation : {reviewed_at}", 50, 690, font_idx=1, size=9)
 
     # Horizontal divider line
@@ -154,12 +154,12 @@ def generate_suitability_pdf(record: dict[str, Any]) -> bytes:
     pdf.add_text(f"Contraintes / Exclusions : {', '.join(constraints) if constraints else 'Aucune'}", 220, 610, font_idx=1, size=9)
 
     # Section 2: Scénario Retenu & Justification Professionnelle
-    pdf.add_text("2. DETERMINATION DE LA CONVENANCE & RECOMMANDATION", 50, 580, font_idx=2, size=11, r=0.08, g=0.20, b=0.45)
+    pdf.add_text("2. SCENARIO RETENU LORS DE LA REVUE", 50, 580, font_idx=2, size=11, r=0.08, g=0.20, b=0.45)
     chosen = str(record.get("chosen_scenario", "N/A"))
     pdf.add_text(f"Scenario retenu par le conseiller : {chosen.upper()}", 60, 562, font_idx=2, size=10, r=0.1, g=0.5, b=0.2)
 
     rationale = str(record.get("rationale", "Aucune justification specifiee."))
-    pdf.add_text("Justification professionnelle du conseiller agre :", 60, 545, font_idx=2, size=9)
+    pdf.add_text("Justification du reviseur :", 60, 545, font_idx=2, size=9)
 
     # Wrap rationale text in blocks of 80 chars
     y_pos = 530

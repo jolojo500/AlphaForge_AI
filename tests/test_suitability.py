@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from pathlib import Path
 
+import pytest
 from starlette.testclient import TestClient
 
 from alphaforge.api.server import InMemoryRunStore, Run, app, set_store
@@ -106,7 +107,9 @@ def test_advisor_review_full_workflow():
     client_store = InMemoryRunStore()
     set_store(client_store)
 
-    run_id = "test-workflow-run-001"
+    import uuid
+
+    run_id = f"test-workflow-{uuid.uuid4().hex[:8]}"  # records are write-once (#121)
     state = GraphState(
         as_of_date=dt.date(2026, 3, 1),
         persona="amira",
@@ -205,3 +208,23 @@ def test_advisor_review_full_workflow():
     assert resp_pdf.status_code == 200
     assert resp_pdf.headers["content-type"] == "application/pdf"
     assert resp_pdf.content.startswith(b"%PDF-1.4")
+
+
+def test_record_is_write_once(tmp_path):
+    from alphaforge.suitability import LocalSuitabilityStore, RecordExistsError
+
+    store = LocalSuitabilityStore(storage_dir=tmp_path)
+    rec = {"run_id": "r1", "reviewer_id": "advisor", "chosen_scenario": "capped",
+           "rationale": "Cohérent avec la capacité faible du client.", "scenarios": [], "kyc_snapshot": {}}
+    store.save_record("r1", rec)
+    with pytest.raises(RecordExistsError):
+        store.save_record("r1", rec | {"chosen_scenario": "as_requested"})
+
+
+def test_pdf_is_labelled_as_a_fictional_simulation_and_not_bank_branded():
+    from alphaforge.suitability_pdf import generate_suitability_pdf
+
+    pdf = generate_suitability_pdf({"run_id": "r1", "chosen_scenario": "capped", "rationale": "x" * 30})
+    text = pdf.decode("latin-1")
+    assert "SIMULATION EDUCATIVE" in text and "fictif" in text
+    assert "BANQUE NATIONALE" not in text.upper()

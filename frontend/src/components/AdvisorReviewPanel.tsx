@@ -308,7 +308,7 @@ export const AdvisorReviewPanel: React.FC<AdvisorReviewPanelProps> = ({
             {/* Submit Sign-off button */}
             <div className="flex items-center justify-between pt-2">
               <div className="text-[11px] text-muted-foreground">
-                Signataire : <span className="font-semibold text-foreground">{currentUser?.username}</span> (Conseiller agréé)
+                Signataire : <span className="font-semibold text-foreground">{currentUser?.username}</span> (réviseur de démonstration)
               </div>
               <Button
                 type="submit"

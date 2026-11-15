@@ -40,7 +40,7 @@ from alphaforge.graph import (
 )
 from alphaforge.personas import PERSONAS
 from alphaforge.state import GraphState
-from alphaforge.suitability import get_suitability_store
+from alphaforge.suitability import RecordExistsError, get_suitability_store
 from alphaforge.trace_store import get_trace_store
 from alphaforge.users import get_user_store
 from alphaforge.whatif import diff_scenarios, prepare_whatif_inputs
@@ -901,7 +901,7 @@ def get_run_state(run_id: str, request: Request):
 
 class ReviewRunRequest(BaseModel):
     chosen_scenario: str = Field(..., description="Chosen scenario name")
-    rationale: str = Field(..., min_length=5, description="Advisor professional rationale")
+    rationale: str = Field(..., min_length=20, description="Advisor rationale (at least 20 characters)")
     edited_assumptions: dict[str, Any] | None = None
 
 
@@ -965,7 +965,10 @@ def review_run(
         "verifier_result": state.verification or {},
     }
 
-    saved_record = get_suitability_store().save_record(run_id, record)
+    try:
+        saved_record = get_suitability_store().save_record(run_id, record)
+    except RecordExistsError:
+        raise HTTPException(status_code=409, detail="Cette analyse a déjà été révisée ; le dossier est immuable.") from None
 
     state.reviewed = True
     state.reviewer_id = user.username
