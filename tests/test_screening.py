@@ -145,3 +145,35 @@ def test_account_eligibility_registered_accounts_exclude_spot_crypto(no_holdings
         p = _profile("amira", account_type=acc)
         out = _run(p, no_holdings, monkeypatch)
         assert {"BTC-USD", "ETH-USD"} <= set(out["eligible_universe"])
+
+
+def test_crypto_etf_holding_stays_eligible_in_tfsa(no_holdings, monkeypatch):
+    """#186 item 2: BTCC.B.TO is a qualified listed ETF; only spot crypto is excluded."""
+    p = _profile("amira", account_type="tfsa", current_holdings={"BTCC.B.TO": 0.3, "XIU.TO": 0.7})
+    out = _run(p, no_holdings, monkeypatch)
+    assert "BTC-USD" in out["eligible_universe"]
+    assert "ETH-USD" not in out["eligible_universe"]
+    excluded = {e["ticker"]: e for e in out["exclusions"]}
+    assert "BTC-USD" not in excluded
+    assert excluded["ETH-USD"]["rule"] == "account_eligibility"
+    assert excluded["ETH-USD"]["reason"] and excluded["ETH-USD"]["evidence_id"].startswith("ES")
+    notes = [e for e in out["evidence"].values() if "FNB coté" in str(e.value)]
+    assert len(notes) == 1 and notes[0].confidence == "assumption"
+    assert "BTCC.B.TO" in str(notes[0].value) and "sous-jacent BTC-USD" in str(notes[0].value)
+
+
+def test_requested_crypto_etf_vehicle_stays_eligible_in_tfsa(no_holdings, monkeypatch):
+    """#186 item 2: "15 % Bitcoin via BTCC.B dans mon CELI" is not a spot crypto request."""
+    p = _profile(
+        "amira", account_type="tfsa", request_type="judge",
+        requested_idea={"ticker": "BTC-USD", "weight": 0.15}, requested_vehicle="BTCC.B",
+    )
+    out = _run(p, no_holdings, monkeypatch)
+    assert "BTC-USD" in out["eligible_universe"]
+    assert not any(e["ticker"] == "BTC-USD" for e in out["exclusions"])
+    assert any("BTCC.B" in str(e.value) for e in out["evidence"].values())
+    # Spot crypto asked for directly is still excluded and flagged.
+    p2 = _profile("amira", account_type="tfsa", request_type="judge", requested_idea={"ticker": "BTC-USD", "weight": 0.15})
+    out2 = _run(p2, no_holdings, monkeypatch)
+    btc = next(e for e in out2["exclusions"] if e["ticker"] == "BTC-USD")
+    assert btc["requested"] is True and btc["rule"] == "account_eligibility"

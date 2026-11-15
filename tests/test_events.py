@@ -311,3 +311,21 @@ def test_record_llm_classifier_output():
         assert how == "llm"
         out.append(c.model_dump())
     RECORDED.write_text(json.dumps(out, indent=1) + "\n")
+
+
+def test_sec_filings_with_the_same_title_on_different_dates_are_both_kept():
+    """#186 item 9: two quarterly 8-Ks with identical item lists are distinct filings."""
+    def filing(d, acc):
+        return NewsItem(
+            ticker="TSLA", headline="Form 8-K: Items 2.02, 9.01", source="SEC", provider="sec_edgar",
+            url=f"https://www.sec.gov/Archives/edgar/data/1318605/{acc}/0001318605-{acc[10:12]}-{acc[12:]}-index.htm",
+            published_at=dt.datetime.fromisoformat(d + "T12:00:00+00:00"),
+        )
+
+    q1 = filing("2026-07-23", "000131860526000041")
+    q2 = filing("2026-10-22", "000131860526000077")
+    same_day = filing("2026-10-22", "000131860526000078")
+    kept = ev._select([q1, q2, same_day], AS_OF)
+    assert len(kept) == 2  # one per date: the same-day pair collapses, the quarters do not
+    assert [i.published_date for i in kept] == [q2.published_date, q1.published_date]
+    assert kept[1].url == q1.url
