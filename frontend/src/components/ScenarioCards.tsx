@@ -37,15 +37,19 @@ const METRIC_LABELS: Record<string, string> = {
   sector_concentration_hhi: 'Concentration (HHI)',
   us_exposure: 'Exposition US',
   tax_drag: 'Friction fiscale estimée',
+  fee_drag: 'Frais de gestion (RFG)',
 };
 
-function formatMetricValue(ev: Evidence | undefined): string {
+function formatMetricValue(ev: Evidence | undefined, metricKey?: string): string {
   if (!ev) return '—';
   let val = ev.value;
   if (typeof val === 'object' && val !== null && 'value' in val) {
     val = (val as { value: unknown }).value as number | string;
   }
   if (typeof val === 'number') {
+    if (metricKey === 'fee_drag' || metricKey === 'tax_drag') {
+      return `${(val * 100).toFixed(2)} %`;
+    }
     return `${(val * 100).toFixed(1)} %`;
   }
   return String(val);
@@ -190,7 +194,7 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {Object.entries(sc.metrics).map(([metricKey, eid]) => {
                         const ev = evidence[eid];
-                        const formatted = formatMetricValue(ev);
+                        const formatted = formatMetricValue(ev, metricKey);
                         return (
                           <div key={metricKey} className="bg-muted/50 p-2.5 rounded-lg border border-border/60">
                             <span className="text-[11px] text-muted-foreground block truncate" title={METRIC_LABELS[metricKey] || metricKey}>

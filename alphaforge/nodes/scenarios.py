@@ -17,6 +17,13 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 
+from alphaforge.costs import (
+    CAPITAL_PRESERVATION_FOREIGN_BOND_CAP,
+    calculate_fee_drag,
+    capital_preservation_foreign_bond_evidence,
+    etf_mer_evidence,
+    fx_conversion_evidence,
+)
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import concentration, max_drawdown, stress_2022, volatility
@@ -65,6 +72,7 @@ METHODS = {
     "sector_concentration_hhi": "Herfindahl index of the weights by universe sector label",
     "us_exposure": "weight in US-listed assets (crypto not counted)",
     "tax_drag": "estimated annual tax drag based on historical dividend/interest yields and account tax rules",
+    "fee_drag": "weighted average management expense ratio (MER) across holdings",
 }
 
 
@@ -74,19 +82,26 @@ METHODS = {
 def caps_for(profile: Profile, rounds: int = 0) -> dict[str, float]:
     """Profile caps for the lower of tolerance and capacity. `rounds` is kept for callers;
     objections no longer tighten every cap (#116), see `targeted_changes`."""
-    return dict(CAPS.get(effective_risk(profile.risk_tolerance, profile.risk_capacity), CAPS["moderate"]))
+    caps = dict(CAPS.get(effective_risk(profile.risk_tolerance, profile.risk_capacity), CAPS["moderate"]))
+    if profile.objective == "capital_preservation":
+        caps["foreign_fixed_income_unhedged"] = CAPITAL_PRESERVATION_FOREIGN_BOND_CAP
+    return caps
 
 
 def _asset_caps(tickers: list[str], info: pd.DataFrame, caps: dict) -> np.ndarray:
     out = []
+    foreign_bond_cap = caps.get("foreign_fixed_income_unhedged")
     for t in tickers:
         cls = info.at[t, "asset_class"]
+        curr = info.at[t, "currency"] if "currency" in info.columns else "CAD"
         if cls == "equity":
             cap = caps["single_stock"]
         elif cls == "crypto":
             cap = caps["crypto_total"]
         else:
             cap = caps["etf"]
+        if foreign_bond_cap is not None and cls == "etf_bond" and curr != "CAD":
+            cap = min(cap, foreign_bond_cap)
         out.append(min(cap, caps.get("per_ticker", {}).get(t, cap)))
     return np.array(out, dtype=float)
 
@@ -254,12 +269,13 @@ def scenario_metrics(
     account_type: str = "non_registered",
     as_of: dt.date | None = None,
 ) -> dict:
-    """The fixed metric values (PRD 3.3, Issue #118), computed with quant and tax functions."""
+    """The fixed metric values (PRD 3.3, Issue #118, #119), computed with quant, tax and cost functions."""
     w = weights.to_dict()
     conc = concentration(w, info)
     stress = stress_2022(prices, w)
     tax_date = as_of or (prices.index[-1].date() if len(prices) else dt.date.today())
     tax_d = scenario_tax_drag(weights, account_type, tax_date, info)
+    fee_d = calculate_fee_drag(weights, info)
     return {
         "volatility_ann": volatility(prices, w),
         "max_drawdown": max_drawdown(prices, w),
@@ -268,6 +284,7 @@ def scenario_metrics(
         "sector_concentration_hhi": conc["sector_hhi"],
         "us_exposure": conc["us_exposure"],
         "tax_drag": tax_d,
+        "fee_drag": fee_d,
     }
 
 
@@ -519,7 +536,7 @@ def scenarios_node(state: GraphState) -> dict:
         }
 
     # Pass 1: standard risk metrics (EP2..EP7, EP8..EP13, EP14..EP19)
-    base_metrics = [m for m in SCENARIO_METRICS if m != "tax_drag"]
+    base_metrics = [m for m in SCENARIO_METRICS if m not in ("tax_drag", "fee_drag")]
     for name in SCENARIO_NAMES:
         values = all_values[name]
         for m in base_metrics:
@@ -531,7 +548,7 @@ def scenarios_node(state: GraphState) -> dict:
                 confidence="fact" if values[m] is not None else "assumption",
             )
 
-    # Pass 2: tax drag metric per scenario (marked as an assumption)
+    # Pass 2a: tax drag metric per scenario (marked as an assumption)
     if "tax_drag" in SCENARIO_METRICS:
         for name in SCENARIO_NAMES:
             values = all_values[name]
@@ -547,6 +564,24 @@ def scenarios_node(state: GraphState) -> dict:
                 url="https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years.html",
                 date=end,
                 method=f"{METHODS['tax_drag']}, compte {profile.account_type}",
+                confidence="assumption",
+            )
+
+    # Pass 2b: fee drag metric per scenario (marked as an assumption)
+    if "fee_drag" in SCENARIO_METRICS:
+        for name in SCENARIO_NAMES:
+            values = all_values[name]
+            scenario_ids[name]["fee_drag"] = reg.add(
+                {
+                    "metric": "fee_drag",
+                    "scenario": name,
+                    "value": values["fee_drag"],
+                    "unit": "ratio",
+                },
+                source="Ratios de dépenses de gestion (RFG/MER) des émetteurs de FNB",
+                url="https://www.blackrock.com/ca/investors/en/products/product-list",
+                date=end,
+                method=f"{METHODS['fee_drag']}, moyenne pondérée des RFG de l'allocation",
                 confidence="assumption",
             )
 
@@ -576,6 +611,40 @@ def scenarios_node(state: GraphState) -> dict:
             date=rule["date"],
             method=rule["method"],
             confidence=rule["confidence"],
+        )
+
+    # Sourced ETF MER, FX conversion cost, and capital preservation bond rule assumption evidence
+    for entry in etf_mer_evidence(as_of):
+        reg.add(
+            entry["value"],
+            source=entry["source"],
+            url=entry["url"],
+            date=entry["date"],
+            method=entry["method"],
+            confidence=entry["confidence"],
+        )
+
+    for name in SCENARIO_NAMES:
+        usd_share = all_values[name].get("us_exposure") or 0.0
+        fx_ev = fx_conversion_evidence(as_of, usd_share, name)
+        reg.add(
+            fx_ev["value"],
+            source=fx_ev["source"],
+            url=fx_ev["url"],
+            date=fx_ev["date"],
+            method=fx_ev["method"],
+            confidence=fx_ev["confidence"],
+        )
+
+    if profile.objective == "capital_preservation":
+        fb_ev = capital_preservation_foreign_bond_evidence(as_of)
+        reg.add(
+            fb_ev["value"],
+            source=fb_ev["source"],
+            url=fb_ev["url"],
+            date=fb_ev["date"],
+            method=fb_ev["method"],
+            confidence=fb_ev["confidence"],
         )
 
     from alphaforge.nodes.quant import rolling_returns_stats
@@ -703,6 +772,20 @@ def scenarios_node(state: GraphState) -> dict:
                     method=f"{METHODS['tax_drag']}, compte {profile.account_type}",
                     confidence="assumption",
                 )
+            elif m == "fee_drag":
+                ids_curr[m] = reg.add(
+                    {
+                        "metric": "fee_drag",
+                        "scenario": "current",
+                        "value": values_curr["fee_drag"],
+                        "unit": "ratio",
+                    },
+                    source="Ratios de dépenses de gestion (RFG/MER) des émetteurs de FNB",
+                    url="https://www.blackrock.com/ca/investors/en/products/product-list",
+                    date=end,
+                    method=f"{METHODS['fee_drag']}, moyenne pondérée des RFG du portefeuille actuel",
+                    confidence="assumption",
+                )
             else:
                 ids_curr[m] = reg.add(
                     {"metric": m, "scenario": "current", "value": values_curr[m], "unit": "ratio"},
@@ -722,7 +805,6 @@ def scenarios_node(state: GraphState) -> dict:
             outcomes_curr["1y"] = stats_1y_curr
         if stats_3y_curr:
             outcomes_curr["3y"] = stats_3y_curr
-
         notes_curr = [
             f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
             f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "

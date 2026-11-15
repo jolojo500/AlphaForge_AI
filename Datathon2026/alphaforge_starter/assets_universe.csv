@@ -1,32 +1,32 @@
-asset_id,ticker,name,asset_class,market,currency,sector
-A01,RY.TO,Royal Bank of Canada,equity,TSX,CAD,Financials
-A02,TD.TO,Toronto-Dominion Bank,equity,TSX,CAD,Financials
-A03,MFC.TO,Manulife Financial,equity,TSX,CAD,Financials
-A04,ENB.TO,Enbridge,equity,TSX,CAD,Energy
-A05,CNQ.TO,Canadian Natural Resources,equity,TSX,CAD,Energy
-A06,CNR.TO,Canadian National Railway,equity,TSX,CAD,Industrials
-A07,FTS.TO,Fortis,equity,TSX,CAD,Utilities
-A08,ATD.TO,Alimentation Couche-Tard,equity,TSX,CAD,Consumer Staples
-A09,SHOP.TO,Shopify,equity,TSX,CAD,Information Technology
-A10,CSU.TO,Constellation Software,equity,TSX,CAD,Information Technology
-A11,AAPL,Apple,equity,NASDAQ,USD,Information Technology
-A12,MSFT,Microsoft,equity,NASDAQ,USD,Information Technology
-A13,NVDA,NVIDIA,equity,NASDAQ,USD,Information Technology
-A14,GOOGL,Alphabet (Class A),equity,NASDAQ,USD,Communication Services
-A15,AMZN,Amazon,equity,NASDAQ,USD,Consumer Discretionary
-A16,TSLA,Tesla,equity,NASDAQ,USD,Consumer Discretionary
-A17,JPM,JPMorgan Chase,equity,NYSE,USD,Financials
-A18,JNJ,Johnson & Johnson,equity,NYSE,USD,Health Care
-A19,PG,Procter & Gamble,equity,NYSE,USD,Consumer Staples
-A20,XOM,Exxon Mobil,equity,NYSE,USD,Energy
-A21,XIU.TO,iShares S&P/TSX 60 Index ETF,etf_equity,TSX,CAD,Broad market (Canada)
-A22,SPY,SPDR S&P 500 ETF Trust,etf_equity,NYSE Arca,USD,Broad market (U.S.)
-A23,QQQ,Invesco QQQ Trust (Nasdaq-100),etf_equity,NASDAQ,USD,Broad market (U.S. growth/tech-heavy)
-A24,ESGV,Vanguard ESG U.S. Stock ETF,etf_equity,Cboe BZX,USD,"Broad market (U.S., ESG-screened)"
-A25,XBB.TO,iShares Core Canadian Universe Bond Index ETF,etf_bond,TSX,CAD,Bonds (Canada aggregate)
-A26,ZST.TO,BMO Ultra Short-Term Bond ETF,etf_bond,TSX,CAD,Bonds (Canada ultra short-term)
-A27,AGG,iShares Core U.S. Aggregate Bond ETF,etf_bond,NYSE Arca,USD,Bonds (U.S. aggregate)
-A28,TLT,iShares 20+ Year Treasury Bond ETF,etf_bond,NASDAQ,USD,Bonds (U.S. long Treasury)
-A29,GLD,SPDR Gold Shares,etf_commodity,NYSE Arca,USD,Gold
-A30,BTC-USD,Bitcoin,crypto,Crypto (24/7),USD,Crypto asset
-A31,ETH-USD,Ether,crypto,Crypto (24/7),USD,Crypto asset
+asset_id,ticker,name,asset_class,market,currency,sector,mer,mer_source_url
+A01,RY.TO,Royal Bank of Canada,equity,TSX,CAD,Financials,0.0,
+A02,TD.TO,Toronto-Dominion Bank,equity,TSX,CAD,Financials,0.0,
+A03,MFC.TO,Manulife Financial,equity,TSX,CAD,Financials,0.0,
+A04,ENB.TO,Enbridge,equity,TSX,CAD,Energy,0.0,
+A05,CNQ.TO,Canadian Natural Resources,equity,TSX,CAD,Energy,0.0,
+A06,CNR.TO,Canadian National Railway,equity,TSX,CAD,Industrials,0.0,
+A07,FTS.TO,Fortis,equity,TSX,CAD,Utilities,0.0,
+A08,ATD.TO,Alimentation Couche-Tard,equity,TSX,CAD,Consumer Staples,0.0,
+A09,SHOP.TO,Shopify,equity,TSX,CAD,Information Technology,0.0,
+A10,CSU.TO,Constellation Software,equity,TSX,CAD,Information Technology,0.0,
+A11,AAPL,Apple,equity,NASDAQ,USD,Information Technology,0.0,
+A12,MSFT,Microsoft,equity,NASDAQ,USD,Information Technology,0.0,
+A13,NVDA,NVIDIA,equity,NASDAQ,USD,Information Technology,0.0,
+A14,GOOGL,Alphabet (Class A),equity,NASDAQ,USD,Communication Services,0.0,
+A15,AMZN,Amazon,equity,NASDAQ,USD,Consumer Discretionary,0.0,
+A16,TSLA,Tesla,equity,NASDAQ,USD,Consumer Discretionary,0.0,
+A17,JPM,JPMorgan Chase,equity,NYSE,USD,Financials,0.0,
+A18,JNJ,Johnson & Johnson,equity,NYSE,USD,Health Care,0.0,
+A19,PG,Procter & Gamble,equity,NYSE,USD,Consumer Staples,0.0,
+A20,XOM,Exxon Mobil,equity,NYSE,USD,Energy,0.0,
+A21,XIU.TO,iShares S&P/TSX 60 Index ETF,etf_equity,TSX,CAD,Broad market (Canada),0.0018,https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf
+A22,SPY,SPDR S&P 500 ETF Trust,etf_equity,NYSE Arca,USD,Broad market (U.S.),0.000945,https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-sp-500-etf-trust-spy
+A23,QQQ,Invesco QQQ Trust (Nasdaq-100),etf_equity,NASDAQ,USD,Broad market (U.S. growth/tech-heavy),0.0020,https://www.invesco.com/qqq-etf/en/about.html
+A24,ESGV,Vanguard ESG U.S. Stock ETF,etf_equity,Cboe BZX,USD,"Broad market (U.S., ESG-screened)",0.0009,https://investor.vanguard.com/investment-products/etfs/profile/esgv
+A25,XBB.TO,iShares Core Canadian Universe Bond Index ETF,etf_bond,TSX,CAD,Bonds (Canada aggregate),0.0010,https://www.blackrock.com/ca/investors/en/products/239493/ishares-core-canadian-universe-bond-index-etf
+A26,ZST.TO,BMO Ultra Short-Term Bond ETF,etf_bond,TSX,CAD,Bonds (Canada ultra short-term),0.0016,https://www.bmogam.com/ca-en/advisors/investment-solutions/etfs/bmo-ultra-short-term-bond-etf-zst/
+A27,AGG,iShares Core U.S. Aggregate Bond ETF,etf_bond,NYSE Arca,USD,Bonds (U.S. aggregate),0.0003,https://www.ishares.com/us/products/239458/ishares-core-us-aggregate-bond-etf
+A28,TLT,iShares 20+ Year Treasury Bond ETF,etf_bond,NASDAQ,USD,Bonds (U.S. long Treasury),0.0015,https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf
+A29,GLD,SPDR Gold Shares,etf_commodity,NYSE Arca,USD,Gold,0.0040,https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-gold-shares-gld
+A30,BTC-USD,Bitcoin,crypto,Crypto (24/7),USD,Crypto asset,0.0,
+A31,ETH-USD,Ether,crypto,Crypto (24/7),USD,Crypto asset,0.0,

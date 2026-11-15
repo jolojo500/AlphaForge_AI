@@ -21,6 +21,7 @@ const METRIC_LABELS: Record<string, string> = {
   top_weight: 'Poids principal',
   sector_concentration_hhi: 'Concentration (HHI)',
   us_exposure: 'Exposition US',
+  fee_drag: 'Frais de gestion (RFG)',
 };
 
 function formatChangeField(field?: string, value?: unknown): string {
