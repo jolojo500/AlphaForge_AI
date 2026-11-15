@@ -5,7 +5,14 @@ import pytest
 from alphaforge import whatif
 from alphaforge.graph import run
 from alphaforge.personas import PERSONAS
-from alphaforge.whatif import WhatIfError, apply_change, diff_scenarios, parse_change, rerun, rerun_inputs
+from alphaforge.whatif import (
+    WhatIfError,
+    apply_change,
+    diff_scenarios,
+    parse_change,
+    rerun,
+    rerun_inputs,
+)
 
 
 @pytest.fixture
