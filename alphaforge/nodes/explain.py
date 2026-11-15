@@ -63,6 +63,7 @@ Règles strictes :
   N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » : utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
 - Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives (« fictional »). Si une preuve est fictive ou une hypothèse, mentionne-le dans les limites.
 - Contexte crypto DefiLlama : s'il est fourni dans les preuves (ex. TVL Ethereum, offre de stablecoins), tu peux le citer de manière purement descriptive dans « quelles_donnees » ou « limites » avec son identifiant de preuve (par exemple « la valeur totale bloquée sur Ethereum était de ... au ... »), sans prévision, sans signal et sans conseil.
+- Si la préférence esg_tilt est active, mentionne la « part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect) » avec son identifiant de preuve pour le scénario retenu, et rappelle en une phrase dans les limites que l'indicateur repose sur les actions américaines et ne constitue pas un score ESG. Ne prétends jamais que le portefeuille « est ESG » ou « est durable ».
 - Pas de raisonnement interne : seulement des constats observables.
 - avertissement : « Simulation éducative. Aucun conseil personnalisé. »"""
 
@@ -86,6 +87,7 @@ Strict rules:
   NEVER use the roots 'recommend*' or 'advise*'.
 - Distinguish facts ('fact' evidence), assumptions ('assumption'), and fictional data ('fictional').
 - DefiLlama crypto context: if provided in the evidence (e.g. Ethereum TVL, stablecoin supply), you may cite it purely descriptively in 'quelles_donnees' or 'limites' with its evidence id (e.g. 'the total value locked on Ethereum was ... as of ...'), with no forecast, no signal, and no advice.
+- If the esg_tilt preference is active, mention the 'share of the portfolio in assets held by the ESGV fund (indirect indicator)' with its evidence id for the most consistent scenario, and state the limit in one sentence under limits (U.S. stocks only, fund membership is not an ESG score). Never claim that the portfolio 'is ESG' or 'is sustainable'.
 - avertissement: 'Educational simulation. No personalized advice.'"""
 
 
@@ -584,6 +586,30 @@ def template_explanation(state: GraphState) -> dict:
                     "evidence": [best.metrics["max_drawdown"], *caps_evidence],
                 }
             )
+
+    if state.profile and "esg_tilt" in state.profile.preferences:
+        esg_val = _metric_value(state, best, "esg_proxy_share")
+        if esg_val is not None and "esg_proxy_share" in best.metrics:
+            if lang == "en":
+                donnees.append(
+                    {
+                        "claim": (
+                            f"Scenario {best.name}: share of the portfolio in assets held by the ESGV fund "
+                            f"(indirect proxy) of {_fr(abs(esg_val) * 100, 1)} %."
+                        ),
+                        "evidence": [best.metrics["esg_proxy_share"]],
+                    }
+                )
+            else:
+                donnees.append(
+                    {
+                        "claim": (
+                            f"Scénario {best.name} : part du portefeuille dans des titres présents dans le fonds ESGV "
+                            f"(indicateur indirect) de {_fr(abs(esg_val) * 100, 1)} %."
+                        ),
+                        "evidence": [best.metrics["esg_proxy_share"]],
+                    }
+                )
     ticker, weight_pct, incompatible = _requested_assessment(state)
     horizon = getattr(state.profile, "horizon_years", 5) if state.profile else 5
     scenario_label = "le scénario ajusté" if best.name == "capped" else "le profil de référence"
@@ -594,6 +620,12 @@ def template_explanation(state: GraphState) -> dict:
         if lang != "en"
         else {"low": "low", "moderate": "moderate", "high": "high"}.get(capacity, capacity)
     )
+
+    proxy_eids = [
+        eid for eid, ev in state.evidence.items()
+        if (isinstance(ev.value, dict) and ev.value.get("metric") == "esg_proxy")
+        or (isinstance(ev.value, str) and "Proxy ESG" in ev.value)
+    ]
 
     if lang == "en":
         tol_str = (
@@ -655,6 +687,16 @@ def template_explanation(state: GraphState) -> dict:
                         f"compared to the data provider close as of {ev_cross.date}."
                     ),
                     "evidence": [ev_cross.id],
+                }
+            )
+        if state.profile and "esg_tilt" in state.profile.preferences:
+            limites.append(
+                {
+                    "claim": (
+                        "The share of the portfolio in assets held by the ESGV fund (indirect proxy) "
+                        "is limited to U.S. equities and fund membership does not constitute an ESG score."
+                    ),
+                    "evidence": proxy_eids[:1],
                 }
             )
         if state.profile and state.profile.conflicts:
@@ -738,6 +780,16 @@ def template_explanation(state: GraphState) -> dict:
                     f"par rapport au cours de clôture du fournisseur au {ev_cross.date}."
                 ),
                 "evidence": [ev_cross.id],
+            }
+        )
+    if state.profile and "esg_tilt" in state.profile.preferences:
+        limites.append(
+            {
+                "claim": (
+                    "La part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect) "
+                    "est limitée aux actions américaines et l'appartenance au fonds ne constitue pas un score ESG."
+                ),
+                "evidence": proxy_eids[:1],
             }
         )
     if state.profile and state.profile.conflicts:

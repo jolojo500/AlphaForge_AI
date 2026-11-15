@@ -36,6 +36,7 @@ export const Step4Preferences: React.FC<Step4Props> = ({
     'Obligations & Revenu fixe',
     'Or & Valeurs refuges',
     'Énergie & Ressources',
+    'Investissement responsable & ESG (tilt)',
   ];
 
   const cryptoOptions = [

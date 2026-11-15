@@ -414,6 +414,12 @@ export function prepareBackendPayload(
   }
   if (profile.esgImportance.includes('Prioritaire') || profile.esgImportance.includes('strict')) {
     constraints.push('esg_only', 'no_controversies');
+  } else if (
+    profile.esgImportance.includes('Secondaire') ||
+    profile.esgImportance.includes('Favoriser') ||
+    profile.esgImportance.includes('esg_tilt')
+  ) {
+    // Soft ESG wish maps to esg_tilt preference
   }
   if (profile.excludedCategories) {
     profile.excludedCategories.forEach((ex) => {
@@ -425,9 +431,19 @@ export function prepareBackendPayload(
 
   // Map questionnaire labels to the preference tokens the scenario builder understands
   // (PREFERENCE_SECTORS in alphaforge/nodes/scenarios.py); other labels pass through.
-  const preferences: string[] = profile.interestedSectors.map((s) =>
-    /tech|ia\b/i.test(s) ? 'likes_tech' : s
-  );
+  const preferences: string[] = profile.interestedSectors.map((s) => {
+    if (/tech|ia\b/i.test(s)) return 'likes_tech';
+    if (/responsable|esg/i.test(s)) return 'esg_tilt';
+    return s;
+  });
+  if (
+    (profile.esgImportance.includes('Secondaire') ||
+      profile.esgImportance.includes('Favoriser') ||
+      profile.esgImportance.includes('esg_tilt')) &&
+    !preferences.includes('esg_tilt')
+  ) {
+    preferences.push('esg_tilt');
+  }
   if (/modérée|majeurs/i.test(profile.cryptoPreference) && !preferences.includes('likes_crypto')) {
     preferences.push('likes_crypto');
   }

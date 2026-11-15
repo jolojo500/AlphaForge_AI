@@ -58,6 +58,7 @@ const METRIC_LABELS_FR: Record<string, string> = {
   us_exposure: 'Exposition US',
   tax_drag: 'Friction fiscale estimée',
   fee_drag: 'Frais de gestion (RFG)',
+  esg_proxy_share: 'Part proxy ESG (ESGV)',
 };
 
 const METRIC_LABELS_EN: Record<string, string> = {
@@ -69,6 +70,7 @@ const METRIC_LABELS_EN: Record<string, string> = {
   us_exposure: 'US Exposure',
   tax_drag: 'Estimated Tax Drag',
   fee_drag: 'Management Fees (MER)',
+  esg_proxy_share: 'ESG Proxy Share (ESGV)',
 };
 
 function formatMetricValue(ev: Evidence | undefined, metricKey?: string): string {
