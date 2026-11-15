@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from alphaforge import llm
 from alphaforge.evidence import numeric
+from alphaforge.nodes.profile import TOLERANCE_FR
 from alphaforge.state import Evidence, GraphState, Scenario
 from alphaforge.tracing import traced
 
@@ -194,12 +195,17 @@ def template_explanation(state: GraphState) -> dict:
             )
     bm = _metric_value(state, best, "max_drawdown")
     if bm is not None:
+        tol_str = (
+            TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
+            if state.profile
+            else ""
+        )
         pourquoi.append(
             {
                 "claim": (
                     f"Le scénario {best.name} présente la plus faible perte maximale historique "
                     f"({abs(bm):.1%}) parmi les trois, ce qui est le plus cohérent avec une "
-                    f"tolérance au risque « {state.profile.risk_tolerance} »."
+                    f"tolérance au risque « {tol_str} »."
                 ),
                 "evidence": [best.metrics["max_drawdown"]],
             }

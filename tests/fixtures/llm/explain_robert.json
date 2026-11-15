@@ -2,13 +2,13 @@
  "resume": "Comparaison de trois scénarios fictifs pour Robert, qui vise la préservation du capital.",
  "quelles_donnees": [
   {
-   "claim": "Le scénario tel que demandé a une perte maximale historique de 38,0 %.",
+   "claim": "Le scénario tel que demandé a une volatilité annualisée de 15,5 %.",
    "evidence": [
     "EP2"
    ]
   },
   {
-   "claim": "Le scénario plafonné a une perte maximale historique de 19,0 %.",
+   "claim": "Le scénario plafonné a une volatilité annualisée de 5,1 %.",
    "evidence": [
     "EP8"
    ]
@@ -16,7 +16,7 @@
  ],
  "pourquoi_ce_choix": [
   {
-   "claim": "Le scénario plafonné limite la position TSLA à 5,0 % et réduit la perte historique.",
+   "claim": "Le scénario plafonné limite la position TSLA à 5,0 % et réduit la volatilité.",
    "evidence": [
     "EP8",
     "EP2"
