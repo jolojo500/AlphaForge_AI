@@ -1,0 +1,317 @@
+"""FastAPI backend with SSE (PRD 6). Track C owned."""
+
+from __future__ import annotations
+
+import abc
+import asyncio
+import datetime as dt
+import json
+import threading
+import uuid
+from pathlib import Path
+from typing import Any, Literal
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
+from sse_starlette.sse import EventSourceResponse
+
+from alphaforge.graph import (
+    get_state,
+    initial_state,
+    resume_run,
+    stream_run,
+)
+from alphaforge.personas import PERSONAS
+from alphaforge.state import GraphState
+
+DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+
+class Run:
+    """Represents an execution run and its state/subscribers."""
+
+    def __init__(
+        self,
+        run_id: str,
+        persona: str,
+        request_text: str,
+        as_of_date: dt.date | None = None,
+        created_at: dt.datetime | None = None,
+    ):
+        self.run_id = run_id
+        self.persona = persona
+        self.request_text = request_text
+        self.as_of_date = as_of_date
+        self.created_at = created_at or dt.datetime.now(dt.UTC)
+        self.status: Literal["running", "interrupted", "completed", "error"] = "running"
+        self.events: list[dict[str, Any]] = []
+        self.state: GraphState | None = None
+        self.question: str | None = None
+        self.error: str | None = None
+        self.subscribers: set[tuple[asyncio.Queue, asyncio.AbstractEventLoop]] = set()
+        self._lock = threading.Lock()
+
+    def record_event(self, event: dict[str, Any]) -> None:
+        with self._lock:
+            self.events.append(event)
+            for q, loop in list(self.subscribers):
+                try:
+                    loop.call_soon_threadsafe(q.put_nowait, event)
+                except Exception:  # noqa: BLE001
+                    pass
+            if event.get("type") in ("final", "error"):
+                for q, loop in list(self.subscribers):
+                    try:
+                        loop.call_soon_threadsafe(q.put_nowait, None)
+                    except Exception:  # noqa: BLE001
+                        pass
+                self.subscribers.clear()
+
+    def add_subscriber(self, q: asyncio.Queue, loop: asyncio.AbstractEventLoop) -> None:
+        with self._lock:
+            for ev in self.events:
+                q.put_nowait(ev)
+            if self.status in ("completed", "error"):
+                q.put_nowait(None)
+            else:
+                self.subscribers.add((q, loop))
+
+    def remove_subscriber(
+        self, q: asyncio.Queue, loop: asyncio.AbstractEventLoop
+    ) -> None:
+        with self._lock:
+            self.subscribers.discard((q, loop))
+
+
+class BaseRunStore(abc.ABC):
+    @abc.abstractmethod
+    def create(
+        self, persona: str, request_text: str, as_of_date: dt.date | None = None
+    ) -> Run:
+        pass
+
+    @abc.abstractmethod
+    def get(self, run_id: str) -> Run | None:
+        pass
+
+    @abc.abstractmethod
+    def save(self, run: Run) -> None:
+        pass
+
+
+class InMemoryRunStore(BaseRunStore):
+    def __init__(self) -> None:
+        self._runs: dict[str, Run] = {}
+        self._lock = threading.Lock()
+
+    def create(
+        self, persona: str, request_text: str, as_of_date: dt.date | None = None
+    ) -> Run:
+        run_id = uuid.uuid4().hex
+        run = Run(
+            run_id=run_id,
+            persona=persona,
+            request_text=request_text,
+            as_of_date=as_of_date,
+        )
+        with self._lock:
+            self._runs[run_id] = run
+        return run
+
+    def get(self, run_id: str) -> Run | None:
+        with self._lock:
+            return self._runs.get(run_id)
+
+    def save(self, run: Run) -> None:
+        with self._lock:
+            self._runs[run.run_id] = run
+
+
+store: BaseRunStore = InMemoryRunStore()
+
+
+def get_store() -> BaseRunStore:
+    return store
+
+
+def set_store(new_store: BaseRunStore) -> None:
+    global store
+    store = new_store
+
+
+def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
+    try:
+        for item in gen_fn(*args):
+            t = item.get("type")
+            if t == "final":
+                run.state = item.get("state")
+                run.status = "completed"
+                run.record_event({"type": "final", "run_id": run.run_id})
+            elif t == "interrupt":
+                run.status = "interrupted"
+                run.question = item.get("question")
+                run.record_event(item)
+            else:
+                run.record_event(item)
+    except Exception as exc:  # noqa: BLE001
+        run.status = "error"
+        run.error = str(exc)
+        run.record_event({"type": "error", "error": str(exc), "message": str(exc)})
+
+
+def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> threading.Thread:
+    thread = threading.Thread(
+        target=_run_worker,
+        args=(run, gen_fn, *args),
+        daemon=True,
+    )
+    thread.start()
+    return thread
+
+
+app = FastAPI(title="AlphaForge AI API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class RunCreateRequest(BaseModel):
+    persona: str
+    request_text: str = ""
+    as_of_date: dt.date | None = None
+
+
+class AnswerRequest(BaseModel):
+    text: str = Field(..., description="Answer to the clarifying question")
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/personas")
+def get_personas() -> dict[str, dict[str, Any]]:
+    return PERSONAS
+
+
+@app.post("/runs")
+def create_run(req: RunCreateRequest) -> dict[str, str]:
+    if req.persona not in PERSONAS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown persona '{req.persona}'. Allowed: {list(PERSONAS.keys())}",
+        )
+    run = store.create(
+        persona=req.persona,
+        request_text=req.request_text,
+        as_of_date=req.as_of_date,
+    )
+    start_run_thread(
+        run,
+        stream_run,
+        initial_state(run.persona, run.request_text, run.as_of_date),
+        run.run_id,
+    )
+    return {"run_id": run.run_id}
+
+
+@app.get("/runs/{run_id}/events")
+async def stream_run_events(run_id: str) -> EventSourceResponse:
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    loop = asyncio.get_running_loop()
+
+    async def event_generator():
+        q: asyncio.Queue = asyncio.Queue()
+        run.add_subscriber(q, loop)
+        try:
+            while True:
+                ev = await q.get()
+                if ev is None:
+                    break
+                yield {"data": json.dumps(ev)}
+        finally:
+            run.remove_subscriber(q, loop)
+
+    return EventSourceResponse(event_generator())
+
+
+@app.post("/runs/{run_id}/answer")
+def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.status != "interrupted":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Run is not awaiting an answer (current status: {run.status})",
+        )
+
+    run.status = "running"
+    start_run_thread(
+        run,
+        resume_run,
+        req.text,
+        run.run_id,
+    )
+    return {"run_id": run.run_id, "status": "resumed"}
+
+
+@app.get("/runs/{run_id}")
+def get_run_state(run_id: str) -> dict[str, Any]:
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    if run.state is not None:
+        data = run.state.model_dump(mode="json")
+        data["run_id"] = run.run_id
+        return data
+
+    try:
+        state = get_state(run.run_id)
+        data = state.model_dump(mode="json")
+        data["run_id"] = run.run_id
+        return data
+    except Exception:  # noqa: BLE001
+        if run.status == "error":
+            raise HTTPException(
+                status_code=500, detail=run.error or "Run failed with an error"
+            ) from None
+        raise HTTPException(status_code=202, detail="Run in progress") from None
+
+
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    dist_dir = DIST_DIR
+    if not dist_dir.is_dir():
+        raise HTTPException(status_code=404, detail="Not found")
+
+    target = (dist_dir / full_path).resolve()
+    try:
+        target.relative_to(dist_dir)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Forbidden") from None
+
+    if full_path and target.is_file():
+        return FileResponse(target)
+
+    index_file = dist_dir / "index.html"
+    if index_file.is_file():
+        return FileResponse(index_file)
+
+    raise HTTPException(status_code=404, detail="Not found")
