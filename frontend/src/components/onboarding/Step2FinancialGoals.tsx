@@ -127,7 +127,7 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
             <span>Horizon avant retrait majeur <span className="text-destructive">*</span></span>
           </label>
           <span className="text-xs font-semibold text-primary">
-            {currentHorizonNum} an{currentHorizonNum > 1 ? 's' : ''}
+            {firstWithdrawalHorizon ? `${currentHorizonNum} an${currentHorizonNum > 1 ? 's' : ''}` : 'À choisir'}
           </span>
         </div>
 
@@ -154,7 +154,7 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
           <div className="relative w-full h-6 select-none mt-0.5">
             {horizonMarks.map((mark) => {
               const ratio = (mark.val - 1) / 29;
-              const isSelected = currentHorizonNum === mark.val;
+              const isSelected = Boolean(firstWithdrawalHorizon) && currentHorizonNum === mark.val;
 
               return (
                 <button
@@ -212,7 +212,7 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
             <Input
               type="text"
               required
-              value={formatCurrency(simulatedCapital)}
+              value={simulatedCapital > 0 ? formatCurrency(simulatedCapital) : ''}
               placeholder="ex : 50 000 $ CAD"
               onChange={(e) => {
                 const num = parseInt(e.target.value.replace(/\D/g, ''), 10);
