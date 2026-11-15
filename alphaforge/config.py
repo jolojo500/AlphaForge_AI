@@ -9,8 +9,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-# Automatically load environment variables from .env file if present
-load_dotenv(REPO_ROOT / ".env")
+# Load .env from the repo root for local runs (never overrides variables already set).
+# AF_DOTENV=0 skips it: the test suite sets it so a developer's .env (AF_AUTH=on, DynamoDB
+# backends, credentials) cannot leak into tests that must run offline and unauthenticated.
+if os.getenv("AF_DOTENV", "1") != "0":
+    load_dotenv(REPO_ROOT / ".env")
 
 # If explicit AWS access keys are provided, do not let a placeholder AWS_PROFILE override them
 if os.getenv("AWS_ACCESS_KEY_ID") and "AWS_PROFILE" in os.environ:
