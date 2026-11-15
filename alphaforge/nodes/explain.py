@@ -21,7 +21,7 @@ from alphaforge.state import Evidence, GraphState, Scenario
 from alphaforge.tracing import traced
 
 DISCLAIMER = "Simulation éducative. Aucun conseil personnalisé."
-MAX_EVIDENCE_LINES = 220
+MAX_EVIDENCE_LINES = 100
 
 class Claim(BaseModel):
     claim: str
@@ -57,8 +57,8 @@ Règles strictes :
   aucune promesse. Les statistiques sont historiques.
   N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » :
   utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
-- Concision stricte : au plus 3 affirmations (claims) par section, environ 35 mots par affirmation.
-  Va droit au but, sans répétition.
+- Concision stricte : 1 à 2 affirmations (claims) par section, environ 25 à 30 mots par affirmation.
+  Va droit au but, sans répétition. Le résumé doit comporter 1 à 2 phrases directes (environ 30 mots).
 - Ne remplace pas les trois scénarios par un seul : compare-les, puis indique le plus cohérent.
 - Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives
   (« fictional »). Si une preuve est fictive ou une hypothèse, dis-le dans les limites.

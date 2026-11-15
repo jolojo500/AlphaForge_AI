@@ -267,12 +267,22 @@ def _select(items: list[NewsItem], as_of: dt.date) -> list[NewsItem]:
     return out
 
 
+def is_rule_confident(item: NewsItem) -> bool:
+    """True if rules can classify this item with high confidence without an LLM."""
+    if item.provider == "sec_edgar":
+        return True
+    text = item.headline if item.provider == "sec_edgar" else f"{item.headline} {item.summary}"
+    return bool(_OFFTOPIC.search(text))
+
+
 def classify_all(items: list[NewsItem], llm_client=None) -> list[tuple[NewsItem, Classification, str]]:
     def one(i: NewsItem):
+        if is_rule_confident(i) and llm_client is None and llm._override is None:
+            return i, heuristic_classify(i), "rules"
         c, how = classify_item(i, i.ticker or "general market", llm_client)
         return i, c, how
 
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    with ThreadPoolExecutor(max_workers=8) as pool:
         return list(pool.map(one, items))
 
 
