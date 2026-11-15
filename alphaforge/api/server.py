@@ -493,6 +493,21 @@ def get_run_diff(run_id: str) -> dict[str, Any]:
     return diff
 
 
+@app.get("/runs/compare")
+def compare_runs(run_a: str, run_b: str) -> dict[str, Any]:
+    """Compare two completed runs using diff_scenarios (PRD 7, C-9)."""
+    r_a = store.get(run_a)
+    r_b = store.get(run_b)
+    if r_a is None or r_b is None:
+        raise HTTPException(status_code=404, detail="One or both runs not found")
+    if r_a.state is None or r_b.state is None:
+        raise HTTPException(status_code=400, detail="Both runs must be completed to compare")
+    diff = diff_scenarios(r_a.state, r_b.state)
+    diff["run_a_id"] = r_a.run_id
+    diff["run_b_id"] = r_b.run_id
+    return diff
+
+
 @app.post("/runs/{run_id}/answer")
 def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
     run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
