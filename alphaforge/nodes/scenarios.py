@@ -1097,4 +1097,7 @@ def scenarios_node(state: GraphState) -> dict:
         )
         if rounds:
             summary += " Révisés après objections : " + ("; ".join(changes) or "aucun changement") + "."
-    return {"scenarios": scenarios, "evidence": reg.items(), "summary": summary}
+    from alphaforge.guardrails import check_guardrails
+
+    guardrails = check_guardrails(profile, scenarios, {**state.evidence, **reg.items()})
+    return {"scenarios": scenarios, "evidence": reg.items(), "summary": summary, "guardrails": guardrails}
