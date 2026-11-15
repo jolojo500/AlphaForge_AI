@@ -29,11 +29,9 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { ClarificationScreen } from './components/ClarificationScreen';
 import { ResponseScreen } from './components/ResponseScreen';
 import { EvidenceModal } from './components/EvidenceModal';
-import { PersonaComparisonView } from './components/PersonaComparisonView';
 import { ReplayRunModal } from './components/ReplayRunModal';
 import { AuthModal } from './components/AuthModal';
 import { ProfileModal } from './components/ProfileModal';
-import { SimulationBanner } from './components/SimulationBanner';
 import { AppHeader } from './components/AppHeader';
 import { DEMO_PERSONAS } from './lib/demoProfiles';
 import { Button } from './components/ui/button';
@@ -41,11 +39,11 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 
 const STORAGE_KEY = 'alphaforge_user_profile';
 
-type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results' | 'compare';
+type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results';
 type PersonaChoice = 'custom' | 'robert' | 'amira' | 'mateo';
 
 export const AppContent: React.FC = () => {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const [view, setView] = useState<AppView>('welcome');
   const [customProfile, setCustomProfile] = useState<UserOnboardingProfile | null>(null);
   const [activePersonaId, setActivePersonaId] = useState<PersonaChoice>('custom');
@@ -437,7 +435,6 @@ export const AppContent: React.FC = () => {
           onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
           initialQuery={initialQuery}
-          onCompare={() => setView('compare')}
         />
         <ReplayRunModal
           isOpen={isReplayModalOpen}
@@ -458,31 +455,6 @@ export const AppContent: React.FC = () => {
           currentUser={currentUser}
         />
       </>
-    );
-  }
-
-  // View 5: Persona Side-by-Side Comparison (kept accessible for jury test suites)
-  if (view === 'compare') {
-    return (
-      <div className="min-h-screen bg-background flex flex-col font-sans transition-colors">
-        <SimulationBanner />
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
-          <PersonaComparisonView
-            onBack={() => setView(customProfile ? 'query' : 'welcome')}
-            userProfile={activeProfile}
-            onSelectEvidence={setSelectedEvidenceId}
-          />
-        </main>
-
-        <EvidenceModal
-          evidence={activeEvidence}
-          onClose={() => setSelectedEvidenceId(null)}
-        />
-
-        <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground select-none">
-          <p>{t('app.footer', 'AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026')}</p>
-        </footer>
-      </div>
     );
   }
 
