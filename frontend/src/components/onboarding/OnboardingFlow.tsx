@@ -41,7 +41,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     initialProfile?.primaryObjective || ''
   );
   const [firstWithdrawalHorizon, setFirstWithdrawalHorizon] = useState<string>(
-    initialProfile?.firstWithdrawalHorizon || '5 ans · Moyen terme'
+    initialProfile?.firstWithdrawalHorizon || ''
   );
   const [withdrawalMethod, setWithdrawalMethod] = useState<string>(
     initialProfile?.withdrawalMethod || ''

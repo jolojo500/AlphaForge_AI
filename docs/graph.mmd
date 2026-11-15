@@ -1,0 +1,36 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	profile(profile)
+	screening(screening)
+	quant(quant)
+	macro(macro)
+	events(events)
+	scenarios(scenarios)
+	red_team(red_team)
+	explain(explain)
+	verifier(verifier)
+	__end__([<p>__end__</p>]):::last
+	__start__ -.-> profile;
+	__start__ -.-> screening;
+	events --> scenarios;
+	explain --> verifier;
+	macro --> scenarios;
+	profile -.-> screening;
+	quant --> scenarios;
+	red_team -.-> explain;
+	red_team -.-> scenarios;
+	scenarios --> red_team;
+	screening --> events;
+	screening --> macro;
+	screening --> quant;
+	verifier -.-> __end__;
+	verifier -.-> explain;
+	profile -.-> profile;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
