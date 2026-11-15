@@ -271,3 +271,64 @@ def test_whatif_api_flow():
     assert "scenarios" in diff
     assert "capped" in diff["scenarios"]
     assert diff["scenarios"]["capped"]["weights"]["TSLA"]["old"] == pytest.approx(0.05)
+
+
+def _custom(tolerance: str, horizon: int = 10) -> dict:
+    return {
+        "objective": "growth",
+        "horizon_years": horizon,
+        "risk_tolerance": tolerance,
+        "risk_capacity": "moderate",
+        "constraints": [],
+        "preferences": ["likes_tech"],
+        "budget_cad": 50000,
+    }
+
+
+def _wait_final(client: TestClient, run_id: str, timeout: float = 60) -> dict:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        resp = client.get(f"/runs/{run_id}")
+        if resp.status_code == 200 and resp.json().get("verification"):
+            return resp.json()
+        time.sleep(0.2)
+    raise AssertionError(f"run {run_id} did not finish")
+
+
+def test_custom_profiles_are_isolated_per_run():
+    client = TestClient(app)
+    text = "Je veux construire un portefeuille."
+    a = client.post("/runs", json={"persona": "custom_user", "request_text": text,
+                                   "profile_data": _custom("high", 15)}).json()["run_id"]
+    b = client.post("/runs", json={"persona": "custom_user", "request_text": text,
+                                   "profile_data": _custom("low", 3)}).json()["run_id"]
+    sa, sb = _wait_final(client, a), _wait_final(client, b)
+    assert sa["persona"] != sb["persona"]
+    assert sa["profile"]["risk_tolerance"] == "high" and sa["profile"]["horizon_years"] == 15
+    assert sb["profile"]["risk_tolerance"] == "low" and sb["profile"]["horizon_years"] == 3
+
+
+def test_personas_endpoint_unchanged_by_custom_runs():
+    client = TestClient(app)
+    before = client.get("/personas").json()
+    run_id = client.post("/runs", json={"persona": "custom_user",
+                                        "request_text": "Je veux construire un portefeuille.",
+                                        "profile_data": _custom("moderate")}).json()["run_id"]
+    _wait_final(client, run_id)
+    after = client.get("/personas").json()
+    assert set(after) == {"amira", "mateo", "robert"} and after == before
+    assert PERSONAS["robert"]["risk_tolerance"] == "low_moderate"
+
+
+@pytest.mark.parametrize("bad", [{"risk_tolerance": "yolo"}, {"risk_capacity": "huge"},
+                                 {"horizon_years": 0}, {"horizon_years": "soon"}])
+def test_invalid_custom_profile_is_rejected(bad):
+    client = TestClient(app)
+    resp = client.post("/runs", json={"persona": "custom_user", "request_text": "x",
+                                      "profile_data": _custom("moderate") | bad})
+    assert resp.status_code == 400
+
+
+def test_unknown_persona_without_profile_is_rejected():
+    client = TestClient(app)
+    assert client.post("/runs", json={"persona": "custom_user", "request_text": "x"}).status_code == 400

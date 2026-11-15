@@ -1,11 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ["class"],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border, 214.3 31.8% 91.4%))",
         input: "hsl(var(--input, 214.3 31.8% 91.4%))",
@@ -35,6 +39,10 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card, 0 0% 100%))",
           foreground: "hsl(var(--card-foreground, 222.2 84% 4.9%))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover, 0 0% 100%))",
+          foreground: "hsl(var(--popover-foreground, 222.2 84% 4.9%))",
         },
       },
       borderRadius: {

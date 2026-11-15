@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-PersonaId = Literal["amira", "mateo", "robert"]
+PersonaId = str
 ScenarioName = Literal["as_requested", "capped", "profile_baseline"]
 
 SCENARIO_NAMES: tuple[str, ...] = ("as_requested", "capped", "profile_baseline")

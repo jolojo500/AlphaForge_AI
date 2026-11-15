@@ -21,7 +21,8 @@ export async function fetchPersonas(): Promise<Record<string, PersonaMeta>> {
 export async function createRun(
   persona: string,
   requestText: string,
-  asOfDate?: string
+  asOfDate?: string,
+  extraPayload?: Partial<BackendRunPayload>
 ): Promise<{ run_id: string }> {
   const res = await fetch(`${API_BASE}/runs`, {
     method: 'POST',
@@ -30,6 +31,8 @@ export async function createRun(
       persona,
       request_text: requestText,
       as_of_date: asOfDate || null,
+      profile_data: extraPayload?.profile_data || null,
+      user_profile: extraPayload?.user_profile || null,
     }),
   });
   if (!res.ok) {
@@ -113,4 +116,94 @@ export function subscribeRunEvents(
   return () => {
     source.close();
   };
+}
+
+import { UserOnboardingProfile, BackendRunPayload } from './types';
+
+/**
+ * Prepares the payload for the AlphaForge multi-agent backend.
+ * Integrates questionnaire profile and user question, ready for POST /runs.
+ */
+export function prepareBackendPayload(
+  profile: UserOnboardingProfile,
+  requestText: string
+): BackendRunPayload {
+  let objective = 'capital_preservation';
+  if (profile.primaryObjective.includes('équilibrée')) {
+    objective = 'balanced';
+  } else if (profile.primaryObjective.includes('Croissance')) {
+    objective = 'growth';
+  } else if (profile.primaryObjective.includes('revenus') || profile.primaryObjective.includes('Revenus')) {
+    objective = 'income';
+  }
+
+  let horizonYears = 5;
+  const matchNum = profile.firstWithdrawalHorizon.match(/\d+/);
+  if (matchNum) {
+    horizonYears = parseInt(matchNum[0], 10);
+  } else if (profile.firstWithdrawalHorizon.includes('Court')) {
+    horizonYears = 2;
+  } else if (profile.firstWithdrawalHorizon.includes('Long')) {
+    horizonYears = 15;
+  }
+
+  let riskTolerance = 'low_moderate';
+  if (profile.riskTolerance === 'Faible') riskTolerance = 'low';
+  else if (profile.riskTolerance === 'Faible à modéré') riskTolerance = 'low_moderate';
+  else if (profile.riskTolerance === 'Modéré') riskTolerance = 'moderate';
+  else if (profile.riskTolerance === 'Élevé') riskTolerance = 'high';
+
+  let riskCapacity = 'low';
+  if (
+    profile.essentialExpensesImpact.includes('couvertes') &&
+    profile.capitalNeedNext12Months.includes('urgence')
+  ) {
+    riskCapacity = 'moderate';
+  }
+
+  const constraints: string[] = [];
+  if (profile.cryptoPreference.includes('Exclusion totale') || profile.cryptoPreference.includes('0 %')) {
+    constraints.push('no_crypto');
+  }
+  if (profile.esgImportance.includes('Prioritaire') || profile.esgImportance.includes('strict')) {
+    constraints.push('esg_only', 'no_controversies');
+  }
+  if (profile.excludedCategories) {
+    profile.excludedCategories.forEach((ex) => {
+      // Only constraints the engine implements are sent (see screening.py).
+      if (ex.includes('fossiles')) constraints.push('esg_only', 'no_controversies');
+      if (ex.includes('Cryptoactifs')) constraints.push('no_crypto');
+    });
+  }
+
+  // Map questionnaire labels to the preference tokens the scenario builder understands
+  // (PREFERENCE_SECTORS in alphaforge/nodes/scenarios.py); other labels pass through.
+  const preferences: string[] = profile.interestedSectors.map((s) =>
+    /tech|ia\b/i.test(s) ? 'likes_tech' : s
+  );
+  if (/modérée|majeurs/i.test(profile.cryptoPreference) && !preferences.includes('likes_crypto')) {
+    preferences.push('likes_crypto');
+  }
+  if (profile.currencyPreference.includes('CAD')) {
+    preferences.push('prefers_cad');
+  }
+
+  const payload: BackendRunPayload = {
+    persona: 'custom_user',
+    request_text: requestText,
+    user_profile: profile,
+    profile_data: {
+      objective,
+      horizon_years: horizonYears,
+      risk_tolerance: riskTolerance,
+      risk_capacity: riskCapacity,
+      constraints: Array.from(new Set(constraints)),
+      preferences,
+      budget_cad: profile.simulatedCapital,
+      notes: profile.additionalNotes,
+    },
+  };
+
+  console.log('[AlphaForge] Payload prepared for backend execution:', payload);
+  return payload;
 }

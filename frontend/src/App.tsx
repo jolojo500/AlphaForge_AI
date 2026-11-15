@@ -1,270 +1,434 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { GraphState, PersonaMeta, TraceEntry, WhatIfDiff } from './types';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  fetchPersonas,
+  GraphState,
+  UserOnboardingProfile,
+  BackendRunPayload,
+  TraceEntry,
+  WhatIfDiff,
+} from './types';
+import {
   createRun,
   subscribeRunEvents,
-  answerRun,
   fetchRunState,
+  answerRun,
   createWhatIf,
   fetchRunDiff,
 } from './api';
-import { SimulationBanner } from './components/SimulationBanner';
-import { PersonaPicker } from './components/PersonaPicker';
-import { ConflictsAlert } from './components/ConflictsAlert';
-import { NodeTrace } from './components/NodeTrace';
-import { ClarificationBox } from './components/ClarificationBox';
+import { ThemeProvider } from './components/ThemeProvider';
+import { ThemeToggle } from './components/ThemeToggle';
+import { WelcomeScreen } from './components/WelcomeScreen';
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { QueryScreen } from './components/QueryScreen';
 import { ScenarioCards } from './components/ScenarioCards';
 import { ExplanationSection } from './components/ExplanationSection';
 import { ExclusionsCard } from './components/ExclusionsCard';
 import { EvidenceTable } from './components/EvidenceTable';
 import { EvidenceModal } from './components/EvidenceModal';
+import { NodeTrace } from './components/NodeTrace';
+import { ConflictsAlert } from './components/ConflictsAlert';
+import { SimulationBanner } from './components/SimulationBanner';
+import { ClarificationBox } from './components/ClarificationBox';
 import { WhatIfControls } from './components/WhatIfControls';
 import { WhatIfDiffView } from './components/WhatIfDiffView';
-import { Compass, AlertTriangle } from 'lucide-react';
+import {
+  ArrowLeft,
+  SlidersHorizontal,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  CheckCircle2,
+} from 'lucide-react';
+import { Logo } from './components/Logo';
+import { Button } from './components/ui/button';
+import { Badge } from './components/ui/badge';
 
-export const App: React.FC = () => {
-  const [personas, setPersonas] = useState<Record<string, PersonaMeta>>({});
-  const [selectedPersona, setSelectedPersona] = useState<string>('robert');
-  const [requestText, setRequestText] = useState<string>('');
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [isAnswering, setIsAnswering] = useState<boolean>(false);
-  const [trace, setTrace] = useState<TraceEntry[]>([]);
-  const [interruptQuestion, setInterruptQuestion] = useState<string | null>(null);
+const STORAGE_KEY = 'alphaforge_user_profile';
+
+type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results';
+
+export const AppContent: React.FC = () => {
+  const [view, setView] = useState<AppView>('welcome');
+  const [userProfile, setUserProfile] = useState<UserOnboardingProfile | null>(null);
   const [runState, setRunState] = useState<GraphState | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [runId, setRunId] = useState<string | null>(null);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+  const [lastPayload, setLastPayload] = useState<BackendRunPayload | null>(null);
+
+  // Live Backend execution state
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [activeTrace, setActiveTrace] = useState<TraceEntry[]>([]);
+  const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState<boolean>(false);
+  const [runError, setRunError] = useState<string | null>(null);
+
+  // What-If state
   const [whatIfDiff, setWhatIfDiff] = useState<WhatIfDiff | null>(null);
   const [isWhatIfRunning, setIsWhatIfRunning] = useState<boolean>(false);
 
-  const unsubRef = useRef<(() => void) | null>(null);
+  // Unsubscribe ref for SSE stream
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Load personas on mount
+  // Check localStorage on mount
   useEffect(() => {
-    fetchPersonas()
-      .then((data) => {
-        setPersonas(data);
-        if (data['robert']) {
-          setRequestText(data['robert'].example_request);
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching personas:', err);
-        setError('Impossible de joindre le serveur FastAPI. Vérifiez que le backend tourne sur le port 8000.');
-      });
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as UserOnboardingProfile;
+        setUserProfile(parsed);
+        setView('query');
+      } else {
+        setView('welcome');
+      }
+    } catch (e) {
+      console.warn('Error reading localStorage:', e);
+      setView('welcome');
+    }
   }, []);
 
-  // Update example request text when selected persona changes
-  const handleSelectPersona = (id: string) => {
-    setSelectedPersona(id);
-    if (personas[id]) {
-      setRequestText(personas[id].example_request);
-    }
-  };
-
-  // Cleanup EventSource on unmount
+  // Cleanup SSE stream on unmount
   useEffect(() => {
     return () => {
-      if (unsubRef.current) {
-        unsubRef.current();
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
       }
     };
   }, []);
 
-  const handleStartRun = useCallback(async () => {
-    setError(null);
-    setTrace([]);
-    setInterruptQuestion(null);
-    setRunState(null);
-    setSelectedEvidenceId(null);
-    setWhatIfDiff(null);
-    setIsRunning(true);
+  // Handle questionnaire completion
+  const handleOnboardingComplete = (profile: UserOnboardingProfile) => {
+    setUserProfile(profile);
+    setView('query');
+  };
 
-    if (unsubRef.current) {
-      unsubRef.current();
-      unsubRef.current = null;
+  // Reset user profile & localStorage
+  const handleResetProfile = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn('Error clearing localStorage:', e);
+    }
+    setUserProfile(null);
+    setView('welcome');
+  };
+
+  // Launch live multi-agent backend execution
+  const handleStartRun = async (payload: BackendRunPayload) => {
+    setLastPayload(payload);
+    setView('analysis_results');
+    setIsRunning(true);
+    setRunError(null);
+    setClarificationQuestion(null);
+    setActiveTrace([]);
+    setRunState(null);
+    setWhatIfDiff(null);
+
+    // Cancel existing stream if any
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
     }
 
     try {
-      const { run_id } = await createRun(selectedPersona, requestText);
-      setRunId(run_id);
+      const { run_id } = await createRun(
+        payload.persona,
+        payload.request_text,
+        undefined,
+        payload
+      );
+      setCurrentRunId(run_id);
 
-      const unsubscribe = subscribeRunEvents(
+      const unsub = subscribeRunEvents(
         run_id,
-        (ev) => {
-          if (ev.type === 'trace') {
-            setTrace((prev) => [...prev, ev.entry]);
-          } else if (ev.type === 'interrupt') {
-            setInterruptQuestion(ev.question);
+        (event) => {
+          if (event.type === 'trace' && event.entry) {
+            setActiveTrace((prev) => {
+              const existingIdx = prev.findIndex((e) => e.node === event.entry?.node);
+              if (existingIdx >= 0) {
+                const copy = [...prev];
+                copy[existingIdx] = event.entry!;
+                return copy;
+              }
+              return [...prev, event.entry!];
+            });
+          } else if (event.type === 'interrupt') {
             setIsRunning(false);
-          } else if (ev.type === 'final') {
+            setClarificationQuestion(event.question);
+          } else if (event.type === 'final') {
             setIsRunning(false);
-            setInterruptQuestion(null);
-            fetchRunState(ev.run_id)
+            setClarificationQuestion(null);
+            fetchRunState(run_id)
               .then((state) => {
                 setRunState(state);
-                if (state.trace && state.trace.length > 0) {
-                  setTrace(state.trace);
-                }
+                if (state.trace) setActiveTrace(state.trace);
               })
               .catch((err) => {
-                setError(`Erreur lors de la récupération du résultat: ${err.message}`);
+                setRunError(err.message || 'Erreur lors de la récupération des résultats');
               });
-          } else if (ev.type === 'error') {
+          } else if (event.type === 'error') {
             setIsRunning(false);
-            setError(ev.error || 'Erreur pendant l’exécution de l’analyse');
+            setRunError(event.error || "Une erreur est survenue lors de l'exécution");
           }
         },
         (err) => {
-          console.error('SSE Error:', err);
+          console.warn('SSE stream notice:', err);
         }
       );
-
-      unsubRef.current = unsubscribe;
+      unsubscribeRef.current = unsub;
     } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setRunError(
+        `Connexion au moteur d'analyse impossible (${errorMessage}). Aucun résultat n'est affiché : réessayez.`
+      );
       setIsRunning(false);
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Échec du lancement : ${msg}`);
     }
-  }, [selectedPersona, requestText]);
+  };
 
-  const handleAnswerClarification = useCallback(async (answer: string) => {
-    if (!runId) return;
-    setIsAnswering(true);
-    setError(null);
-
+  // Answer clarifying question (interrupt)
+  const handleAnswerClarification = async (answerText: string) => {
+    if (!currentRunId) return;
+    setIsSubmittingAnswer(true);
+    setRunError(null);
     try {
-      await answerRun(runId, answer);
-      setInterruptQuestion(null);
+      await answerRun(currentRunId, answerText);
+      setClarificationQuestion(null);
       setIsRunning(true);
-      setIsAnswering(false);
     } catch (err: unknown) {
-      setIsAnswering(false);
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Échec de la réponse : ${msg}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setRunError(errorMessage || "Erreur lors de l'envoi de la réponse");
+    } finally {
+      setIsSubmittingAnswer(false);
     }
-  }, [runId]);
+  };
 
-  const handleRunWhatIf = useCallback(
-    async (field: string, value: unknown) => {
-      if (!runId || !runState) return;
-      setIsWhatIfRunning(true);
-      setError(null);
-
-      try {
-        const { run_id: childId } = await createWhatIf(runId, field, value);
-
-        subscribeRunEvents(
-          childId,
-          (ev) => {
-            if (ev.type === 'trace') {
-              setTrace((prev) => [...prev, ev.entry]);
-            } else if (ev.type === 'final') {
-              fetchRunDiff(childId)
-                .then((diffData) => {
-                  setWhatIfDiff(diffData);
-                  setIsWhatIfRunning(false);
-                })
-                .catch((err) => {
-                  setError(`Échec du calcul des écarts What-If: ${err.message}`);
-                  setIsWhatIfRunning(false);
-                });
-            } else if (ev.type === 'error') {
-              setIsWhatIfRunning(false);
-              setError(ev.error || 'Erreur pendant la simulation What-If');
-            }
-          },
-          (err) => {
-            console.error('SSE What-If error:', err);
+  // Run What-If simulation
+  const handleRunWhatIf = async (field: string, value: unknown) => {
+    if (!currentRunId) return;
+    setIsWhatIfRunning(true);
+    setWhatIfDiff(null);
+    try {
+      const { run_id: childId } = await createWhatIf(currentRunId, field, value);
+      const unsub = subscribeRunEvents(
+        childId,
+        (event) => {
+          if (event.type === 'trace' && event.entry) {
+            setActiveTrace((prev) => {
+              const existingIdx = prev.findIndex((e) => e.node === event.entry?.node);
+              if (existingIdx >= 0) {
+                const copy = [...prev];
+                copy[existingIdx] = event.entry!;
+                return copy;
+              }
+              return [...prev, event.entry!];
+            });
+          } else if (event.type === 'final') {
             setIsWhatIfRunning(false);
+            Promise.all([fetchRunDiff(childId), fetchRunState(childId)])
+              .then(([diff, state]) => {
+                setWhatIfDiff(diff);
+                setRunState(state);
+                setCurrentRunId(childId);
+              })
+              .catch((err) => {
+                console.error('What-If state error:', err);
+              });
+          } else if (event.type === 'error') {
+            setIsWhatIfRunning(false);
+            setRunError(event.error || 'Erreur lors du calcul What-If');
           }
-        );
-      } catch (err: unknown) {
-        setIsWhatIfRunning(false);
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(`Échec du lancement What-If : ${msg}`);
-      }
-    },
-    [runId, runState]
-  );
+        },
+        (err) => {
+          console.warn('What-If SSE notice:', err);
+          setIsWhatIfRunning(false);
+        }
+      );
+      unsubscribeRef.current = unsub;
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setIsWhatIfRunning(false);
+      setRunError(errorMessage || 'Erreur lors du lancement de la simulation What-If');
+    }
+  };
 
-  const activeEvidence = selectedEvidenceId && runState?.evidence
-    ? runState.evidence[selectedEvidenceId] || null
-    : null;
+  const activeEvidence =
+    selectedEvidenceId && runState?.evidence
+      ? runState.evidence[selectedEvidenceId] || null
+      : null;
 
+  // View 1: Welcome screen (First time user with no localStorage)
+  if (view === 'welcome') {
+    return (
+      <WelcomeScreen
+        onStart={() => setView('onboarding')}
+        onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
+      />
+    );
+  }
+
+  // View 2: Onboarding Questionnaire (5 steps)
+  if (view === 'onboarding') {
+    return (
+      <OnboardingFlow
+        initialProfile={userProfile}
+        onComplete={handleOnboardingComplete}
+        onCancel={userProfile ? () => setView('query') : undefined}
+      />
+    );
+  }
+
+  // View 3: Query Screen (Existing user with saved profile in localStorage)
+  if (view === 'query' && userProfile) {
+    return (
+      <QueryScreen
+        profile={userProfile}
+        onEditProfile={() => setView('onboarding')}
+        onResetProfile={handleResetProfile}
+        onRunQuery={handleStartRun}
+      />
+    );
+  }
+
+  // View 4: Live Analysis Results
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-background flex flex-col font-sans transition-colors">
       <SimulationBanner />
 
-      {/* Main Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
+      {/* Top Header */}
+      <header className="bg-card border-b border-border sticky top-0 z-20 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setView('query')}
+              className="gap-1.5 text-xs sm:text-sm font-medium cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Poser une autre question</span>
+            </Button>
+            <Logo size="sm" />
+          </div>
+
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm">
-              <Compass className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-slate-900 tracking-tight">AlphaForge AI</h1>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-                  Datathon PolyFinances 2026
+            {userProfile && (
+              <Badge
+                variant="secondary"
+                className="hidden sm:inline-flex items-center gap-1.5 py-1 px-2.5 font-normal"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>
+                  {userProfile.simulatedCapitalFormatted} · {userProfile.riskTolerance}
                 </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Moteur de second avis d&apos;investissement · Architecture multi-agents vérifiable
-              </p>
-            </div>
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setView('onboarding')}
+              className="text-xs cursor-pointer"
+            >
+              Modifier profil
+            </Button>
+
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-            <div className="text-sm">
-              <span className="font-semibold block">Erreur rencontrée</span>
-              <span>{error}</span>
+      {/* Main Results View */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+        {/* Error notification if any */}
+        {runError && (
+          <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-xs text-destructive flex items-start justify-between gap-3 shadow-xs">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block">Notification système</span>
+                <p className="mt-0.5 leading-relaxed">{runError}</p>
+              </div>
             </div>
+            {lastPayload && !isRunning && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleStartRun(lastPayload)}
+                className="h-8 text-xs gap-1.5 shrink-0"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Réessayer</span>
+              </Button>
+            )}
           </div>
         )}
 
-        <PersonaPicker
-          personas={personas}
-          selectedPersona={selectedPersona}
-          onSelectPersona={handleSelectPersona}
-          requestText={requestText}
-          onChangeRequestText={setRequestText}
-          onRun={handleStartRun}
-          isRunning={isRunning}
-        />
-
-        {/* Profile conflicts shown near the top if detected */}
-        {runState?.profile?.conflicts && (
-          <ConflictsAlert conflicts={runState.profile.conflicts} />
+        {/* Live Loading banner while running */}
+        {isRunning && !runState && (
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg text-xs text-foreground flex items-center justify-between gap-3 shadow-xs animate-pulse">
+            <div className="flex items-center gap-2.5">
+              <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              <div>
+                <span className="font-semibold text-primary">
+                  Orchestration multi-agents en direct...
+                </span>
+                <p className="text-muted-foreground mt-0.5">
+                  Question : « {lastPayload?.request_text} » · Exécution des agents et calcul des scénarios
+                </p>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-[11px] font-mono border-primary/30">
+              {activeTrace.length} / 9 étapes
+            </Badge>
+          </div>
         )}
 
-        {interruptQuestion && (
+        {/* Success banner when complete */}
+        {runState && !isRunning && (
+          <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-950 dark:text-emerald-200 flex items-start justify-between gap-2.5 shadow-xs">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+              <div className="text-xs">
+                <div className="font-semibold">
+                  Analyse complétée avec succès · 9 agents coordonnés
+                </div>
+                <p className="mt-0.5 text-xs text-emerald-900/80 dark:text-emerald-300">
+                  Requête traitée : « {lastPayload?.request_text || runState?.request_text} » avec votre profil ({userProfile?.primaryObjective}, {userProfile?.firstWithdrawalHorizon}).
+                </p>
+              </div>
+            </div>
+            {runState.verification?.passed && (
+              <Badge variant="outline" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 text-[10px] shrink-0 font-medium">
+                Vérifié déterministe
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Clarification Box (Agent 1 interrupt) */}
+        {clarificationQuestion && (
           <ClarificationBox
-            question={interruptQuestion}
+            question={clarificationQuestion}
             onAnswer={handleAnswerClarification}
-            isSubmitting={isAnswering}
+            isSubmitting={isSubmittingAnswer}
           />
         )}
 
-        <NodeTrace trace={trace} isRunning={isRunning} />
+        {/* Node Trace (Real-time agent execution) */}
+        {(activeTrace.length > 0 || isRunning) && (
+          <NodeTrace
+            trace={activeTrace.length > 0 ? activeTrace : (runState?.trace || [])}
+            isRunning={isRunning || isWhatIfRunning}
+          />
+        )}
 
+        {/* Conflicts Alert */}
+        {runState?.profile?.conflicts && runState.profile.conflicts.length > 0 && (
+          <ConflictsAlert conflicts={runState.profile.conflicts} />
+        )}
+
+        {/* What-If Module */}
         {runState && (
           <>
-            {whatIfDiff && (
-              <WhatIfDiffView
-                diff={whatIfDiff}
-                onClose={() => setWhatIfDiff(null)}
-              />
-            )}
-
+            <WhatIfDiffView diff={whatIfDiff} onClose={() => setWhatIfDiff(null)} />
             <WhatIfControls
               currentProfile={runState.profile}
               asOfDate={runState.as_of_date}
@@ -272,50 +436,68 @@ export const App: React.FC = () => {
               onRunWhatIf={handleRunWhatIf}
               isRunning={isWhatIfRunning}
             />
-
-            <ScenarioCards
-              scenarios={runState.scenarios}
-              evidence={runState.evidence}
-              mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
-            />
-
-            <ExplanationSection
-              explanation={runState.explanation}
-              verification={runState.verification}
-              evidence={runState.evidence}
-              onSelectEvidence={setSelectedEvidenceId}
-            />
-
-            <ExclusionsCard
-              exclusions={runState.exclusions}
-              evidence={runState.evidence}
-              onSelectEvidence={setSelectedEvidenceId}
-            />
-
-            <EvidenceTable
-              evidence={runState.evidence}
-              onSelectEvidence={setSelectedEvidenceId}
-            />
           </>
+        )}
+
+        {/* Scenarios */}
+        {runState?.scenarios && (
+          <ScenarioCards
+            scenarios={runState.scenarios}
+            evidence={runState.evidence}
+            mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
+          />
+        )}
+
+        {/* Explanation */}
+        {runState?.explanation && (
+          <ExplanationSection
+            explanation={runState.explanation}
+            verification={runState.verification}
+            evidence={runState.evidence}
+            onSelectEvidence={setSelectedEvidenceId}
+          />
+        )}
+
+        {/* Exclusions */}
+        {runState?.exclusions && (
+          <ExclusionsCard
+            exclusions={runState.exclusions}
+            evidence={runState.evidence}
+            onSelectEvidence={setSelectedEvidenceId}
+          />
+        )}
+
+        {/* Evidence Table */}
+        {runState?.evidence && (
+          <EvidenceTable
+            evidence={runState.evidence}
+            onSelectEvidence={setSelectedEvidenceId}
+          />
         )}
       </main>
 
-      {/* Evidence detail modal */}
+      {/* Modal for evidence detail */}
       <EvidenceModal
         evidence={activeEvidence}
         onClose={() => setSelectedEvidenceId(null)}
       />
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-6 mt-auto text-center text-xs text-slate-500">
-        <p>
-          AlphaForge AI — Projet pour le Datathon PolyFinances 2026 (BNCD & AWS).
-        </p>
-        <p className="mt-1 text-slate-400">
-          Simulation éducative. Aucun conseil personnalisé ni promesse de rendement financier.
+      <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground">
+        <p>AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026</p>
+        <p className="mt-1 text-muted-foreground/70">
+          Les performances passées ne garantissent pas les résultats futurs.
         </p>
       </footer>
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ThemeProvider defaultTheme="light" storageKey="alphaforge_theme">
+      <AppContent />
+    </ThemeProvider>
   );
 };
 

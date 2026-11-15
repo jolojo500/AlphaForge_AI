@@ -44,19 +44,19 @@ export const WhatIfDiffView: React.FC<WhatIfDiffViewProps> = ({ diff, onClose })
   if (!diff) return null;
 
   return (
-    <section className="bg-indigo-50/40 border-2 border-indigo-200 rounded-xl p-6 mb-6 shadow-sm">
+    <section className="bg-card border-2 border-primary/40 rounded-xl p-5 sm:p-6 mb-6 shadow-xs">
       {/* Header */}
-      <div className="flex items-start justify-between pb-3 mb-4 border-b border-indigo-100">
+      <div className="flex items-start justify-between pb-3 mb-4 border-b border-border/70">
         <div className="flex items-center gap-2">
-          <GitCompare className="w-5 h-5 text-indigo-700" />
+          <GitCompare className="w-5 h-5 text-primary" />
           <div>
-            <h2 className="text-base font-bold text-indigo-950">
+            <h2 className="text-sm sm:text-base font-bold text-foreground">
               Comparaison Avant / Après (Simulation What-If)
             </h2>
             {/* Exactly which hypothesis changed line */}
-            <p className="text-xs font-semibold text-indigo-800 flex items-center gap-1.5 mt-0.5">
+            <p className="text-xs font-semibold text-primary flex items-center gap-1.5 mt-0.5">
               <span>Hypothèse modifiée :</span>
-              <span className="bg-white px-2 py-0.5 rounded border border-indigo-200 text-indigo-900 font-mono">
+              <span className="bg-muted px-2 py-0.5 rounded border border-border text-foreground font-mono">
                 {formatChangeField(diff.change?.field, diff.change?.value)}
               </span>
             </p>
@@ -66,20 +66,20 @@ export const WhatIfDiffView: React.FC<WhatIfDiffViewProps> = ({ diff, onClose })
         <button
           type="button"
           onClick={onClose}
-          className="text-indigo-400 hover:text-indigo-700 p-1 rounded-lg transition-colors cursor-pointer"
+          className="text-muted-foreground hover:text-foreground p-1 rounded-md transition-colors cursor-pointer"
           aria-label="Fermer la vue comparative"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Summary bullet points */}
       {diff.summary && diff.summary.length > 0 && (
-        <div className="bg-white/80 p-3.5 rounded-lg border border-indigo-100 mb-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 block mb-1">
+        <div className="bg-muted/40 p-3.5 rounded-lg border border-border mb-5">
+          <span className="text-xs font-bold uppercase tracking-wider text-foreground block mb-1">
             Impacts observés sur les allocations :
           </span>
-          <ul className="text-xs text-indigo-950 space-y-1 list-disc list-inside">
+          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
             {diff.summary.map((line, idx) => (
               <li key={idx} className="font-medium">{line}</li>
             ))}
@@ -98,14 +98,14 @@ export const WhatIfDiffView: React.FC<WhatIfDiffViewProps> = ({ diff, onClose })
           );
 
           return (
-            <div key={name} className="bg-white rounded-lg p-4 border border-indigo-100 shadow-2xs">
-              <h3 className="text-sm font-bold text-slate-900 mb-3 pb-1 border-b border-slate-100 flex items-center justify-between">
+            <div key={name} className="bg-card rounded-lg p-4 border border-border shadow-2xs">
+              <h3 className="text-sm font-bold text-foreground mb-3 pb-1 border-b border-border/60 flex items-center justify-between">
                 <span>{SCENARIO_LABELS[name] || name}</span>
               </h3>
 
               {/* Weights deltas */}
               <div className="mb-4">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                   Écarts d&apos;allocation
                 </span>
                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
@@ -118,25 +118,25 @@ export const WhatIfDiffView: React.FC<WhatIfDiffViewProps> = ({ diff, onClose })
                       <div
                         key={ticker}
                         className={`text-xs p-1 rounded flex items-center justify-between ${
-                          isTSLA ? 'bg-amber-50 font-medium' : ''
+                          isTSLA ? 'bg-amber-500/10 font-medium' : ''
                         }`}
                       >
-                        <span className="font-mono text-slate-800">{ticker}</span>
+                        <span className="font-mono text-foreground">{ticker}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-500 text-[11px]">
+                          <span className="text-muted-foreground text-[11px]">
                             {(delta.old * 100).toFixed(1)}%
                           </span>
-                          <ArrowRight className="w-3 h-3 text-slate-300" />
-                          <span className="font-semibold text-slate-900 text-[11px]">
+                          <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
+                          <span className="font-semibold text-foreground text-[11px]">
                             {(delta.new * 100).toFixed(1)}%
                           </span>
                           <span
                             className={`inline-flex items-center text-[10px] font-bold px-1 py-0.5 rounded ${
                               isIncrease
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                 : isDecrease
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-slate-100 text-slate-600'
+                                ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                : 'bg-muted text-muted-foreground'
                             }`}
                           >
                             {isIncrease ? (
@@ -158,7 +158,7 @@ export const WhatIfDiffView: React.FC<WhatIfDiffViewProps> = ({ diff, onClose })
 
               {/* Metrics deltas */}
               <div>
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
                   Écarts des indicateurs
                 </span>
                 <div className="space-y-1 text-xs">
@@ -168,14 +168,14 @@ export const WhatIfDiffView: React.FC<WhatIfDiffViewProps> = ({ diff, onClose })
                     const newStr = delta.new !== null ? `${(delta.new * 100).toFixed(1)}%` : '—';
 
                     return (
-                      <div key={mKey} className="flex justify-between items-center py-0.5 text-slate-700">
-                        <span className="text-[11px] truncate" title={METRIC_LABELS[mKey] || mKey}>
+                      <div key={mKey} className="flex justify-between items-center py-0.5 text-foreground">
+                        <span className="text-[11px] truncate text-muted-foreground" title={METRIC_LABELS[mKey] || mKey}>
                           {METRIC_LABELS[mKey] || mKey}
                         </span>
                         <div className="flex items-center gap-1.5 text-[11px] shrink-0 font-mono">
-                          <span>{oldStr}</span>
-                          <span className="text-slate-300">→</span>
-                          <span className="font-bold text-slate-900">{newStr}</span>
+                          <span className="text-muted-foreground">{oldStr}</span>
+                          <span className="text-muted-foreground/40">→</span>
+                          <span className="font-bold text-foreground">{newStr}</span>
                         </div>
                       </div>
                     );

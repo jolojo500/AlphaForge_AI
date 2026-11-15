@@ -222,10 +222,44 @@ class RunCreateRequest(BaseModel):
     persona: str
     request_text: str = ""
     as_of_date: dt.date | None = None
+    profile_data: dict[str, Any] | None = None
+    user_profile: dict[str, Any] | None = None
 
 
 class AnswerRequest(BaseModel):
     text: str = Field(..., description="Answer to the clarifying question")
+
+
+DEMO_PERSONAS = ("amira", "mateo", "robert")
+TOLERANCES = {"low", "low_moderate", "moderate", "high"}
+CAPACITIES = {"low", "moderate", "high"}
+
+
+def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
+    """Validated persona-table entry for a questionnaire profile (400 on bad values)."""
+    tolerance = data.get("risk_tolerance", "moderate")
+    capacity = data.get("risk_capacity", "moderate")
+    if tolerance not in TOLERANCES:
+        raise HTTPException(400, f"risk_tolerance must be one of {sorted(TOLERANCES)}")
+    if capacity not in CAPACITIES:
+        raise HTTPException(400, f"risk_capacity must be one of {sorted(CAPACITIES)}")
+    try:
+        horizon = int(data.get("horizon_years", 5))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "horizon_years must be an integer") from None
+    if not 1 <= horizon <= 50:
+        raise HTTPException(400, "horizon_years must be between 1 and 50")
+    return {
+        "label": str(data.get("label") or "Profil personnalisé"),
+        "objective": str(data.get("objective") or "balanced"),
+        "horizon_years": horizon,
+        "risk_tolerance": tolerance,
+        "risk_capacity": capacity,
+        "constraints": [str(c) for c in data.get("constraints") or []],
+        "preferences": [str(c) for c in data.get("preferences") or []],
+        "budget_cad": data.get("budget_cad"),
+        "example_request": request_text,
+    }
 
 
 @app.get("/health")
@@ -235,18 +269,24 @@ def health() -> dict[str, str]:
 
 @app.get("/personas")
 def get_personas() -> dict[str, dict[str, Any]]:
-    return PERSONAS
+    return {k: PERSONAS[k] for k in DEMO_PERSONAS}
 
 
 @app.post("/runs")
 def create_run(req: RunCreateRequest) -> dict[str, str]:
-    if req.persona not in PERSONAS:
+    persona = req.persona
+    if req.profile_data:
+        # A questionnaire profile is registered under its own key for this run only,
+        # so concurrent users never overwrite each other and the demo personas stay intact.
+        persona = f"custom_{uuid.uuid4().hex[:12]}"
+        PERSONAS[persona] = _custom_persona(req.profile_data, req.request_text)
+    elif persona not in DEMO_PERSONAS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown persona '{req.persona}'. Allowed: {list(PERSONAS.keys())}",
+            detail=f"Unknown persona '{persona}'. Allowed: {list(DEMO_PERSONAS)}",
         )
     run = store.create(
-        persona=req.persona,
+        persona=persona,
         request_text=req.request_text,
         as_of_date=req.as_of_date,
     )
