@@ -84,6 +84,58 @@ def test_dynamodb_trace_store_with_stub():
     assert runs[0]["run_id"] == "amira-stub-run"
 
 
+def test_dynamodb_trace_store_with_s3_offloading():
+    """Verify DynamoDB 400 KB limit handling: state offloaded to S3."""
+    items_db = {}
+    s3_objects = {}
+
+    table_stub = MagicMock()
+    table_stub.put_item.side_effect = lambda Item: items_db.update({Item["run_id"]: Item})
+    table_stub.get_item.side_effect = lambda Key: {"Item": items_db.get(Key["run_id"])}
+
+    s3_stub = MagicMock()
+
+    def mock_put_object(Bucket, Key, Body, ContentType):
+        s3_objects[f"{Bucket}/{Key}"] = Body
+
+    def mock_get_object(Bucket, Key):
+        body = s3_objects[f"{Bucket}/{Key}"]
+        mock_body = MagicMock()
+        mock_body.read.return_value = body
+        return {"Body": mock_body}
+
+    s3_stub.put_object.side_effect = mock_put_object
+    s3_stub.get_object.side_effect = mock_get_object
+
+    store = DynamoDBTraceStore(
+        table_name="test-table",
+        region_name="us-east-1",
+        table_resource=table_stub,
+        s3_bucket="test-bucket",
+        s3_client=s3_stub,
+    )
+
+    state = run("robert", PERSONAS["robert"]["example_request"])
+    store.save_run("robert-s3-run", state)
+
+    # Check that DynamoDB item contains s3_state_key and NO final_state_json
+    raw_item = items_db["robert-s3-run"]
+    assert "s3_state_key" in raw_item
+    assert raw_item["s3_state_key"] == "runs/robert-s3-run.json"
+    assert "final_state_json" not in raw_item
+
+    # Check that S3 object exists
+    assert "test-bucket/runs/robert-s3-run.json" in s3_objects
+
+    # Check get_run retrieves full state from S3 transparently
+    retrieved = store.get_run("robert-s3-run")
+    assert retrieved is not None
+    assert retrieved["run_id"] == "robert-s3-run"
+    assert retrieved["persona"] == "robert"
+    assert retrieved["final_state"]["persona"] == "robert"
+
+
+
 def test_get_trace_store_factory(monkeypatch):
     monkeypatch.setenv("AF_TRACE_BACKEND", "local")
     store = get_trace_store()

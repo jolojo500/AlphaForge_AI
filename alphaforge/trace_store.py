@@ -111,7 +111,12 @@ class LocalJsonTraceStore(TraceStore):
 
 
 class DynamoDBTraceStore(TraceStore):
-    """AWS DynamoDB backend for run and trace persistence."""
+    """AWS DynamoDB backend for run and trace persistence.
+
+    To respect DynamoDB's 400 KB item limit, when `s3_bucket` (or env `AF_S3_BUCKET`)
+    is configured, the full graph state is stored in S3 at `s3://<bucket>/runs/<run_id>.json`
+    and DynamoDB stores the trace, verification, and S3 pointer.
+    """
 
     def __init__(
         self,
@@ -119,11 +124,14 @@ class DynamoDBTraceStore(TraceStore):
         region_name: str | None = None,
         session: boto3.Session | None = None,
         table_resource: Any = None,
+        s3_bucket: str | None = None,
+        s3_client: Any = None,
     ) -> None:
         self.table_name = table_name or os.getenv(
             "AF_DYNAMODB_TABLE", "alphaforge-traces"
         )
         self.region_name = region_name or os.getenv("AWS_REGION", "us-east-1")
+        self.s3_bucket = s3_bucket or os.getenv("AF_S3_BUCKET")
 
         if table_resource is not None:
             self._table = table_resource
@@ -139,6 +147,21 @@ class DynamoDBTraceStore(TraceStore):
             dynamodb = session.resource("dynamodb", region_name=self.region_name)
             self._table = dynamodb.Table(self.table_name)
 
+        if s3_client is not None:
+            self._s3 = s3_client
+        elif self.s3_bucket:
+            if session is None:
+                profile = os.getenv("AWS_PROFILE")
+                if profile:
+                    session = boto3.Session(
+                        profile_name=profile, region_name=self.region_name
+                    )
+                else:
+                    session = boto3.Session(region_name=self.region_name)
+            self._s3 = session.client("s3", region_name=self.region_name)
+        else:
+            self._s3 = None
+
     def save_run(
         self,
         run_id: str,
@@ -148,7 +171,6 @@ class DynamoDBTraceStore(TraceStore):
     ) -> dict[str, Any]:
         item = _prepare_item(run_id, state, trace, verification)
 
-        # For DynamoDB put_item, store final_state as JSON string to preserve exact floats/dicts
         db_item = {
             "run_id": item["run_id"],
             "persona": item["persona"],
@@ -158,9 +180,24 @@ class DynamoDBTraceStore(TraceStore):
             "status": item["status"],
             "trace_json": json.dumps(item["trace"], ensure_ascii=False),
             "verification_json": json.dumps(item["verification"], ensure_ascii=False),
-            "final_state_json": json.dumps(item["final_state"], ensure_ascii=False),
             "verification_passed": (item.get("verification") or {}).get("passed", False),
         }
+
+        # To prevent exceeding DynamoDB 400 KB item limit with large states (evidence, quant metrics),
+        # offload full state to S3 when bucket is configured.
+        if self.s3_bucket and self._s3 is not None:
+            s3_key = f"runs/{run_id}.json"
+            state_json = json.dumps(item["final_state"], ensure_ascii=False)
+            self._s3.put_object(
+                Bucket=self.s3_bucket,
+                Key=s3_key,
+                Body=state_json.encode("utf-8"),
+                ContentType="application/json",
+            )
+            db_item["s3_state_key"] = s3_key
+            db_item["s3_bucket"] = self.s3_bucket
+        else:
+            db_item["final_state_json"] = json.dumps(item["final_state"], ensure_ascii=False)
 
         self._table.put_item(Item=db_item)
         return item
@@ -171,10 +208,19 @@ class DynamoDBTraceStore(TraceStore):
         if not raw:
             return None
 
-        # Reconstruct standard item structure
         trace = json.loads(raw.get("trace_json", "[]"))
         verification = json.loads(raw.get("verification_json", "null"))
-        final_state = json.loads(raw.get("final_state_json", "{}"))
+
+        final_state: dict[str, Any] = {}
+        if "s3_state_key" in raw and self._s3 is not None:
+            bucket = raw.get("s3_bucket") or self.s3_bucket
+            s3_obj = self._s3.get_object(Bucket=bucket, Key=raw["s3_state_key"])
+            body_content = s3_obj["Body"].read()
+            if isinstance(body_content, bytes):
+                body_content = body_content.decode("utf-8")
+            final_state = json.loads(body_content)
+        elif "final_state_json" in raw:
+            final_state = json.loads(raw["final_state_json"])
 
         return {
             "run_id": raw["run_id"],
