@@ -1,7 +1,6 @@
-import json
-
 """Tests for TraceStore (local JSON and DynamoDB) and S3 sync (C-5)."""
 
+import json
 import os
 import tempfile
 from unittest.mock import MagicMock
