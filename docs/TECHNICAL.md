@@ -278,27 +278,28 @@ Les métriques ci-dessous proviennent de l'exécution complète du graphe ([alph
 ### 8.3 Mateo (41 ans) — Construction responsable (`build` : Équilibré, ESG, Sans controverse)
 - **Profil** : Équilibré, horizon 10 ans, tolérance modérée (`moderate`), capacité modérée, contraintes `no_crypto`, `esg_only`, `no_controversies`.
 - **Requête** : *« Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées. »*
-- **Screening** : 26 actifs éligibles, 5 actifs strictement exclus :
-  - `BTC-USD` et `ETH-USD` (exclus par `no_crypto` : `ES1`, `ES2`).
-  - `ENB.TO`, `CNQ.TO`, `XOM` (exclus par le critère ESG sur le secteur de l'énergie : `ES3`, `ES4`, `ES5`).
+- **Screening** : 25 actifs éligibles, 6 actifs strictement exclus :
+  - `BTC-USD` et `ETH-USD` (exclus par `no_crypto`).
+  - `ENB.TO`, `CNQ.TO`, `XOM` (exclus par le critère ESG sur le secteur de l'énergie).
+  - `JNJ` (absent de la composition complète de Vanguard ESGV au 2026-09-30).
 
 #### Tableau comparatif des 3 scénarios pour Mateo
 
-| Métrique de risque | `as_requested` (Équipondéré 26 actifs) | `capped` (Plafonné & Équilibré) | `profile_baseline` (Référence) |
+| Métrique de risque | `as_requested` (Équipondéré 25 actifs) | `capped` (Plafonné & Équilibré) | `profile_baseline` (Référence) |
 |---|---|---|---|
-| **Volatilité annualisée (CAD)** | **13,83 %** (`EP2`) | **12,24 %** (`EP8`) | **5,54 %** (`EP14`) |
-| **Perte maximale historique (*Max Drawdown*)** | **-21,18 %** (`EP3`) | **-19,53 %** (`EP9`) | **-7,62 %** (`EP15`) |
-| **Test de résistance 2022 (*Stress 2022*)** | **-16,36 %** (`EP4`) | **-14,97 %** (`EP10`) | **-2,48 %** (`EP16`) |
-| **Poids maximal individuel** | 3,85 % (`EP5`) | 6,00 % (`EP11` - FNB obligataires) | 25,00 % (`EP17` - ZST.TO) |
-| **Indice de concentration sectorielle (HHI)** | 0,0917 (`EP6`) | 0,0813 (`EP12`) | 0,1725 (`EP18`) |
-| **Exposition aux actifs américains** | 57,69 % (`EP7`) | 58,00 % (`EP13`) | 35,52 % (`EP19`) |
+| **Volatilité annualisée (CAD)** | **14,31 %** (`EP2`) | **12,75 %** (`EP8`) | **5,72 %** (`EP14`) |
+| **Perte maximale historique (*Max Drawdown*)** | **-22,02 %** (`EP3`) | **-20,38 %** (`EP9`) | **-8,62 %** (`EP15`) |
+| **Test de résistance 2022 (*Stress 2022*)** | **-17,44 %** (`EP4`) | **-16,02 %** (`EP10`) | **-3,18 %** (`EP16`) |
+| **Poids maximal individuel** | 4,00 % (`EP5`) | 6,00 % (`EP11` - FNB obligataires et or) | 25,00 % (`EP17` - AGG / ZST.TO) |
+| **Indice de concentration sectorielle (HHI)** | 0,0976 (`EP6`) | 0,0866 (`EP12`) | 0,1938 (`EP18`) |
+| **Exposition aux actifs américains** | 56,00 % (`EP7`) | 56,50 % (`EP13`) | 33,09 % (`EP19`) |
 
 **Pondérations clés** :
-- `as_requested` : 26 actifs éligibles équipondérés à 3,85 % chacun.
-- `capped` : ZST.TO 6,0 %, TLT 6,0 %, XBB.TO 6,0 %, AGG 6,0 %, GLD 6,0 %, et 21 actions/FNB éligibles à 3,33 % chacun.
-- `profile_baseline` : ZST.TO 25,0 %, AGG 22,46 %, XIU.TO 18,73 %, FTS.TO 7,0 %, JNJ 7,0 %, RY.TO 5,63 %, TD.TO 4,86 %, PG 4,73 %, XBB.TO 2,54 %, MSFT 1,34 %, ATD.TO 0,62 %.
+- `as_requested` : 25 actifs éligibles équipondérés à 4,0 % chacun.
+- `capped` : AGG, ZST.TO, GLD, TLT et XBB.TO à 6,0 % chacun, puis 20 actions/FNB éligibles à 3,5 % chacun.
+- `profile_baseline` : AGG 25,0 %, ZST.TO 25,0 %, XIU.TO 20,63 %, FTS.TO 7,0 %, PG 7,0 %, RY.TO 6,6 %, TD.TO 5,4 %, ATD.TO 1,19 %, CNR.TO 1,09 %, MSFT 1,09 %.
 
-*Conclusion de l'Agent 4 (exécution réelle sur Bedrock)* : le scénario `profile_baseline` est le plus cohérent avec le profil déclaré (équilibré, tolérance et capacité modérées, ESG, sans controverses) : il présente la volatilité historique la plus faible (5,5 %) des trois, après exclusion des cryptoactifs et des énergies fossiles. Le scénario `capped` (12,2 %) reste plus proche de la demande telle quelle.
+*Conclusion de l'Agent 4 (exécution réelle sur Bedrock)* : le scénario `profile_baseline` est le plus cohérent avec le profil déclaré (équilibré, tolérance et capacité modérées, ESG, sans controverses) : il présente la volatilité historique la plus faible (5,7 %) des trois, après exclusion des cryptoactifs, des énergies fossiles et des titres absents d'ESGV. Le scénario `capped` (12,8 %) reste plus proche de la demande telle quelle.
 
 ---
 
