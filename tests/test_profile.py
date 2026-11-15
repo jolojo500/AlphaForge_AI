@@ -130,6 +130,20 @@ def test_detect_conflict_rules():
     assert "exclu" in prof.detect_conflict(**kw, idea={"ticker": "BTC-USD", "weight": 0.02})[0]
     short = dict(tolerance="high", horizon_years=3, constraints=[])
     assert prof.detect_conflict(**short, idea={"ticker": "ETH-USD", "weight": 0.05})
+    # 12-month loss tolerance conflicts
+    c5 = prof.detect_conflict(tolerance="high", horizon_years=10, constraints=[], idea=None, max_loss_pct=5)
+    assert any("5 %" in c and "élevée" in c for c in c5)
+    c15 = prof.detect_conflict(tolerance="high", horizon_years=10, constraints=[], idea=None, max_loss_pct=15)
+    assert any("15 %" in c and "élevée" in c for c in c15)
+    c25 = prof.detect_conflict(tolerance="moderate", horizon_years=10, constraints=[], idea=None, max_loss_pct=25)
+    assert c25 == []
+
+
+def test_regex_extract_ignores_appended_investor_context():
+    text = "Que pensez-vous de TSLA ?\n\n[Contexte investisseur]\nTolérance de perte sur 12 mois : 5 %"
+    e = prof._regex_extract(text)
+    assert e.ticker == "TSLA"
+    assert e.weight_pct is None  # Does not mistake 5% loss limit for TSLA allocation weight
 
 
 def test_ticker_resolution():

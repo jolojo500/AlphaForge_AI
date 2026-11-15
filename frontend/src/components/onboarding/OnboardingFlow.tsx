@@ -82,9 +82,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>(
     initialProfile?.excludedCategories || []
   );
-  const [currencyPreference, setCurrencyPreference] = useState<string>(
-    initialProfile?.currencyPreference || ''
-  );
 
   const [additionalNotes, setAdditionalNotes] = useState<string>(
     initialProfile?.additionalNotes || ''
@@ -116,7 +113,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       cryptoPreference: cryptoPreference || 'Non spécifié',
       esgImportance: esgImportance || 'Non spécifié',
       excludedCategories,
-      currencyPreference: currencyPreference || 'Non spécifié',
       additionalNotes,
       fictionalCapitalAcknowledged,
       completedAt: new Date().toISOString(),
@@ -147,7 +143,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     riskTolerance && maxLossTolerance && sectorConcentrationLimit && capitalNeedNext12Months && essentialExpensesImpact
   );
   const isStep4Complete = Boolean(
-    interestedSectors.length > 0 && cryptoPreference && esgImportance && currencyPreference
+    interestedSectors.length > 0 && cryptoPreference && esgImportance
   );
 
   const isCurrentStepValid = (() => {
@@ -244,8 +240,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               setEsgImportance={setEsgImportance}
               excludedCategories={excludedCategories}
               setExcludedCategories={setExcludedCategories}
-              currencyPreference={currencyPreference}
-              setCurrencyPreference={setCurrencyPreference}
             />
           )}
 

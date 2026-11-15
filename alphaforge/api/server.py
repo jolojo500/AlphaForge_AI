@@ -249,6 +249,12 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
         raise HTTPException(400, "horizon_years must be an integer") from None
     if not 1 <= horizon <= 50:
         raise HTTPException(400, "horizon_years must be between 1 and 50")
+    max_loss = data.get("max_loss_pct")
+    if max_loss is not None:
+        try:
+            max_loss = float(max_loss)
+        except (TypeError, ValueError):
+            max_loss = None
     return {
         "label": str(data.get("label") or "Profil personnalisé"),
         "objective": str(data.get("objective") or "balanced"),
@@ -258,6 +264,8 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
         "constraints": [str(c) for c in data.get("constraints") or []],
         "preferences": [str(c) for c in data.get("preferences") or []],
         "budget_cad": data.get("budget_cad"),
+        "max_loss_pct": max_loss,
+        "notes": str(data.get("notes") or ""),
         "example_request": request_text,
     }
 

@@ -12,8 +12,6 @@ interface Step4Props {
   setEsgImportance: (val: string) => void;
   excludedCategories?: string[];
   setExcludedCategories?: (val: string[]) => void;
-  currencyPreference: string;
-  setCurrencyPreference: (val: string) => void;
 }
 
 export const Step4Preferences: React.FC<Step4Props> = ({
@@ -25,8 +23,6 @@ export const Step4Preferences: React.FC<Step4Props> = ({
   setEsgImportance,
   excludedCategories = [],
   setExcludedCategories,
-  currencyPreference,
-  setCurrencyPreference,
 }) => {
   const sectorOptions = [
     'Technologies & IA',
@@ -54,12 +50,6 @@ export const Step4Preferences: React.FC<Step4Props> = ({
     'Énergies fossiles & controverses climatiques',
     'Cryptoactifs & devises virtuelles',
     'Aucune exclusion particulière',
-  ];
-
-  const currencyOptions = [
-    'Priorité CAD (Dollar canadien)',
-    'Mixte CAD / USD (Canadien & Américain)',
-    'Sans contrainte de devise',
   ];
 
   const toggleSector = (sector: string) => {
@@ -167,23 +157,6 @@ export const Step4Preferences: React.FC<Step4Props> = ({
           </div>
         </div>
       )}
-
-      {/* Currency */}
-      <div>
-        <label className="block text-xs font-medium text-foreground mb-1.5">
-          Devise & marché d’ancrage <span className="text-destructive">*</span>
-        </label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {currencyOptions.map((opt) => (
-            <RadioCard
-              key={opt}
-              label={opt}
-              selected={currencyPreference === opt}
-              onClick={() => setCurrencyPreference(opt)}
-            />
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

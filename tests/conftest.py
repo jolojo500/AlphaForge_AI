@@ -1,4 +1,10 @@
+import os
+
 import pytest
+
+# Ensure offline deterministic fallback for all test fixtures unless --live is requested
+if not any(arg == "--live" for arg in os.sys.argv):
+    os.environ.setdefault("AF_LLM_OFFLINE", "1")
 
 
 def pytest_addoption(parser):
