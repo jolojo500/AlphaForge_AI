@@ -3,6 +3,13 @@ import { RadioCard } from './RadioCard';
 import { Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import {
+  ACCOUNT_OPTIONS,
+  NET_WORTH_OPTIONS,
+  OBJECTIVE_OPTIONS,
+  WITHDRAWAL_OPTIONS,
+  codeOf,
+} from '@/lib/questionnaireCodes';
 
 interface Step2Props {
   primaryObjective: string;
@@ -33,13 +40,10 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
   netWorthShare = '',
   setNetWorthShare,
 }) => {
-  const objectiveOptions = [
-    'Croissance du capital',
-    'Croissance équilibrée & stabilité',
-    'Préservation du capital',
-    'Génération de revenus réguliers',
-    'Financement d’un projet spécifique',
-  ];
+  const objectiveCode = codeOf('primaryObjective', primaryObjective);
+  const withdrawalCode = codeOf('withdrawalMethod', withdrawalMethod);
+  const accountCode = codeOf('accountType', accountType);
+  const netWorthCode = codeOf('netWorthShare', netWorthShare);
 
   // Parse current horizon number from string (defaults to 5 years)
   const currentHorizonNum = (() => {
@@ -80,46 +84,7 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
     { val: 30, label: '30 ans' },
   ];
 
-  const methodOptions = [
-    'Réinvestissement total (Aucun retrait)',
-    'Retraits progressifs périodiques',
-    'Décaissement unique à terme',
-  ];
-
   const capitalPresets = [10000, 25000, 50000, 100000, 250000];
-
-  const accountTypeOptions = [
-    {
-      id: "CELI — Compte d'épargne libre d'impôt",
-      label: "CELI · Libre d'impôt",
-      info: "Compte d'épargne libre d'impôt. Tous les gains, dividendes et retraits sont 100 % non imposables au Canada. Plafond cumulatif annuel sans pénalité de retrait.",
-    },
-    {
-      id: "REER — Régime d'épargne-retraite",
-      label: "REER · Épargne-retraite",
-      info: "Régime enregistré d'épargne-retraite. Les cotisations sont déductibles de votre revenu imposable. La croissance est à l'abri de l'impôt jusqu'au retrait à la retraite.",
-    },
-    {
-      id: "CELIAPP — Première propriété",
-      label: "CELIAPP · Achat première propriété",
-      info: "Compte combinant les atouts du REER et du CELI : cotisations déductibles d'impôt et retraits non taxés pour l'achat d'une première habitation (max 40 000 $).",
-    },
-    {
-      id: "Compte non enregistré (Imposable)",
-      label: "Non enregistré · Comptant / Marge",
-      info: "Compte imposable ordinaire sans plafond de dépôt. 50 % des gains en capital sont imposables, crédits d'impôt sur dividendes canadiens admissibles.",
-    },
-    {
-      id: "Portefeuille mixte (Enregistré + Non enregistré)",
-      label: "Portefeuille mixte · Enregistré & Imposable",
-      info: "Combinaison de comptes enregistrés (REER/CELI) et non enregistrés permettant l'optimisation fiscale de la localisation des actifs (asset location).",
-    },
-    {
-      id: "CRI / FERR — Décaissement de retraite",
-      label: "CRI / FERR · Revenu de retraite",
-      info: "Compte de retraite immobilisé (CRI) ou Fonds Enregistré de Revenu de Retraite (FERR) soumis à des retraits annuels obligatoires calculés selon l'âge.",
-    },
-  ];
 
   const formatCurrency = (val: number) => {
     if (!val) return '';
@@ -143,12 +108,12 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
           Objectif principal d’investissement <span className="text-destructive">*</span>
         </label>
         <div className="space-y-1.5">
-          {objectiveOptions.map((opt) => (
+          {OBJECTIVE_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={primaryObjective === opt}
-              onClick={() => setPrimaryObjective(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={objectiveCode === opt.code}
+              onClick={() => setPrimaryObjective(opt.code)}
             />
           ))}
         </div>
@@ -225,12 +190,12 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
           Mode de décaissement prévu <span className="text-destructive">*</span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {methodOptions.map((opt) => (
+          {WITHDRAWAL_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={withdrawalMethod === opt}
-              onClick={() => setWithdrawalMethod(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={withdrawalCode === opt.code}
+              onClick={() => setWithdrawalMethod(opt.code)}
             />
           ))}
         </div>
@@ -280,16 +245,12 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
             Part du patrimoine global représentée par ce montant <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[
-              'Moins de 25 % · Part modérée',
-              'Entre 25 % et 50 % · Part significative',
-              'Plus de 50 % · Majorité du patrimoine',
-            ].map((opt) => (
+            {NET_WORTH_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt}
-                label={opt}
-                selected={netWorthShare === opt || Boolean(netWorthShare && opt.startsWith(netWorthShare.slice(0, 10)))}
-                onClick={() => setNetWorthShare && setNetWorthShare(opt)}
+                key={opt.code}
+                label={opt.label}
+                selected={netWorthCode === opt.code}
+                onClick={() => setNetWorthShare && setNetWorthShare(opt.code)}
               />
             ))}
           </div>
@@ -302,12 +263,12 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {accountTypeOptions.map((opt) => (
+            {ACCOUNT_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt.id}
+                key={opt.code}
                 label={opt.label}
-                selected={accountType === opt.id || accountType.startsWith(opt.label.split(' · ')[0])}
-                onClick={() => setAccountType(opt.id)}
+                selected={accountCode === opt.code}
+                onClick={() => setAccountType(opt.code)}
                 infoTooltip={opt.info}
               />
             ))}

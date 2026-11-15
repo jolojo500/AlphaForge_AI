@@ -1,11 +1,23 @@
 import React from 'react';
 import { RadioCard } from './RadioCard';
 import { SegmentedControl } from './SegmentedControl';
-import { ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import {
+  CAPITAL_NEED_OPTIONS,
+  DEBT_OPTIONS,
+  ESSENTIAL_EXPENSES_OPTIONS,
+  INCOME_OPTIONS,
+  MAX_LOSS_OPTIONS,
+  SECTOR_CAP_OPTIONS,
+  TOLERANCE_OPTIONS,
+  codeOf,
+  labelOf,
+  questionnaireWarnings,
+} from '@/lib/questionnaireCodes';
 
 interface Step3Props {
-  riskTolerance: 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé' | '';
-  setRiskTolerance: (val: 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé') => void;
+  riskTolerance: string;
+  setRiskTolerance: (val: string) => void;
   maxLossTolerance: string;
   setMaxLossTolerance: (val: string) => void;
   sectorConcentrationLimit: string;
@@ -41,42 +53,27 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
   const cap = simulatedCapital || 0;
   const hasCap = cap > 0;
 
-  const lossOptions = [
-    {
-      id: '5',
-      label: hasCap ? `Jusqu'à 5 % (${(cap * 0.05).toLocaleString('fr-CA')} $)` : `Jusqu'à 5 %`,
-    },
-    {
-      id: '15',
-      label: hasCap ? `Jusqu'à 15 % (${(cap * 0.15).toLocaleString('fr-CA')} $)` : `Jusqu'à 15 %`,
-    },
-    {
-      id: '25',
-      label: hasCap ? `Jusqu'à 25 % (${(cap * 0.25).toLocaleString('fr-CA')} $)` : `Jusqu'à 25 %`,
-    },
-    {
-      id: '35+',
-      label: hasCap ? `35 % ou plus (${(cap * 0.35).toLocaleString('fr-CA')} $ +)` : `35 % ou plus`,
-    },
-  ];
+  const toleranceCode = codeOf('riskTolerance', riskTolerance) || '';
+  const lossCode = codeOf('maxLossTolerance', maxLossTolerance);
+  const sectorCapCode = codeOf('sectorConcentrationLimit', sectorConcentrationLimit);
+  const capitalNeedCode = codeOf('capitalNeedNext12Months', capitalNeedNext12Months);
+  const expensesCode = codeOf('essentialExpensesImpact', essentialExpensesImpact);
+  const debtCode = codeOf('debtLevel', debtLevel);
+  const incomeCode = codeOf('incomeStability', incomeStability);
 
-  const concentrationOptions = [
-    'Diversification stricte · Max 25 % par secteur',
-    'Diversification modérée · Max 40 % par secteur',
-    'Concentration sectorielle assumée · Sans plafond strict',
-  ];
+  const toleranceLabels: Record<string, string> = {};
+  TOLERANCE_OPTIONS.forEach((o) => {
+    toleranceLabels[o.code] = o.label;
+  });
 
-  const emergencyOptions = [
-    "Non, réserve d'urgence séparée",
-    'Oui, une partie doit rester liquide',
-    'Indéterminé',
-  ];
+  const lossLabel = (code: string, label: string) => {
+    if (!hasCap) return label;
+    const pct = parseFloat(code) / 100;
+    const amount = (cap * pct).toLocaleString('fr-CA');
+    return code === '35' ? `${label} (${amount} $ +)` : `${label} (${amount} $)`;
+  };
 
-  const essentialOptions = [
-    'Non, dépenses couvertes par ailleurs',
-    'Oui, sensible aux pertes durables',
-    'Indéterminé',
-  ];
+  const warnings = questionnaireWarnings({ riskTolerance, maxLossTolerance });
 
   return (
     <div className="space-y-4">
@@ -96,20 +93,21 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
             Tolérance globale au risque <span className="text-destructive">*</span>
           </label>
           <span className="text-xs font-medium text-primary">
-            {riskTolerance || 'Sélection requise'}
+            {toleranceCode ? labelOf('riskTolerance', toleranceCode) : 'Sélection requise'}
           </span>
         </div>
-        <SegmentedControl<'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé'>
-          options={['Faible', 'Faible à modéré', 'Modéré', 'Élevé']}
-          value={riskTolerance}
+        <SegmentedControl<string>
+          options={TOLERANCE_OPTIONS.map((o) => o.code)}
+          labels={toleranceLabels}
+          value={toleranceCode}
           onChange={setRiskTolerance}
         />
         <p className="text-[11px] text-muted-foreground mt-1.5">
-          {riskTolerance === 'Faible' && 'Profil prudent : priorité absolue à la stabilité et à la sécurité du capital.'}
-          {riskTolerance === 'Faible à modéré' && 'Profil modéré-prudent : fluctuations limitées pour contrer l’inflation.'}
-          {riskTolerance === 'Modéré' && 'Profil équilibré : recherche de rendement avec volatilité contrôlée.'}
-          {riskTolerance === 'Élevé' && 'Profil offensif : prêt à assumer de fortes fluctuations pour maximiser les gains.'}
-          {!riskTolerance && 'Sélectionnez votre orientation globale face aux marchés.'}
+          {toleranceCode === 'low' && 'Profil prudent : priorité absolue à la stabilité et à la sécurité du capital.'}
+          {toleranceCode === 'low_moderate' && 'Profil modéré-prudent : fluctuations limitées pour contrer l’inflation.'}
+          {toleranceCode === 'moderate' && 'Profil équilibré : recherche de rendement avec volatilité contrôlée.'}
+          {toleranceCode === 'high' && 'Profil offensif : prêt à assumer de fortes fluctuations pour maximiser les gains.'}
+          {!toleranceCode && 'Sélectionnez votre orientation globale face aux marchés.'}
         </p>
       </div>
 
@@ -119,15 +117,28 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
           Perte temporaire tolérée sur 12 mois sans vendre <span className="text-destructive">*</span>
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {lossOptions.map((opt) => (
+          {MAX_LOSS_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt.id}
-              label={opt.label}
-              selected={maxLossTolerance === opt.id || maxLossTolerance === opt.label}
-              onClick={() => setMaxLossTolerance(opt.id)}
+              key={opt.code}
+              label={lossLabel(opt.code, opt.label)}
+              selected={lossCode === opt.code}
+              onClick={() => setMaxLossTolerance(opt.code)}
             />
           ))}
         </div>
+        {warnings.length > 0 && (
+          <div
+            role="alert"
+            className="mt-2 p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs space-y-1"
+          >
+            {warnings.map((w) => (
+              <p key={w} className="flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>{w}</span>
+              </p>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Sector concentration */}
@@ -136,12 +147,12 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
           Plafond de concentration sectorielle <span className="text-destructive">*</span>
         </label>
         <div className="space-y-1.5">
-          {concentrationOptions.map((opt) => (
+          {SECTOR_CAP_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={sectorConcentrationLimit === opt}
-              onClick={() => setSectorConcentrationLimit(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={sectorCapCode === opt.code}
+              onClick={() => setSectorConcentrationLimit(opt.code)}
             />
           ))}
         </div>
@@ -160,12 +171,12 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
             Aurez-vous besoin de ce capital dans les 12 prochains mois ? <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {emergencyOptions.map((opt) => (
+            {CAPITAL_NEED_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt}
-                label={opt}
-                selected={capitalNeedNext12Months === opt}
-                onClick={() => setCapitalNeedNext12Months(opt)}
+                key={opt.code}
+                label={opt.label}
+                selected={capitalNeedCode === opt.code}
+                onClick={() => setCapitalNeedNext12Months(opt.code)}
               />
             ))}
           </div>
@@ -177,12 +188,12 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
             Une baisse prolongée impacterait-elle vos dépenses essentielles ? <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {essentialOptions.map((opt) => (
+            {ESSENTIAL_EXPENSES_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt}
-                label={opt}
-                selected={essentialExpensesImpact === opt}
-                onClick={() => setEssentialExpensesImpact(opt)}
+                key={opt.code}
+                label={opt.label}
+                selected={expensesCode === opt.code}
+                onClick={() => setEssentialExpensesImpact(opt.code)}
               />
             ))}
           </div>
@@ -193,16 +204,12 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
             Endettement & dettes à taux d'intérêt élevé <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[
-              'Aucune dette ou dettes remboursées',
-              'Prêt hypothécaire uniquement',
-              'Dettes à taux élevé (cartes de crédit, marge)',
-            ].map((opt) => (
+            {DEBT_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt}
-                label={opt}
-                selected={debtLevel === opt || Boolean(debtLevel && opt.startsWith(debtLevel.slice(0, 10)))}
-                onClick={() => setDebtLevel && setDebtLevel(opt)}
+                key={opt.code}
+                label={opt.label}
+                selected={debtCode === opt.code}
+                onClick={() => setDebtLevel && setDebtLevel(opt.code)}
               />
             ))}
           </div>
@@ -214,16 +221,12 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
             Stabilité de vos revenus <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[
-              'Revenus stables (salarié permanent)',
-              'Revenus variables ou travailleur autonome',
-              'Retraité (revenu fixe de rente)',
-            ].map((opt) => (
+            {INCOME_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt}
-                label={opt}
-                selected={incomeStability === opt || Boolean(incomeStability && opt.startsWith(incomeStability.slice(0, 10)))}
-                onClick={() => setIncomeStability && setIncomeStability(opt)}
+                key={opt.code}
+                label={opt.label}
+                selected={incomeCode === opt.code}
+                onClick={() => setIncomeStability && setIncomeStability(opt.code)}
               />
             ))}
           </div>

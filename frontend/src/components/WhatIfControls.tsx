@@ -55,11 +55,11 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-primary" />
             <h2 className="text-sm sm:text-base font-semibold text-foreground">
-              Module What-If : Simulation d&apos;hypothèses alternatives
+              Une hypothèse à la fois
             </h2>
           </div>
           <span className="text-xs text-muted-foreground hidden sm:inline">
-            Rejoue l&apos;analyse dès le filtrage en conservant le profil
+            L&apos;analyse est refaite avec le même profil, à partir du filtrage
           </span>
         </div>
 
@@ -140,7 +140,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
-            <span>Date d&apos;analyse (as-of)</span>
+            <span>Date d&apos;analyse</span>
           </button>
         </div>
 
@@ -154,10 +154,10 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { val: 'low', label: 'Faible (cap 5%)' },
-                  { val: 'low_moderate', label: 'Faible à modérée (cap 5%)' },
-                  { val: 'moderate', label: 'Modérée (cap 7%)' },
-                  { val: 'high', label: 'Élevée (cap 10%)' },
+                  { val: 'low', label: 'Faible (plafond 5\u00a0%)' },
+                  { val: 'low_moderate', label: 'Faible à modérée (plafond 5\u00a0%)' },
+                  { val: 'moderate', label: 'Modérée (plafond 7\u00a0%)' },
+                  { val: 'high', label: 'Élevée (plafond 10\u00a0%)' },
                 ].map(({ val, label }) => (
                   <button
                     key={val}
@@ -174,7 +174,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground mt-2">
-                Exemple : Passer de « modérée » à « élevée » déverrouille le plafond de risque sur le scénario plafonné.
+                Exemple : passer de « modérée » à « élevée » relève le plafond par position dans la version ajustée à vos limites.
               </p>
             </div>
           )}
@@ -191,7 +191,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
                   { val: 'rrsp', label: 'REER (Épargne-retraite)' },
                   { val: 'fhsa', label: 'CELIAPP (1re propriété)' },
                   { val: 'non_registered', label: 'Non enregistré' },
-                  { val: 'mixed', label: 'Mixte (Asset location)' },
+                  { val: 'mixed', label: 'Mixte (plusieurs comptes)' },
                 ].map(({ val, label }) => (
                   <button
                     key={val}
@@ -240,7 +240,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
                 />
               </div>
               <p className="text-[11px] text-muted-foreground mt-2">
-                L&apos;actif sera filtré dès l&apos;étape de screening et retiré de l&apos;ensemble des scénarios construits.
+                L&apos;actif est écarté dès le filtrage et retiré de tous les scénarios.
               </p>
             </div>
           )}
@@ -281,7 +281,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
           {activeTab === 'date' && (
             <div>
               <label htmlFor="date-input" className="block text-xs font-medium text-foreground mb-1">
-                Date d&apos;analyse (as-of date, historique max 2026-11-12) :
+                Date d&apos;analyse (au plus tard le 2026-11-12) :
               </label>
               <Input
                 id="date-input"
@@ -306,12 +306,12 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
             {isRunning ? (
               <>
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Calcul du scénario What-If...</span>
+                <span>Calcul en cours...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Simuler cette hypothèse alternative</span>
+                <span>Relancer l&apos;analyse avec cette hypothèse</span>
               </>
             )}
           </Button>

@@ -566,3 +566,143 @@ def test_history_lists_questionnaire_runs_under_the_frontend_persona_name():
     rid = r.json()["run_id"]
     listed = client.get("/runs?persona=custom_user", headers=h).json()
     assert rid in {x["run_id"] for x in listed}
+
+
+def _questionnaire_profile() -> dict:
+    """What the web questionnaire sends in `profile_data`: codes only, limits included (#186)."""
+    return {
+        "objective": "growth",
+        "horizon_years": 20,
+        "risk_tolerance": "high",
+        "risk_capacity": "high",
+        "account_type": "tfsa",
+        "constraints": [],
+        "preferences": ["likes_tech"],
+        "budget_cad": 100_000,
+        "max_loss_pct": 25,
+        "age_band": "18-29",
+        "currency_preference": "mixed",
+        "sector_cap_pct": 40,
+        "crypto_preference": "5-15",
+        "esg_level": "tilt",
+        "profile_version": 2,
+        "has_emergency_fund": True,
+        "has_high_interest_debt": False,
+        "net_worth_share": 0.20,
+        "investment_knowledge": "intermediate",
+    }
+
+
+def test_questionnaire_limits_reach_the_engine_and_celi_room_is_checked():
+    """#186 item 1: age band, currency, sector cap and crypto minimum travel in profile_data."""
+    client = TestClient(app)
+    r = client.post(
+        "/runs",
+        json={
+            "persona": "custom_user",
+            "request_text": "Je veux construire un portefeuille de croissance.",
+            "profile_data": _questionnaire_profile(),
+        },
+    )
+    assert r.status_code == 200, r.text
+    state = _wait_final(client, r.json()["run_id"])
+    pd_ = state["persona_data"]
+    assert pd_["age_band"] == "18-29"
+    assert pd_["currency_preference"] == "mixed"
+    assert pd_["sector_cap_pct"] == 40
+    assert pd_["crypto_preference"] == "5-15"
+    assert pd_["esg_level"] == "tilt"
+    assert pd_["profile_version"] == 2
+    prof = state["profile"]
+    assert prof["age_band"] == "18-29"
+    assert prof["currency_pref"] == "mixed"
+    assert prof["sector_cap"] == pytest.approx(0.40)
+    assert prof["crypto_target_min"] == pytest.approx(0.05)
+    assert prof["max_loss_12m"] == pytest.approx(0.25)
+    # 100 000 $ in a CELI at 18-29 exceeds the cumulative room: the conflict is in the final state
+    assert any("droits de cotisation" in c and "CELI" in c for c in prof["conflicts"]), prof["conflicts"]
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"age_band": "jeune"},
+        {"currency_preference": "euro"},
+        {"sector_cap_pct": 250},
+        {"crypto_preference": "beaucoup"},
+        {"esg_level": "maybe"},
+    ],
+)
+def test_invalid_questionnaire_limits_are_rejected(bad):
+    client = TestClient(app)
+    resp = client.post(
+        "/runs",
+        json={"persona": "custom_user", "request_text": "x", "profile_data": _questionnaire_profile() | bad},
+    )
+    assert resp.status_code == 400, resp.text
+
+
+def test_universe_endpoint_lists_the_31_assets():
+    client = TestClient(app)
+    resp = client.get("/universe")
+    assert resp.status_code == 200
+    rows = resp.json()
+    assert len(rows) == 31
+    assert {"ticker", "name", "asset_class"} <= set(rows[0])
+    assert {r["ticker"] for r in rows} >= {"XIU.TO", "BTC-USD", "ESGV"}
+    assert "SOL" not in {r["ticker"] for r in rows}
+
+
+def test_profile_put_get_round_trip_is_versioned_with_french_summary(tmp_path):
+    """#170: one versioned profile; each save appends a dated diff; summary uses French labels."""
+    from alphaforge.user_dossier import LocalUserDossierStore, set_dossier_store_override
+
+    set_dossier_store_override(LocalUserDossierStore(storage_dir=tmp_path))
+    try:
+        client = TestClient(app)
+        tok = client.post("/auth/login", json={"username": "robert", "password": "AlphaForge2026!"}).json()[
+            "access_token"
+        ]
+        me = TestClient(app, headers={"Authorization": f"Bearer {tok}"})
+        base = me.get("/user/profile").json()
+        base_version = int(base.get("profile_version") or 0)
+
+        q = _questionnaire_profile() | {"questionnaire": {"ageRange": "18-29", "primaryObjective": "growth"}}
+        r1 = me.put(
+            "/user/profile", json={"profile": q, "account_type": "tfsa", "current_holdings": {"XIU.TO": 0.4}}
+        )
+        assert r1.status_code == 200, r1.text
+        v1 = r1.json()
+        assert v1["profile_version"] == base_version + 1
+        assert v1["profile"]["profile_version"] == base_version + 1
+        assert v1["profile"]["questionnaire"] == {"ageRange": "18-29", "primaryObjective": "growth"}
+
+        r2 = me.put("/user/profile", json={"profile": q | {"objective": "balanced", "horizon_years": 10}})
+        v2 = r2.json()
+        assert v2["profile_version"] == base_version + 2
+        last = v2["profile_history"][-1]
+        assert last["version"] == base_version + 2 and last["updated_at"]
+        assert last["changes"]["objective"] == {"old": "growth", "new": "balanced"}
+        assert last["changes"]["horizon_years"] == {"old": 20, "new": 10}
+        assert "age_band" not in last["changes"]
+
+        got = me.get("/user/profile").json()
+        assert got["profile"] == v2["profile"]
+        assert got["current_holdings"] == {"XIU.TO": 0.4}  # kept from the first save
+        assert got["account_type"] == "tfsa"
+        summary = {row["label"]: row["value"] for row in got["profile_summary"]}
+        assert summary["Objectif principal"] == "Croissance équilibrée et stabilité"
+        assert summary["Tranche d'âge"] == "18–29 ans"
+        assert summary["Place accordée aux cryptoactifs"] == "Favorable / ouvert (5 à 15 %)"
+        assert summary["Devise d'ancrage"] == "Mixte CAD / USD"
+        assert summary["Critères ESG"] == "Secondaire — favoriser les mieux notés"
+        assert summary["Type de compte"].startswith("CELI")
+        assert "growth" not in json.dumps(got["profile_summary"], ensure_ascii=False)
+
+        dossier = me.get("/users/me/dossier")
+        assert dossier.status_code == 200
+        assert f"Mise à jour du profil (version {base_version + 2})" in dossier.text
+        assert "Objectif principal : Croissance du capital → Croissance équilibrée et stabilité" in dossier.text
+        assert "Tranche d'âge :** 18–29 ans" in dossier.text
+    finally:
+        set_dossier_store_override(None)

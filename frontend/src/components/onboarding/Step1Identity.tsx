@@ -2,14 +2,22 @@ import React from 'react';
 import { RadioCard } from './RadioCard';
 import { CheckboxCard } from './CheckboxCard';
 import { SegmentedControl } from './SegmentedControl';
+import {
+  AGE_OPTIONS,
+  ASSET_FAMILIARITY_OPTIONS,
+  EXPERIENCE_OPTIONS,
+  FAMILY_OPTIONS,
+  codeOf,
+  codesOf,
+} from '@/lib/questionnaireCodes';
 
 interface Step1Props {
   ageRange: string;
   setAgeRange: (val: string) => void;
   familySituation: string;
   setFamilySituation: (val: string) => void;
-  investmentExperience: 'Débutant' | 'Intermédiaire' | 'Avancé' | '';
-  setInvestmentExperience: (val: 'Débutant' | 'Intermédiaire' | 'Avancé') => void;
+  investmentExperience: string;
+  setInvestmentExperience: (val: string) => void;
   businessModelsUnderstanding: string | string[];
   setBusinessModelsUnderstanding: (val: string | string[]) => void;
 }
@@ -24,38 +32,22 @@ export const Step1Identity: React.FC<Step1Props> = ({
   businessModelsUnderstanding,
   setBusinessModelsUnderstanding,
 }) => {
-  const ageOptions = ['18–29 ans', '30–44 ans', '45–59 ans', '60 ans et plus'];
+  const ageCode = codeOf('ageRange', ageRange);
+  const familyCode = codeOf('familySituation', familySituation);
+  const experienceCode = codeOf('investmentExperience', investmentExperience) || '';
+  const selectedAssets = codesOf('businessModelsUnderstanding', businessModelsUnderstanding);
 
-  const familyOptions = [
-    'Célibataire',
-    'En couple (sans enfant)',
-    'Famille avec personnes à charge',
-    'Retraité / Enfants indépendants',
-  ];
-
-  const assetOptions = [
-    'Actions cotées en bourse',
-    'FNB & Fonds indiciels',
-    'Obligations & Titres à revenu fixe',
-    'Technologies & Forte croissance',
-    'Cryptoactifs & Actifs numériques',
-  ];
-
-  const selectedAssets = Array.isArray(businessModelsUnderstanding)
-    ? businessModelsUnderstanding
-    : businessModelsUnderstanding
-    ? businessModelsUnderstanding.split(', ').filter(Boolean)
-    : [];
-
-  const toggleAsset = (asset: string) => {
-    let updated: string[];
-    if (selectedAssets.includes(asset)) {
-      updated = selectedAssets.filter((a) => a !== asset);
-    } else {
-      updated = [...selectedAssets, asset];
-    }
+  const toggleAsset = (code: string) => {
+    const updated = selectedAssets.includes(code)
+      ? selectedAssets.filter((a) => a !== code)
+      : [...selectedAssets, code];
     setBusinessModelsUnderstanding(updated);
   };
+
+  const experienceLabels: Record<string, string> = {};
+  EXPERIENCE_OPTIONS.forEach((o) => {
+    experienceLabels[o.code] = o.label;
+  });
 
   return (
     <div className="space-y-4">
@@ -74,12 +66,12 @@ export const Step1Identity: React.FC<Step1Props> = ({
           Tranche d’âge <span className="text-destructive">*</span>
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {ageOptions.map((opt) => (
+          {AGE_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={ageRange === opt}
-              onClick={() => setAgeRange(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={ageCode === opt.code}
+              onClick={() => setAgeRange(opt.code)}
             />
           ))}
         </div>
@@ -91,12 +83,12 @@ export const Step1Identity: React.FC<Step1Props> = ({
           Situation personnelle & familiale <span className="text-destructive">*</span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {familyOptions.map((opt) => (
+          {FAMILY_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={familySituation === opt}
-              onClick={() => setFamilySituation(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={familyCode === opt.code}
+              onClick={() => setFamilySituation(opt.code)}
             />
           ))}
         </div>
@@ -107,16 +99,17 @@ export const Step1Identity: React.FC<Step1Props> = ({
         <label className="block text-xs font-medium text-foreground mb-1.5">
           Niveau d’expérience en investissement <span className="text-destructive">*</span>
         </label>
-        <SegmentedControl<'Débutant' | 'Intermédiaire' | 'Avancé'>
-          options={['Débutant', 'Intermédiaire', 'Avancé']}
-          value={investmentExperience}
+        <SegmentedControl<string>
+          options={EXPERIENCE_OPTIONS.map((o) => o.code)}
+          labels={experienceLabels}
+          value={experienceCode}
           onChange={setInvestmentExperience}
         />
         <p className="text-[11px] text-muted-foreground mt-1.5">
-          {investmentExperience === 'Débutant' && 'Priorité à la simplicité et aux explications des concepts de base.'}
-          {investmentExperience === 'Intermédiaire' && 'Compréhension courante des actions, des FNB et des cycles de marché.'}
-          {investmentExperience === 'Avancé' && 'Suivi actif des marchés et maîtrise des métriques quantitatives.'}
-          {!investmentExperience && 'Sélectionnez votre niveau de familiarité avec les marchés.'}
+          {experienceCode === 'beginner' && 'Priorité à la simplicité et aux explications des concepts de base.'}
+          {experienceCode === 'intermediate' && 'Compréhension courante des actions, des FNB et des cycles de marché.'}
+          {experienceCode === 'advanced' && 'Suivi actif des marchés et maîtrise des métriques quantitatives.'}
+          {!experienceCode && 'Sélectionnez votre niveau de familiarité avec les marchés.'}
         </p>
       </div>
 
@@ -126,12 +119,12 @@ export const Step1Identity: React.FC<Step1Props> = ({
           Actifs que vous êtes à l’aise d’analyser <span className="text-destructive">*</span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {assetOptions.map((opt) => (
+          {ASSET_FAMILIARITY_OPTIONS.map((opt) => (
             <CheckboxCard
-              key={opt}
-              label={opt}
-              checked={selectedAssets.includes(opt)}
-              onToggle={() => toggleAsset(opt)}
+              key={opt.code}
+              label={opt.label}
+              checked={selectedAssets.includes(opt.code)}
+              onToggle={() => toggleAsset(opt.code)}
             />
           ))}
         </div>

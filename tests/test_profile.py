@@ -533,3 +533,77 @@ def test_question_vehicle_and_allocation_extraction():
 
     ext2 = _regex_extract("Garder 50 % en crypto")
     assert ext2.requested_allocation == {"crypto": 0.50}
+
+
+def test_crypto_etf_holding_is_eligible_in_guardrails():
+    """#186 item 2: crypto held through BTCC.B.TO is analysed via BTC-USD but is eligible."""
+    from alphaforge.guardrails import check_guardrails
+    from alphaforge.state import Profile, Scenario
+
+    sc = Scenario(name="current", weights={"BTC-USD": 0.30, "XIU.TO": 0.70}, metrics={})
+    base = dict(persona="amira", objective="growth", horizon_years=10, risk_tolerance="high",
+                risk_capacity="high", account_type="tfsa")
+    via_etf = Profile(**base, current_holdings={"BTCC.B.TO": 0.30, "XIU.TO": 0.70})
+    entry = next(g for g in check_guardrails(via_etf, [sc], {}) if g["limit"] == "account_eligibility")
+    assert entry["status"] == "ok" and entry["observed"] == 0.0
+    assert entry["via_etf"] == {"BTC-USD": ["BTCC.B.TO"]}
+    assert "FNB coté" in entry["message_fr"] and "sous-jacent" in entry["message_fr"]
+    assert "listed ETF" in entry["message_en"]
+
+    spot = Profile(**base, current_holdings={"BTC-USD": 0.30, "XIU.TO": 0.70})
+    entry = next(g for g in check_guardrails(spot, [sc], {}) if g["limit"] == "account_eligibility")
+    assert entry["status"] == "breach" and entry["tickers"] == ["BTC-USD"]
+
+    asked = Profile(**base, requested_vehicle="BTCC.B", requested_idea={"ticker": "BTC-USD", "weight": 0.3})
+    entry = next(g for g in check_guardrails(asked, [sc], {}) if g["limit"] == "account_eligibility")
+    assert entry["status"] == "ok"
+
+
+def test_tfsa_balance_inferred_from_holdings_is_not_compared_with_room():
+    """#186 item 3: a balance can exceed cumulative room through growth; only a stated
+    contribution is compared."""
+    from alphaforge.guardrails import check_guardrails
+
+    persona_data = {
+        "objective": "growth", "horizon_years": 25, "risk_tolerance": "high",
+        "risk_capacity": "high", "account_type": "tfsa", "age_band": "18-29",
+        "current_holdings": {"XIU.TO": 90_000, "AAPL": 30_000},
+    }
+    state = GraphState(
+        as_of_date=dt.date(2026, 11, 15), persona="custom", persona_data=persona_data,
+        request_text="Je veux évaluer mon allocation.",
+    )
+    res = profile_node(state)
+    p = res["profile"]
+    assert p.budget_cad == pytest.approx(120_000.0) and p.budget_inferred is True
+    assert not any("droits de cotisation" in c for c in p.conflicts)
+    assert not any(isinstance(e.value, dict) and e.value.get("metric") == "tfsa_room" for e in res["evidence"].values())
+    assert not any(g["limit"] == "tfsa_room" for g in check_guardrails(p, [], res["evidence"]))
+
+    stated = GraphState(
+        as_of_date=dt.date(2026, 11, 15), persona="custom",
+        persona_data={**persona_data, "budget_cad": 120_000.0},
+        request_text="Je veux évaluer mon allocation.",
+    )
+    res2 = profile_node(stated)
+    p2 = res2["profile"]
+    assert p2.budget_inferred is False
+    assert any("78 000 $" in c and "120 000 $" in c for c in p2.conflicts)
+    assert any(isinstance(e.value, dict) and e.value.get("metric") == "tfsa_room" for e in res2["evidence"].values())
+    assert any(g["limit"] == "tfsa_room" and g["status"] == "breach" for g in check_guardrails(p2, [], res2["evidence"]))
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("je détiens 2 cryptos", None),
+        ("j'ai 3 cryptos dans mon portefeuille", None),
+        ("garder 50 % en crypto", {"crypto": 0.5}),
+        ("20 % crypto", {"crypto": 0.2}),
+        ("15 pour cent de crypto", {"crypto": 0.15}),
+        ("mettre 10 en crypto", {"crypto": 0.1}),
+    ],
+)
+def test_crypto_target_needs_a_weight_context(text, expected):
+    """#186 item 10: a count of cryptos is not a crypto weight."""
+    assert prof._regex_extract(text).requested_allocation == expected

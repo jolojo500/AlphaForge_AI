@@ -361,3 +361,99 @@ def test_pinned_bond_idea_stays_feasible_under_the_growth_floor():
     assert capped["XBB.TO"] == pytest.approx(0.15, abs=TOL)
     assert _share(capped, {"equity", "etf_equity"}) >= 0.85 - 1e-3
     assert sum(capped.values()) == pytest.approx(1.0, abs=1e-6)
+
+
+# --- #173, #176 and the #186 follow-ups (items 7 and 8) ------------------------------------
+
+
+def _scenario_evidence(out, metric, scenario):
+    return [
+        e for e in out["evidence"].values()
+        if isinstance(e.value, dict) and e.value.get("metric") == metric and e.value.get("scenario") == scenario
+    ]
+
+
+def test_issue_173_hhi_looks_through_etfs_and_reads_as_effective_sectors():
+    out = _run(_profile("amira"))
+    for name in SCENARIO_NAMES:
+        hhi_ev = out["evidence"][_by_name(out)[name].metrics["sector_concentration_hhi"]]
+        assert hhi_ev.value["look_through"] is True
+        assert 0 < numeric(hhi_ev) < 1
+        assert hhi_ev.value["effective_sectors"] == pytest.approx(1 / numeric(hhi_ev), rel=1e-3)
+        assert "secteurs effectifs" in hhi_ev.value["label"]
+        assert "looking through ETF holdings" in hhi_ev.method
+        assumption = out["evidence"][hhi_ev.value["assumption"]]
+        assert assumption.confidence == "assumption"
+        assert "répartie également entre les 11 secteurs GICS" in assumption.value
+        assert f"({hhi_ev.value['other_sector_share']:.1%})" in assumption.value
+        (top_name,) = _scenario_evidence(out, "top_name_exposure", name)
+        assert top_name.value["name"] and numeric(top_name) > 0
+        (canada,) = _scenario_evidence(out, "canada_exposure", name)
+        assert 0 <= numeric(canada) <= 1
+    notes = " ".join(_by_name(out)["capped"].notes)
+    assert "secteurs effectifs" in notes and "transparence des FNB" in notes
+
+
+def test_issue_176_long_proxy_companions_and_survivorship_next_to_returns():
+    out = _run(_profile("amira", horizon_years=20))
+    surv = [
+        e for e in out["evidence"].values()
+        if e.confidence == "assumption" and isinstance(e.value, str) and "survivant" in e.value
+    ]
+    assert len(surv) == 1
+    surv_id = surv[0].id
+    for name in SCENARIO_NAMES:
+        sc = _by_name(out)[name]
+        for metric in ("max_drawdown_long_proxy", "stress_2000_02_proxy", "stress_2008_proxy"):
+            (ev,) = _scenario_evidence(out, metric, name)
+            assert ev.confidence == "fact" and numeric(ev) < 0
+            assert ev.value["survivorship_note"] == surv_id
+            assert "rows <= 2026-11-12 only" in ev.method
+            assert ev.date <= AS_OF
+        (worst,) = _scenario_evidence(out, "rolling_1y_worst", name)
+        assert worst.value["survivorship_note"] == surv_id  # cited beside the historical returns
+        assert sc.historical_outcomes["survivorship_evidence"] == surv_id
+        lp = sc.historical_outcomes["long_proxy"]
+        assert lp["stress_2008_proxy"] < 0 and lp["window"].startswith("1999-01-31")
+        assert lp["max_drawdown_long_proxy"] <= lp["stress_2008_proxy_drawdown"]
+        notes = " ".join(sc.notes)
+        assert f"Biais du survivant : {surv_id}" in notes
+        assert "épisode 2008" in notes and "épisode 2000-02" in notes
+
+
+def test_issue_176_proxies_are_as_of_safe():
+    p = _profile("amira")
+    state = GraphState(
+        as_of_date=dt.date(2024, 6, 28), persona="amira", profile=p, eligible_universe=_eligible(p)
+    )
+    out = scenarios_node(state)
+    for metric in ("max_drawdown_long_proxy", "stress_2000_02_proxy", "stress_2008_proxy"):
+        for ev in _scenario_evidence(out, metric, "capped"):
+            assert ev.date <= dt.date(2024, 6, 28)
+            assert ev.value["window"].endswith("2024-06-30") or ev.value["window"].endswith("2024-05-31")
+
+
+def test_issue_186_item_7_fx_cost_amortised_over_the_horizon():
+    out = _run(_profile("mateo", horizon_years=10))
+    for name in SCENARIO_NAMES:
+        (ev,) = _scenario_evidence(out, "all_in_cost", name)
+        c = ev.value["components"]
+        assert c["horizon_years"] == 10.0
+        assert c["fx_annualised"] == pytest.approx(c["fx_conversion_cost"] / 10, abs=1e-4)
+        assert numeric(ev) == pytest.approx(c["fee_drag"] + c["fx_annualised"] + c["tax_drag"], abs=2e-4)
+        assert "amortised over the profile horizon" in ev.method and "FX cost / 10 years" in ev.method
+
+
+def test_issue_186_item_8_capital_preservation_states_that_the_line_rule_is_skipped():
+    robert = _run(_profile("robert"))
+    note = next(
+        e for e in robert["evidence"].values()
+        if isinstance(e.value, str) and e.value.startswith("Lignes des scénarios plafonné")
+    )
+    assert "préservation du capital" in note.value and "rule skipped for capital_preservation" in note.method
+    mateo = _run(_profile("mateo"))
+    note_m = next(
+        e for e in mateo["evidence"].values()
+        if isinstance(e.value, str) and e.value.startswith("Lignes des scénarios plafonné")
+    )
+    assert "préservation du capital" not in note_m.value

@@ -71,11 +71,18 @@ _WORDING = [
     r"\b(?:r?acheter|(?:re)?vendre|rachetez|revendez)\b",
     r"\bbuy\b(?!-and-hold| and hold)",
     r"\bsell\b(?!-offs?\b)",
-    # Hold recommendation (PRD 5.10, Issue #168).
-    r"(?<!buy-and-)(?<!buy and )\bhold\b",
+    # Hold recommendation (PRD 5.10, Issue #168): "hold TSLA", "a hold recommendation".
+    # Allowed (#186, item 6): "the assets you currently hold", "you hold in a TFSA".
+    r"(?<!buy-and-)(?<!buy and )\bhold\b"
+    r"(?!\s*(?:[.,;:!?)\]\n]|$|(?:and|or|but|in|at|today|now|currently|already|through|via|with"
+    r"|is|are|was|were|has|have|had|do|does|did|will|would|may|might|can|could)\b))",
     # Internal identifiers that must not leak into user text (Issues #168, #171).
     r"\bas_requested\b",
-    r"\bcapped\b",
+    # "capped" as a scenario name ("scenario capped", "the capped scenario"); the plain verb
+    # ("exposure is capped at 5 %", "weights were capped") is allowed (#186, item 6).
+    r"(?<!is )(?<!are )(?<!was )(?<!were )(?<!been )(?<!being )(?<!be )(?<!get )(?<!gets )"
+    r"(?<!got )(?<!stays )(?<!stay )(?<!remains )(?<!remain )(?<!kept )(?<!keep )"
+    r"\bcapped\b(?!\s+(?:at|to|by|under|below|around|near)\b)",
     r"\bprofile_baseline\b",
     r"\bpersonas?\b",
     r"\b(?:policy_rate_ca|policy_rate_us|cpi_yoy_ca|cpi_yoy_us)\b",

@@ -80,6 +80,9 @@ class Profile(BaseModel):
     constraints: list[str] = Field(default_factory=list)  # hard rules
     preferences: list[str] = Field(default_factory=list)  # soft
     budget_cad: float | None = None
+    # True when budget_cad is the dollar total of the declared holdings (a balance), not a
+    # stated contribution: never compared with TFSA room (#186, item 3).
+    budget_inferred: bool = False
     account_type: AccountType = "non_registered"
     request_type: Literal["build", "judge"] = "build"
     requested_idea: dict | None = None  # {"ticker": "TSLA", "weight": 0.25}

@@ -6,6 +6,7 @@ import math
 import pandas as pd
 import pytest
 
+from alphaforge.data.holdings import holdings_weights
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import find, find_one, numeric
 from alphaforge.nodes.quant import (
@@ -19,6 +20,7 @@ from alphaforge.nodes.quant import (
 )
 from alphaforge.state import GraphState, Profile
 
+AS_OF = dt.date(2026, 11, 12)
 IDX = pd.bdate_range("2024-01-01", periods=5)
 # B is A divided by 2: identical returns.
 TOY = pd.DataFrame(
@@ -61,11 +63,43 @@ def test_correlation_of_identical_returns_is_one():
 def test_concentration_on_real_universe():
     info = get_provider().asset_info()
     banks = concentration({"RY.TO": 0.5, "TD.TO": 0.5}, info)
-    assert banks == {"sector_hhi": 1.0, "us_exposure": 0.0, "top_weight": 0.5}
-    mixed = concentration({"SPY": 0.5, "RY.TO": 0.5}, info)
-    assert mixed["sector_hhi"] == pytest.approx(0.5)
+    assert banks["sector_hhi"] == 1.0 and banks["effective_sectors"] == 1.0
+    assert banks["us_exposure"] == 0.0 and banks["canada_exposure"] == 1.0
+    assert banks["top_weight"] == 0.5 and banks["top_name"] == "RY.TO"
+    mixed = concentration({"SPY": 0.5, "RY.TO": 0.5}, info, as_of=AS_OF)
+    assert mixed["sector_hhi"] < 0.5  # SPY is spread over its holdings, not one "sector"
     assert mixed["us_exposure"] == pytest.approx(0.5)
+    assert mixed["canada_exposure"] == pytest.approx(0.5)
     assert concentration("BTC-USD", info)["us_exposure"] == 0.0
+
+
+# --- #173: look-through of ETF holdings -----------------------------------------------------
+
+
+def test_sector_hhi_looks_through_etf_holdings():
+    info = get_provider().asset_info()
+    spy = concentration({"SPY": 1.0}, info, as_of=AS_OF)
+    assert spy["effective_sectors"] >= 8  # a broad index fund is diversified, not one sector
+    assert spy["effective_sectors"] == pytest.approx(1 / spy["sector_hhi"])
+    assert spy["other_sector_share"] > 0  # holdings outside the universe: spread over 11 GICS sectors
+    assert concentration({"AAPL": 1.0}, info, as_of=AS_OF)["sector_hhi"] == 1.0
+    assert concentration("RY.TO", info)["effective_sectors"] == 1.0
+    # SPY and ESGV overlap almost fully: splitting between them barely changes the HHI,
+    # whereas the old sector-label HHI would have halved (0.5 for two "sectors").
+    split = concentration({"SPY": 0.5, "ESGV": 0.5}, info, as_of=AS_OF)
+    assert abs(split["sector_hhi"] - spy["sector_hhi"]) < 0.05
+
+
+def test_country_and_single_name_exposure_look_through():
+    info = get_provider().asset_info()
+    xiu = concentration({"XIU.TO": 1.0}, info, as_of=AS_OF)
+    assert xiu["canada_exposure"] == pytest.approx(1.0) and xiu["us_exposure"] == 0.0
+    assert xiu["top_name"] == "RY.TO" and 0 < xiu["top_name_exposure"] < 0.2
+    spy_w, qqq_w = holdings_weights("SPY", as_of=AS_OF)["AAPL"], holdings_weights("QQQ", as_of=AS_OF)["AAPL"]
+    c = concentration({"AAPL": 0.05, "SPY": 0.5, "QQQ": 0.45}, info, as_of=AS_OF)
+    assert c["top_name"] == "AAPL"
+    assert c["top_name_exposure"] == pytest.approx(0.05 + 0.5 * spy_w + 0.45 * qqq_w)
+    assert c["top_weight"] == pytest.approx(0.5)  # the UI metric keeps its meaning: largest line
 
 
 # --- real data ----------------------------------------------------------------------------
@@ -140,6 +174,6 @@ def test_usd_exposure_and_effective_sectors():
 
     eff = effective_sectors({"RY.TO": 0.5, "TD.TO": 0.5}, info)
     assert eff == pytest.approx(1.0)
-    eff_two = effective_sectors({"SPY": 0.5, "RY.TO": 0.5}, info)
-    assert eff_two == pytest.approx(2.0)
+    eff_two = effective_sectors({"SPY": 0.5, "RY.TO": 0.5}, info, as_of=AS_OF)
+    assert eff_two > 2.0  # look-through: more than the two universe labels
 

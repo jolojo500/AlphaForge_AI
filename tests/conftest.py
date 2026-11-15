@@ -2,6 +2,14 @@ import os
 
 import pytest
 
+# Tests never read the developer's .env (see alphaforge/config.py) and always run with
+# authentication off and local backends, whatever the machine has configured.
+os.environ["AF_DOTENV"] = "0"
+os.environ.setdefault("AF_AUTH", "off")
+for _var in ("AF_TRACE_BACKEND", "AF_USERS_BACKEND", "AF_SUITABILITY_BACKEND", "AF_DOSSIER_BACKEND"):
+    os.environ.setdefault(_var, "local")
+os.environ.setdefault("AF_CHECKPOINTER", "memory")
+
 # Ensure offline deterministic fallback for all test fixtures unless --live is requested
 if not any(arg == "--live" for arg in os.sys.argv):
     os.environ.setdefault("AF_LLM_OFFLINE", "1")

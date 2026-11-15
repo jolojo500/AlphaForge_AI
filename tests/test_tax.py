@@ -193,3 +193,39 @@ def test_tfsa_room_limits_and_age_band():
     fr, en = tfsa_room_sentences(check)
     assert "100 000 $" in fr and "78 000 $" in fr and "22 000 $" in fr
     assert "$100,000" in en and "$78,000" in en and "$22,000" in en
+
+
+def test_tfsa_room_evidence_states_the_birthday_assumption():
+    """#186 item 4: year - age + 18 assumes the birthday has passed; the EK evidence says so."""
+    from alphaforge.tax import (
+        TFSA_ROOM_ASSUMPTION_FR,
+        tfsa_room_check,
+        tfsa_room_evidence,
+        tfsa_room_for_age,
+    )
+
+    assert tfsa_room_for_age(29, 2026) == 78000  # band 18-29 keeps 78 000 $
+    assert "anniversaire" in TFSA_ROOM_ASSUMPTION_FR
+    ev = tfsa_room_evidence(tfsa_room_check("tfsa", 100_000.0, "18-29"), AS_OF)
+    assert "anniversaire" in ev["method"]
+    assert ev["value"]["assumption"] == TFSA_ROOM_ASSUMPTION_FR
+    assert "birthday" in (tfsa_room_for_age.__doc__ or "")
+
+
+@pytest.mark.parametrize(
+    "holdings, vehicle, expected",
+    [
+        ({"BTCC.B.TO": 0.3}, None, {"BTC-USD": ["BTCC.B.TO"]}),
+        ({"IBIT": 1000, "ETHH.TO": 500, "AAPL": 200}, None, {"BTC-USD": ["IBIT"], "ETH-USD": ["ETHH.TO"]}),
+        ({"btcc.b": 0.3}, None, {"BTC-USD": ["BTCC.B"]}),
+        (None, "BTCC.B", {"BTC-USD": ["BTCC.B"]}),
+        ({"BTC-USD": 0.3, "BTC": 0.1}, None, {}),  # spot, not a vehicle
+        ({"VCN.TO": 0.5}, "VCN.TO", {}),  # a proxy that is not crypto
+        (None, None, {}),
+    ],
+)
+def test_listed_crypto_vehicles(holdings, vehicle, expected):
+    """#186 item 2: crypto held or asked for through a listed ETF, keyed by its spot proxy."""
+    from alphaforge.tax import listed_crypto_vehicles
+
+    assert listed_crypto_vehicles(holdings, vehicle) == expected

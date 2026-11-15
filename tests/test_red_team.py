@@ -152,3 +152,44 @@ def test_objection_with_invented_number_is_dropped(use_llm):
     use_llm({"objections": [bad, obj("warning")]})
     s = run("amira", PERSONAS["amira"]["example_request"])
     assert [o["objection"] for o in s.objections] == ["Concentration américaine élevée."]
+
+
+def test_objection_with_advice_wording_is_dropped_with_a_log_line(use_llm, caplog):
+    """#186 item 5: a forbidden word in an objection must not reach the verifier."""
+    import logging
+
+    bad = obj("blocking") | {"objection": "Nous recommandons de vendre TSLA."}
+    use_llm({"objections": [bad, obj("warning")]})
+    with caplog.at_level(logging.WARNING, logger="alphaforge.nodes.red_team"):
+        s = run("amira", PERSONAS["amira"]["example_request"])
+    assert [o["objection"] for o in s.objections] == ["Concentration américaine élevée."]
+    assert s.retries["red_team"] == 1  # the dropped objection was blocking: no loop
+    assert s.verification["passed"] is True
+    assert any("objection dropped" in r.message and "vendre TSLA" in r.message for r in caplog.records)
+
+
+def test_objection_with_internal_term_is_reworded_not_dropped(use_llm):
+    """#186 item 5: a plain-term substitution comes first; the objection is kept."""
+    from alphaforge.nodes.verifier import check_text_wording
+
+    bad = obj("warning") | {"objection": "Concentration élevée dans capped sur un seul marché."}
+    use_llm({"objections": [bad]})
+    s = run("amira", PERSONAS["amira"]["example_request"])
+    assert len(s.objections) == 1
+    text = s.objections[0]["objection"]
+    assert "capped" not in text and "la version ajustée à vos limites" in text
+    assert check_text_wording([("objection", text)]) == []
+    assert s.verification["passed"] is True
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("Concentration élevée (EP1).", "Concentration élevée (EP1)."),
+        ("Le scénario profile_baseline est concentré.", "Le scénario le profil de référence est concentré."),
+        ("Nous recommandons de vendre TSLA.", None),
+        ("Vous devriez vendre TSLA.", None),
+    ],
+)
+def test_reword_objection(text, expected):
+    assert rt.reword_objection(text, "fr") == expected
