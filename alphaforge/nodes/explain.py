@@ -404,7 +404,8 @@ def _requested_assessment(state: GraphState) -> tuple[str | None, float | None, 
         if asset_class == "crypto"
         else "etf"
     )
-    incompatible = bool(profile.conflicts) or float(weight) > caps[cap_key]
+    # Reading assumptions ("Hypothèse ...") are not conflicts: only real ones make the idea incompatible.
+    incompatible = bool(_real_conflicts(profile)) or float(weight) > caps[cap_key]
     return ticker, weight_pct, incompatible
 
 
