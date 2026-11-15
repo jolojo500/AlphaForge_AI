@@ -106,19 +106,36 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
                   <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                     Répartition des actifs ({sortedWeights.length})
                   </h4>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-1.5">
                     {sortedWeights.map(([ticker, weight]) => {
                       const pct = (weight * 100).toFixed(1);
+                      const isHighlightedTicker = ticker === 'TSLA';
                       return (
-                        <div key={ticker} className="text-xs">
+                        <div
+                          key={ticker}
+                          className={`text-xs p-1 rounded transition-colors ${
+                            isHighlightedTicker ? 'bg-amber-50/80 border border-amber-200' : ''
+                          }`}
+                        >
                           <div className="flex justify-between items-center text-slate-700 mb-0.5">
-                            <span className="font-medium font-mono">{ticker}</span>
-                            <span>{pct} %</span>
+                            <span className="font-semibold font-mono flex items-center gap-1">
+                              {ticker}
+                              {isHighlightedTicker && (
+                                <span className="text-[10px] text-amber-700 font-normal">
+                                  (actif évalué)
+                                </span>
+                              )}
+                            </span>
+                            <span className="font-medium">{pct} %</span>
                           </div>
                           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                             <div
                               className={`h-full rounded-full ${
-                                isMostConsistent ? 'bg-emerald-600' : 'bg-blue-600'
+                                isHighlightedTicker
+                                  ? 'bg-amber-500'
+                                  : isMostConsistent
+                                  ? 'bg-emerald-600'
+                                  : 'bg-blue-600'
                               }`}
                               style={{ width: `${Math.min(100, Math.max(0, weight * 100))}%` }}
                             />
