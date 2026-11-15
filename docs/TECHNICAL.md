@@ -298,7 +298,7 @@ Les métriques ci-dessous proviennent de l'exécution complète du graphe ([alph
 - `capped` : ZST.TO 6,0 %, TLT 6,0 %, XBB.TO 6,0 %, AGG 6,0 %, GLD 6,0 %, et 21 actions/FNB éligibles à 3,33 % chacun.
 - `profile_baseline` : ZST.TO 25,0 %, AGG 22,46 %, XIU.TO 18,73 %, FTS.TO 7,0 %, JNJ 7,0 %, RY.TO 5,63 %, TD.TO 4,86 %, PG 4,73 %, XBB.TO 2,54 %, MSFT 1,34 %, ATD.TO 0,62 %.
 
-*Conclusion de l'Agent 4* : Le scénario `capped` répond aux exigences d'équilibre et de responsabilité environnementale en filtrant rigoureusement les énergies fossiles et en maintenant une volatilité modérée de 12,2 % (contre 5,5 % pour le scénario de référence `profile_baseline`).
+*Conclusion de l'Agent 4 (exécution réelle sur Bedrock)* : le scénario `profile_baseline` est le plus cohérent avec le profil déclaré (équilibré, tolérance et capacité modérées, ESG, sans controverses) : il présente la volatilité historique la plus faible (5,5 %) des trois, après exclusion des cryptoactifs et des énergies fossiles. Le scénario `capped` (12,2 %) reste plus proche de la demande telle quelle.
 
 ---
 
