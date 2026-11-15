@@ -225,3 +225,50 @@ def test_issue_35_against_042_fails(ev042):
 def test_years_and_scenario_counts_are_ignored(ev042):
     e = mutate(quelles_donnees=[{"claim": "Les 3 scénarios, sur 2022 et 2026, citent EP1.", "evidence": ["EP1"]}])
     assert v.check_numbers(e, ev042) == []
+
+
+# --- #114: adversarial cases ------------------------------------------------------------
+def _ev114():
+    import datetime as dt
+
+    from alphaforge.state import Evidence
+
+    def e(i, val):
+        return Evidence(id=i, value={"metric": "m", "value": val}, source="t",
+                        date=dt.date(2026, 1, 1), method="t")
+    return {"EP3": e("EP3", -0.232), "EP9": e("EP9", -0.061)}
+
+
+def _doc114(**kw):
+    base = {"resume": "Comparaison.", "incertitude": "Historique.",
+            "quelles_donnees": [{"claim": "Perte maximale de -23,2 %.", "evidence": ["EP3"]}],
+            "pourquoi_ce_choix": [], "limites": [], "ce_qui_changerait_la_reponse": []}
+    return base | kw
+
+
+def test_invented_number_in_resume_fails():
+    errs = v.check_numbers(_doc114(resume="Une perte maximale de -12 % en 2022."), _ev114())
+    assert errs and errs[0].startswith("resume")
+
+
+def test_number_in_resume_with_inline_id_passes():
+    assert v.check_numbers(_doc114(resume="Une perte maximale de -23,2 % [EP3]."), _ev114()) == []
+
+
+def test_percentage_equal_to_an_unrelated_weight_fails():
+    weights = {"capped": [0.20, 0.05], "as_requested": [0.25]}
+    doc = _doc114(quelles_donnees=[{"claim": "Une perte de 20 % au pire.", "evidence": ["EP3"]}])
+    assert v.check_numbers(doc, _ev114(), [], weights)
+
+
+def test_weight_of_the_named_scenario_passes():
+    weights = {"capped": [0.20, 0.05], "as_requested": [0.25]}
+    doc = _doc114(quelles_donnees=[{"claim": "Le scénario plafonné garde TSLA à 5 %.", "evidence": ["EP9"]}])
+    assert v.check_numbers(doc, _ev114(), [], weights) == []
+
+
+def test_points_are_checked_and_differences_allowed():
+    ok = _doc114(quelles_donnees=[{"claim": "Un écart de 17,1 points.", "evidence": ["EP3", "EP9"]}])
+    bad = _doc114(quelles_donnees=[{"claim": "Un écart de 47 points.", "evidence": ["EP3", "EP9"]}])
+    assert v.check_numbers(ok, _ev114()) == []
+    assert v.check_numbers(bad, _ev114())
