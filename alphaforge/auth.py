@@ -6,10 +6,12 @@ import datetime as dt
 import logging
 import os
 import re
+import ssl
 import threading
 from typing import Annotated, Any
 
 import boto3
+import certifi
 import jwt
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -62,7 +64,15 @@ def get_jwks_client() -> PyJWKClient:
                 f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/"
                 f"{COGNITO_USER_POOL_ID}/.well-known/jwks.json"
             )
-            _jwks_client = PyJWKClient(jwks_url, cache_keys=True, max_cached_keys=10)
+            ssl_ctx = None
+            try:
+                ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+            except Exception:
+                try:
+                    ssl_ctx = ssl.create_default_context()
+                except Exception:
+                    ssl_ctx = None
+            _jwks_client = PyJWKClient(jwks_url, cache_keys=True, max_cached_keys=10, ssl_context=ssl_ctx)
         return _jwks_client
 
 

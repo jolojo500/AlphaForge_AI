@@ -176,12 +176,30 @@ def _regex_extract(text: str) -> Extraction:
             ticker = t
             break
     if not ticker:
-        if re.search(r"\b(?:sp500|s&p\s*500|snp500|s&p)\b", lowered):
+        if re.search(r"\b(?:ethereum|ether|eth)\b", lowered):
+            ticker = "ETH-USD"
+        elif re.search(r"\b(?:bitcoin|btc)\b", lowered):
+            ticker = "BTC-USD"
+        elif re.search(r"\b(?:sp500|s&p\s*500|snp500|s&p)\b", lowered):
             ticker = "SPY"
         elif re.search(r"\b(?:nasdaq|nas100)\b", lowered):
             ticker = "QQQ"
         elif re.search(r"\b(?:tsx\s*60|tsx)\b", lowered):
             ticker = "XIU.TO"
+        elif re.search(r"\b(?:nvidia)\b", lowered):
+            ticker = "NVDA"
+        elif re.search(r"\b(?:tesla)\b", lowered):
+            ticker = "TSLA"
+        elif re.search(r"\b(?:apple)\b", lowered):
+            ticker = "AAPL"
+        elif re.search(r"\b(?:microsoft)\b", lowered):
+            ticker = "MSFT"
+        elif re.search(r"\b(?:google|alphabet)\b", lowered):
+            ticker = "GOOGL"
+        elif re.search(r"\b(?:amazon)\b", lowered):
+            ticker = "AMZN"
+        elif re.search(r"\b(?:shopify)\b", lowered):
+            ticker = "SHOP.TO"
     horizon = None
     m_h = re.search(r"(\d+)\s*(?:ans?|years?|yrs?)\b", lowered)
     if m_h:
@@ -851,10 +869,11 @@ def build_profile(
             conflicts.append(c)
     if used_fallback:
         conflicts.append(
-            "Assumption: the request was read with fallback rules; the profile relies on reference profile hypotheses."
+            "Assumption: Connection with the AI model failed (offline mode or missing AWS credentials); "
+            "analysis was completed using deterministic fallback rules and reference profile parameters."
             if language == "en"
-            else "Hypothèse : la demande a été lue de façon simplifiée ; le profil repose sur les "
-            "hypothèses du profil de référence."
+            else "Hypothèse : La connexion avec le modèle d'IA a échoué (mode hors-ligne ou identifiants AWS manquants) ; "
+            "l'analyse a été complétée à l'aide des règles déterministes de secours et des paramètres du profil de référence."
         )
     current_holdings = None
     holdings_unanalysed: dict[str, float] = {}
