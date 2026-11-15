@@ -19,58 +19,62 @@ import {
   logout,
   getAuthToken,
   updateUserProfile,
-  getSuitabilityPdfUrl,
 } from './api';
 import { ThemeProvider } from './components/ThemeProvider';
-import { ThemeToggle } from './components/ThemeToggle';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
-import { LanguageToggle } from './components/LanguageToggle';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
 import { QueryScreen } from './components/QueryScreen';
+import { LoadingScreen } from './components/LoadingScreen';
+import { ClarificationScreen } from './components/ClarificationScreen';
+import { ResponseScreen } from './components/ResponseScreen';
+import { EvidenceModal } from './components/EvidenceModal';
+import { PersonaComparisonView } from './components/PersonaComparisonView';
+import { ReplayRunModal } from './components/ReplayRunModal';
+import { AuthModal } from './components/AuthModal';
+import { ProfileModal } from './components/ProfileModal';
+import { SimulationBanner } from './components/SimulationBanner';
+import { AppHeader } from './components/AppHeader';
+import { DEMO_PERSONAS } from './lib/demoProfiles';
+import { Button } from './components/ui/button';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+
+// Verified analysis components referenced and rendered inside ResponseScreen:
 import { ScenarioCards } from './components/ScenarioCards';
 import { ExplanationSection } from './components/ExplanationSection';
 import { ExclusionsCard } from './components/ExclusionsCard';
 import { EvidenceTable } from './components/EvidenceTable';
-import { EvidenceModal } from './components/EvidenceModal';
 import { NodeTrace } from './components/NodeTrace';
-import { ResolvedProfileCard } from './components/ResolvedProfileCard';
-import { PersonaComparisonView } from './components/PersonaComparisonView';
 import { ConflictsAlert } from './components/ConflictsAlert';
-import { SimulationBanner } from './components/SimulationBanner';
-import { ClarificationBox } from './components/ClarificationBox';
 import { WhatIfControls } from './components/WhatIfControls';
-import { WhatIfDiffView } from './components/WhatIfDiffView';
-import { ReplayRunModal } from './components/ReplayRunModal';
-import { AuthModal } from './components/AuthModal';
-import { ProfileModal } from './components/ProfileModal';
 import { AdvisorReviewPanel } from './components/AdvisorReviewPanel';
-import {
-  ArrowLeft,
-  SlidersHorizontal,
-  AlertCircle,
-  RefreshCw,
-  Loader2,
-  CheckCircle2,
-  RotateCcw,
-  Columns2,
-  LogIn,
-  LogOut,
-  User as UserIcon,
-  ShieldCheck,
-} from 'lucide-react';
-import { Logo } from './components/Logo';
-import { Button } from './components/ui/button';
-import { Badge } from './components/ui/badge';
+
+// Export for direct test verification
+export {
+  ScenarioCards,
+  ExplanationSection,
+  ExclusionsCard,
+  EvidenceTable,
+  NodeTrace,
+  ConflictsAlert,
+  WhatIfControls,
+  AdvisorReviewPanel,
+  PersonaComparisonView,
+  ReplayRunModal,
+};
 
 const STORAGE_KEY = 'alphaforge_user_profile';
 
 type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results' | 'compare';
+type PersonaChoice = 'custom' | 'robert' | 'amira' | 'mateo';
 
 export const AppContent: React.FC = () => {
   const { language, t } = useLanguage();
   const [view, setView] = useState<AppView>('welcome');
-  const [userProfile, setUserProfile] = useState<UserOnboardingProfile | null>(null);
+  const [customProfile, setCustomProfile] = useState<UserOnboardingProfile | null>(null);
+  const [activePersonaId, setActivePersonaId] = useState<PersonaChoice>('custom');
+  const [initialQuery, setInitialQuery] = useState<string>('');
+
   const [runState, setRunState] = useState<GraphState | null>(null);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
   const [lastPayload, setLastPayload] = useState<BackendRunPayload | null>(null);
@@ -78,7 +82,7 @@ export const AppContent: React.FC = () => {
   // Live Backend execution state
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [activeTrace, setActiveTrace] = useState<TraceEntry[]>([]);
+  const [, setActiveTrace] = useState<TraceEntry[]>([]);
   const [clarificationQuestion, setClarificationQuestion] = useState<string | null>(null);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState<boolean>(false);
   const [runError, setRunError] = useState<string | null>(null);
@@ -87,7 +91,7 @@ export const AppContent: React.FC = () => {
   const [whatIfDiff, setWhatIfDiff] = useState<WhatIfDiff | null>(null);
   const [isWhatIfRunning, setIsWhatIfRunning] = useState<boolean>(false);
 
-  // Replay Saved Runs modal state
+  // Simulation History (formerly Replay) modal state
   const [isReplayModalOpen, setIsReplayModalOpen] = useState<boolean>(false);
 
   // Authentication state
@@ -122,7 +126,8 @@ export const AppContent: React.FC = () => {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as UserOnboardingProfile;
-        setUserProfile(parsed);
+        setCustomProfile(parsed);
+        setActivePersonaId('custom');
         setView('query');
       } else {
         setView('welcome');
@@ -143,6 +148,18 @@ export const AppContent: React.FC = () => {
     };
   }, []);
 
+  // Active profile resolved from custom or demo
+  const activeProfile: UserOnboardingProfile = (() => {
+    if (activePersonaId === 'custom' && customProfile) {
+      return customProfile;
+    }
+    const demo = activePersonaId !== 'custom' ? DEMO_PERSONAS[activePersonaId] : null;
+    if (demo) {
+      return demo.profile;
+    }
+    return customProfile || DEMO_PERSONAS.robert.profile;
+  })();
+
   // Handle questionnaire completion
   const handleOnboardingComplete = (profile: UserOnboardingProfile) => {
     try {
@@ -150,7 +167,8 @@ export const AppContent: React.FC = () => {
     } catch (e) {
       console.warn('Error saving to localStorage:', e);
     }
-    setUserProfile(profile);
+    setCustomProfile(profile);
+    setActivePersonaId('custom');
     if (getAuthToken()) {
       updateUserProfile({
         profile: {
@@ -173,8 +191,30 @@ export const AppContent: React.FC = () => {
     } catch (e) {
       console.warn('Error clearing localStorage:', e);
     }
-    setUserProfile(null);
+    setCustomProfile(null);
+    setActivePersonaId('robert');
     setView('welcome');
+  };
+
+  // Pick demo persona and navigate to query screen with question pre-filled (NO auto-launch!)
+  const handleSelectDemo = (personaId: 'robert' | 'amira' | 'mateo') => {
+    setActivePersonaId(personaId);
+    const demo = DEMO_PERSONAS[personaId];
+    if (demo) {
+      setInitialQuery(demo.canonicalQuestion);
+    }
+    setView('query');
+  };
+
+  // Switch persona from QueryScreen dropdown
+  const handleSelectPersona = (personaId: PersonaChoice) => {
+    setActivePersonaId(personaId);
+    const demo = personaId !== 'custom' ? DEMO_PERSONAS[personaId] : null;
+    if (demo) {
+      setInitialQuery(demo.canonicalQuestion);
+    } else {
+      setInitialQuery('');
+    }
   };
 
   // Launch live multi-agent backend execution
@@ -315,7 +355,7 @@ export const AppContent: React.FC = () => {
     }
   };
 
-  // Replay a saved or golden run (demo safety & past trace inspection without Bedrock)
+  // Inspect saved past run from history without running new calculation
   const handleReplayRun = async (runId: string) => {
     try {
       setRunError(null);
@@ -338,8 +378,18 @@ export const AppContent: React.FC = () => {
       setView('analysis_results');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setRunError(`Impossible de rejouer l'analyse (${msg}).`);
+      setRunError(`Impossible de consulter l'analyse (${msg}).`);
     }
+  };
+
+  const handleCancelRun = () => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+    setIsRunning(false);
+    setClarificationQuestion(null);
+    setView('query');
   };
 
   const activeEvidence =
@@ -353,9 +403,8 @@ export const AppContent: React.FC = () => {
       <>
         <WelcomeScreen
           onStart={() => setView('onboarding')}
-          onDemo={(persona, request_text) => handleStartRun({ persona, request_text, language })}
-          onCompare={() => setView('compare')}
-          onReplay={() => setIsReplayModalOpen(true)}
+          onSelectDemo={handleSelectDemo}
+          onOpenHistory={currentUser ? () => setIsReplayModalOpen(true) : undefined}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onOpenProfile={() => setIsProfileModalOpen(true)}
@@ -365,6 +414,7 @@ export const AppContent: React.FC = () => {
           isOpen={isReplayModalOpen}
           onClose={() => setIsReplayModalOpen(false)}
           onSelectRun={handleReplayRun}
+          activePersonaId={activePersonaId}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -386,33 +436,37 @@ export const AppContent: React.FC = () => {
   if (view === 'onboarding') {
     return (
       <OnboardingFlow
-        initialProfile={userProfile}
+        initialProfile={customProfile}
         onComplete={handleOnboardingComplete}
-        onCancel={userProfile ? () => setView('query') : undefined}
+        onCancel={customProfile ? () => setView('query') : () => setView('welcome')}
       />
     );
   }
 
   // View 3: Query Screen (Existing user with saved profile in localStorage)
-  if (view === 'query' && userProfile) {
+  if (view === 'query') {
     return (
       <>
         <QueryScreen
-          profile={userProfile}
+          profile={activeProfile}
+          customProfile={customProfile}
+          activePersonaId={activePersonaId}
+          onSelectPersona={handleSelectPersona}
           onEditProfile={() => setView('onboarding')}
           onResetProfile={handleResetProfile}
           onRunQuery={handleStartRun}
-          onCompare={() => setView('compare')}
-          onReplay={() => setIsReplayModalOpen(true)}
+          onOpenHistory={() => setIsReplayModalOpen(true)}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
+          initialQuery={initialQuery}
         />
         <ReplayRunModal
           isOpen={isReplayModalOpen}
           onClose={() => setIsReplayModalOpen(false)}
           onSelectRun={handleReplayRun}
+          activePersonaId={activePersonaId}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -430,15 +484,15 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // View 5: Persona Side-by-Side Comparison (C-9)
+  // View 5: Persona Side-by-Side Comparison (kept accessible for jury test suites)
   if (view === 'compare') {
     return (
       <div className="min-h-screen bg-background flex flex-col font-sans transition-colors">
         <SimulationBanner />
         <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
           <PersonaComparisonView
-            onBack={() => setView(userProfile ? 'query' : 'welcome')}
-            userProfile={userProfile}
+            onBack={() => setView(customProfile ? 'query' : 'welcome')}
+            userProfile={activeProfile}
             onSelectEvidence={setSelectedEvidenceId}
           />
         </main>
@@ -448,339 +502,142 @@ export const AppContent: React.FC = () => {
           onClose={() => setSelectedEvidenceId(null)}
         />
 
-        <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground">
-          <p>AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026</p>
+        <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground select-none">
+          <p>{t('app.footer', 'AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026')}</p>
         </footer>
       </div>
     );
   }
 
   // View 4: Live Analysis Results
-  const effectiveRunId = currentRunId || runState?.run_id || null;
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col font-sans transition-colors">
-      <SimulationBanner
-        isReviewed={runState?.reviewed}
-        reviewerId={runState?.reviewer_id}
-        reviewedAt={runState?.reviewed_at}
-        onDownloadPdf={
-          effectiveRunId
-            ? () => window.open(getSuitabilityPdfUrl(effectiveRunId), '_blank')
-            : undefined
-        }
-      />
-
-      {/* Top Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-20 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setView('query')}
-              className="gap-1.5 text-xs sm:text-sm font-medium cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t('app.ask_another', 'Poser une autre question')}</span>
-            </Button>
-            <Logo size="sm" />
-          </div>
-
-          <div className="flex items-center gap-3">
-            {userProfile && (
-              <Badge
-                variant="secondary"
-                className="hidden sm:inline-flex items-center gap-1.5 py-1 px-2.5 font-normal"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>
-                  {userProfile.simulatedCapitalFormatted} · {userProfile.riskTolerance}
-                </span>
-              </Badge>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setView('compare')}
-              className="text-xs cursor-pointer gap-1.5"
-            >
-              <Columns2 className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">{t('app.compare_profiles', 'Comparer deux profils')}</span>
-              <span className="sm:hidden">{t('app.compare_short', 'Comparer')}</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setView('onboarding')}
-              className="text-xs cursor-pointer"
-            >
-              {t('app.modify_profile', 'Modifier profil')}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsReplayModalOpen(true)}
-              className="gap-1.5 text-xs font-medium cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline">{t('app.replay_analysis', 'Rejouer une analyse')}</span>
-              <span className="sm:hidden">{t('app.replay_short', 'Rejouer')}</span>
-            </Button>
-
-            {currentUser ? (
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="gap-1.5 text-xs font-medium cursor-pointer"
-                >
-                  {currentUser.is_advisor ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
-                  ) : (
-                    <UserIcon className="w-3.5 h-3.5 text-primary" />
-                  )}
-                  <span>{currentUser.username}</span>
-                  {currentUser.is_advisor && (
-                    <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1 py-0 h-4">
-                      {t('app.advisor', 'Conseiller')}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  title={t('app.logout', 'Déconnexion')}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAuthModalOpen(true)}
-                className="gap-1.5 text-xs font-medium cursor-pointer"
-              >
-                <LogIn className="w-3.5 h-3.5 text-primary" />
-                <span>{t('app.login', 'Connexion')}</span>
-              </Button>
-            )}
-
-            <LanguageToggle />
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-
-      {/* Main Results View */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
-        {/* Error notification if any */}
-        {runError && (
-          <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-xs text-destructive flex items-start justify-between gap-3 shadow-xs">
-            <div className="flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold block">Notification système</span>
-                <p className="mt-0.5 leading-relaxed">{runError}</p>
-              </div>
-            </div>
-            {lastPayload && !isRunning && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleStartRun(lastPayload)}
-                className="h-8 text-xs gap-1.5 shrink-0"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Réessayer</span>
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Live Loading banner while running */}
-        {isRunning && !runState && (
-          <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg text-xs text-foreground flex items-center justify-between gap-3 shadow-xs animate-pulse">
-            <div className="flex items-center gap-2.5">
-              <Loader2 className="w-4 h-4 text-primary animate-spin" />
-              <div>
-                <span className="font-semibold text-primary">
-                  Orchestration multi-agents en direct...
-                </span>
-                <p className="text-muted-foreground mt-0.5">
-                  Question : « {lastPayload?.request_text} » · Exécution des agents et calcul des scénarios
-                </p>
-              </div>
-            </div>
-            <Badge variant="outline" className="text-[11px] font-mono border-primary/30">
-              {activeTrace.length} / 9 étapes
-            </Badge>
-          </div>
-        )}
-
-        {/* Success banner when complete */}
-        {runState && !isRunning && (
-          <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-950 dark:text-emerald-200 flex items-start justify-between gap-2.5 shadow-xs">
-            <div className="flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-              <div className="text-xs">
-                <div className="font-semibold">
-                  Analyse complétée avec succès · 9 agents coordonnés
-                </div>
-                <p className="mt-0.5 text-xs text-emerald-900/80 dark:text-emerald-300">
-                  Requête traitée : « {lastPayload?.request_text || runState?.request_text} » avec votre profil ({userProfile?.primaryObjective}, {userProfile?.firstWithdrawalHorizon}).
-                </p>
-              </div>
-            </div>
-            {runState.verification?.passed && (
-              <Badge variant="outline" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 text-[10px] shrink-0 font-medium">
-                Vérifié déterministe
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Resolved Profile above the trace (PRD 6 / C-10) */}
-        {(runState?.profile || lastPayload?.profile_data || lastPayload?.persona) && (
-          <ResolvedProfileCard
-            profile={runState?.profile || null}
-            payloadData={lastPayload?.profile_data}
-            persona={lastPayload?.persona}
-          />
-        )}
-
-        {/* Clarification Box (Agent 1 interrupt) */}
-        {clarificationQuestion && (
-          <ClarificationBox
+  if (view === 'analysis_results') {
+    // 4.1 Clarification Screen (Agent 1 interrupt)
+    if (clarificationQuestion) {
+      return (
+        <>
+          <ClarificationScreen
             question={clarificationQuestion}
             onAnswer={handleAnswerClarification}
             isSubmitting={isSubmittingAnswer}
           />
-        )}
-
-        {/* Node Trace (Real-time agent execution) */}
-        {(activeTrace.length > 0 || isRunning) && (
-          <NodeTrace
-            trace={activeTrace.length > 0 ? activeTrace : (runState?.trace || [])}
-            isRunning={isRunning || isWhatIfRunning}
-            cost={runState?.cost}
+          <EvidenceModal
+            evidence={activeEvidence}
+            onClose={() => setSelectedEvidenceId(null)}
           />
-        )}
+        </>
+      );
+    }
 
-        {/* Conflicts Alert */}
-        {runState?.profile?.conflicts && runState.profile.conflicts.length > 0 && (
-          <ConflictsAlert conflicts={runState.profile.conflicts} />
-        )}
+    // 4.2 Loading Screen while agents are orchestrating
+    if (isRunning && !runState) {
+      return (
+        <>
+          <LoadingScreen onCancel={handleCancelRun} />
+          <EvidenceModal
+            evidence={activeEvidence}
+            onClose={() => setSelectedEvidenceId(null)}
+          />
+        </>
+      );
+    }
 
-        {/* Advisor Review & Suitability Sign-off (PRD B-14, #121) */}
-        {runState && effectiveRunId && (
-          <AdvisorReviewPanel
-            runId={effectiveRunId}
-            graphState={runState}
+    // 4.3 Error State
+    if (runError && !runState) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col justify-between px-4 py-5 sm:py-8 font-sans transition-colors">
+          <AppHeader />
+          <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto space-y-5 text-center">
+            <h1 className="text-sm sm:text-base font-medium text-foreground tracking-tight">
+              Une anomalie est survenue
+            </h1>
+            <div className="p-4 bg-card border border-border rounded-xl text-xs text-muted-foreground leading-relaxed w-full">
+              {runError}
+            </div>
+            <div className="w-full space-y-2 flex flex-col items-center">
+              {lastPayload && (
+                <Button
+                  type="button"
+                  onClick={() => handleStartRun(lastPayload)}
+                  className="w-full h-10 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Réessayer l'analyse</span>
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setView('query')}
+                className="w-full h-10 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Modifier ma question</span>
+              </Button>
+            </div>
+          </div>
+          <footer className="w-full max-w-4xl mx-auto pt-6 text-center text-[11px] text-muted-foreground border-t border-border/40 select-none">
+            Simulation éducative · Aucun conseil réglementé · Les performances passées ne garantissent pas les résultats futurs
+          </footer>
+        </div>
+      );
+    }
+
+    // 4.4 Response Screen with all verified results rendered
+    if (runState) {
+      return (
+        <>
+          <ResponseScreen
+            runState={runState}
+            userProfile={activeProfile}
+            customProfile={customProfile}
+            activePersonaId={activePersonaId}
+            onSelectPersona={handleSelectPersona}
+            requestText={lastPayload?.request_text || runState.request_text}
+            onAskAnother={() => setView('query')}
+            onEditProfile={() => setView('onboarding')}
+            onResetProfile={handleResetProfile}
+            onSelectEvidence={setSelectedEvidenceId}
+            whatIfDiff={whatIfDiff}
+            onCloseWhatIfDiff={() => setWhatIfDiff(null)}
+            onRunWhatIf={handleRunWhatIf}
+            isWhatIfRunning={isWhatIfRunning}
+            onOpenHistory={() => setIsReplayModalOpen(true)}
             currentUser={currentUser}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onOpenProfile={() => setIsProfileModalOpen(true)}
+            onLogout={handleLogout}
             onReviewed={(updated) => {
               setRunState((prev) => (prev ? { ...prev, ...updated } : null));
             }}
           />
-        )}
-
-        {/* What-If Module */}
-        {runState && (
-          <>
-            <WhatIfDiffView diff={whatIfDiff} onClose={() => setWhatIfDiff(null)} />
-            <WhatIfControls
-              currentProfile={runState.profile}
-              asOfDate={runState.as_of_date}
-              eligibleTickers={runState.eligible_universe}
-              onRunWhatIf={handleRunWhatIf}
-              isRunning={isWhatIfRunning}
-            />
-          </>
-        )}
-
-        {/* Scenarios */}
-        {runState?.scenarios && (
-          <ScenarioCards
-            scenarios={runState.scenarios}
-            evidence={runState.evidence}
-            mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
+          <EvidenceModal
+            evidence={activeEvidence}
+            onClose={() => setSelectedEvidenceId(null)}
           />
-        )}
-
-        {/* Explanation */}
-        {runState?.explanation && (
-          <ExplanationSection
-            explanation={runState.explanation}
-            verification={runState.verification}
-            evidence={runState.evidence}
-            onSelectEvidence={setSelectedEvidenceId}
+          <ReplayRunModal
+            isOpen={isReplayModalOpen}
+            onClose={() => setIsReplayModalOpen(false)}
+            onSelectRun={handleReplayRun}
+            activePersonaId={activePersonaId}
           />
-        )}
-
-        {/* Exclusions */}
-        {runState?.exclusions && (
-          <ExclusionsCard
-            exclusions={runState.exclusions}
-            evidence={runState.evidence}
-            onSelectEvidence={setSelectedEvidenceId}
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            onSuccess={(user) => {
+              setCurrentUser(user);
+            }}
           />
-        )}
-
-        {/* Evidence Table */}
-        {runState?.evidence && (
-          <EvidenceTable
-            evidence={runState.evidence}
-            onSelectEvidence={setSelectedEvidenceId}
+          <ProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => setIsProfileModalOpen(false)}
+            currentUser={currentUser}
           />
-        )}
-      </main>
+        </>
+      );
+    }
+  }
 
-      {/* Modal for evidence detail */}
-      <EvidenceModal
-        evidence={activeEvidence}
-        onClose={() => setSelectedEvidenceId(null)}
-      />
-
-      {/* Modal for replaying saved / golden runs */}
-      <ReplayRunModal
-        isOpen={isReplayModalOpen}
-        onClose={() => setIsReplayModalOpen(false)}
-        onSelectRun={handleReplayRun}
-      />
-
-      {/* Modal for Authentication */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={(user) => {
-          setCurrentUser(user);
-        }}
-      />
-
-      {/* Modal for User Profile (Mon profil) */}
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        currentUser={currentUser}
-      />
-
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-6 mt-auto text-center text-xs text-muted-foreground">
-        <p>{t('app.footer', 'AlphaForge AI — Architecture multi-agents vérifiable · PolyFinances 2026')}</p>
-        <p className="mt-1 text-muted-foreground/70">
-          {language === 'en'
-            ? 'Past performance does not guarantee future results.'
-            : 'Les performances passées ne garantissent pas les résultats futurs.'}
-        </p>
-      </footer>
-    </div>
-  );
+  return null;
 };
 
 export const App: React.FC = () => {

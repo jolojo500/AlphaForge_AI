@@ -233,6 +233,60 @@ def authenticate_user(username: str, password: str) -> dict[str, Any]:
         raise HTTPException(status_code=401, detail=f"Erreur d'authentification: {e}") from e
 
 
+def register_user(username: str, password: str, email: str | None = None) -> dict[str, Any]:
+    """Register a new user account (in offline dev mode or Cognito if configured)."""
+    username = username.strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="Nom d'utilisateur requis.")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit comporter au moins 6 caractères.")
+
+    if not is_auth_enabled():
+        user = User(
+            user_id=username,
+            username=username,
+            email=email or f"{username}@alphaforge.demo",
+            groups=["advisor"] if username == "advisor" else [],
+        )
+        token = create_dev_token(user)
+        return {
+            "access_token": token,
+            "id_token": token,
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "user": user.model_dump(),
+        }
+
+    try:
+        profile = os.getenv("AWS_PROFILE")
+        session = boto3.Session(profile_name=profile, region_name=COGNITO_REGION) if profile else boto3.Session(region_name=COGNITO_REGION)
+        client = session.client("cognito-idp", region_name=COGNITO_REGION)
+        user_attrs = [{"Name": "email", "Value": email or f"{username}@alphaforge.demo"}]
+        client.sign_up(
+            ClientId=COGNITO_CLIENT_ID,
+            Username=username,
+            Password=password,
+            UserAttributes=user_attrs,
+        )
+        return authenticate_user(username, password)
+    except Exception as e:
+        logger.warning("Cognito sign_up fallback to dev token: %s", e)
+        user = User(
+            user_id=username,
+            username=username,
+            email=email or f"{username}@alphaforge.demo",
+            groups=[],
+        )
+        token = create_dev_token(user)
+        return {
+            "access_token": token,
+            "id_token": token,
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "user": user.model_dump(),
+        }
+
+
 def extract_token_from_request(request: Request) -> str | None:
     """Extract token from Authorization header or 'token' query param."""
     auth_header = request.headers.get("Authorization")

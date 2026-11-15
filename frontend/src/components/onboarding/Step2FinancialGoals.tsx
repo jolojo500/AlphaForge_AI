@@ -41,11 +41,11 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
     'Financement d’un projet spécifique',
   ];
 
-  // Parse current horizon number from string (null if not set yet)
+  // Parse current horizon number from string (defaults to 5 years)
   const currentHorizonNum = (() => {
-    if (!firstWithdrawalHorizon) return null;
+    if (!firstWithdrawalHorizon) return 5;
     const m = firstWithdrawalHorizon.match(/\d+/);
-    return m ? parseInt(m[0], 10) : null;
+    return m ? parseInt(m[0], 10) : 5;
   })();
 
   const formatHorizonText = (val: number): string => {
@@ -161,11 +161,7 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
             <span>Horizon avant retrait majeur <span className="text-destructive">*</span></span>
           </label>
           <span className="text-xs font-semibold text-primary">
-            {currentHorizonNum !== null ? (
-              `${currentHorizonNum} an${currentHorizonNum > 1 ? 's' : ''}`
-            ) : (
-              <span className="text-muted-foreground font-normal italic">À définir</span>
-            )}
+            {currentHorizonNum} an{currentHorizonNum > 1 ? 's' : ''}
           </span>
         </div>
 

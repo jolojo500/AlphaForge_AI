@@ -26,6 +26,7 @@ from sse_starlette.sse import EventSourceResponse
 from alphaforge.auth import (
     User,
     authenticate_user,
+    register_user,
     get_current_user,
     get_current_user_from_request_or_none,
     require_advisor,
@@ -557,10 +558,27 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: str | None = None
+
+
 @app.post("/auth/login")
 def login_endpoint(req: LoginRequest) -> dict[str, Any]:
     """Authenticate with Cognito or local dev mode (PRD C-14, #128)."""
     return authenticate_user(req.username, req.password)
+
+
+@app.post("/auth/register")
+def register_endpoint(req: RegisterRequest) -> dict[str, Any]:
+    """Register a new user account."""
+    res = register_user(req.username, req.password, req.email)
+    get_user_store().save_user_profile(
+        req.username.strip(),
+        {"profile": {}, "account_type": None, "current_holdings": None},
+    )
+    return res
 
 
 @app.get("/auth/me")

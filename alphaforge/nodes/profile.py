@@ -120,6 +120,12 @@ def _resolve_ticker(raw: str | None) -> str | None:
         return "BTC-USD"
     if key in ("ETHER", "ETHEREUM", "ETH"):
         return "ETH-USD"
+    if key in ("SP500", "S&P 500", "S&P500", "SNP500", "S&P", "SPY"):
+        return "SPY"
+    if key in ("NASDAQ", "NAS100", "QQQ"):
+        return "QQQ"
+    if key in ("TSX", "TSX60", "XIU"):
+        return "XIU.TO"
     return None
 
 
@@ -145,8 +151,15 @@ def _regex_extract(text: str) -> Extraction:
         ):
             ticker = t
             break
-    if not ticker and weight is not None and re.search(r"\bcrypto\b", lowered):
-        ticker = "BTC-USD"
+    if not ticker:
+        if re.search(r"\b(?:sp500|s&p\s*500|snp500|s&p)\b", lowered):
+            ticker = "SPY"
+        elif re.search(r"\b(?:nasdaq|nas100)\b", lowered):
+            ticker = "QQQ"
+        elif re.search(r"\b(?:tsx\s*60|tsx)\b", lowered):
+            ticker = "XIU.TO"
+        elif weight is not None and re.search(r"\bcrypto\b", lowered):
+            ticker = "BTC-USD"
     horizon = None
     m_h = re.search(r"(\d+)\s*(?:ans?|years?|yrs?)\b", lowered)
     if m_h:
@@ -190,11 +203,13 @@ def extract_profile(
     con = persona.get("constraints", [])
     pref = persona.get("preferences", [])
     lang_label = "English" if language == "en" else "French"
+    # Extract ticker & weight only from the primary question, never from the appended investor context
+    primary_text = text.split("\n\n[Contexte investisseur]")[0].split("[Contexte investisseur]")[0].strip()
     prompt = (
         f"Persona hypotheses: objective={obj}, horizon={hor} years, tolerance={tol}, capacity={cap}, "
         f"constraints={con}, preferences={pref}.\n"
         f"Allowed tickers: {', '.join(sorted(_universe()))}.\n"
-        f'Request ({lang_label}): """{text}"""'
+        f'Request ({lang_label}): """{primary_text}"""'
     )
     conflicts_inst = (
         "conflicts: up to 2 short English sentences about a contradiction between the request and "
@@ -699,9 +714,10 @@ def build_kyc_completeness_and_assumptions(
 def needs_clarification(text: str, ext: Extraction, language: str = "fr") -> str | None:
     """ONE targeted question when an essential field is missing, else None."""
     ask_goal = ASK_GOAL_EN if language == "en" else ASK_GOAL
-    if not text.strip():
+    primary = text.split("\n\n[Contexte investisseur]")[0].split("[Contexte investisseur]")[0].strip()
+    if not primary:
         return ask_goal
-    if ext.ticker is None and not _INTENT_RE.search(text):
+    if ext.ticker is None and not _INTENT_RE.search(primary):
         return ask_goal  # e.g. "Je veux investir": no idea, no goal, no horizon
     if ext.ticker and ext.weight_pct is None:
         if language == "en":

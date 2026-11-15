@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Logo } from '../Logo';
-import { ThemeToggle } from '../ThemeToggle';
-import { LanguageToggle } from '../LanguageToggle';
+import { AppHeader } from '../AppHeader';
 import { UserOnboardingProfile } from '../../types';
 import { Step1Identity } from './Step1Identity';
 import { Step2FinancialGoals } from './Step2FinancialGoals';
@@ -43,7 +41,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     initialProfile?.primaryObjective || ''
   );
   const [firstWithdrawalHorizon, setFirstWithdrawalHorizon] = useState<string>(
-    initialProfile?.firstWithdrawalHorizon || ''
+    initialProfile?.firstWithdrawalHorizon || '5 ans · Moyen terme'
   );
   const [withdrawalMethod, setWithdrawalMethod] = useState<string>(
     initialProfile?.withdrawalMethod || ''
@@ -92,6 +90,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>(
     initialProfile?.excludedCategories || []
   );
+  const [currencyPreference, setCurrencyPreference] = useState<string>(
+    initialProfile?.currencyPreference || ''
+  );
 
   const [additionalNotes, setAdditionalNotes] = useState<string>(
     initialProfile?.additionalNotes || ''
@@ -132,6 +133,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       cryptoPreference: cryptoPreference || 'Non spécifié',
       esgImportance: esgImportance || 'Non spécifié',
       excludedCategories,
+      currencyPreference: currencyPreference || 'Non spécifié',
       additionalNotes,
       currentHoldingsCsv,
       currentHoldings: Object.keys(currentHoldings).length > 0 ? currentHoldings : undefined,
@@ -164,7 +166,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     riskTolerance && maxLossTolerance && sectorConcentrationLimit && capitalNeedNext12Months && essentialExpensesImpact && debtLevel && incomeStability
   );
   const isStep4Complete = Boolean(
-    interestedSectors.length > 0 && cryptoPreference && esgImportance
+    interestedSectors.length > 0 && cryptoPreference && esgImportance && currencyPreference
   );
 
   const isCurrentStepValid = (() => {
@@ -185,29 +187,36 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const progressPercent = (currentStep / 5) * 100;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-start px-4 py-6 sm:py-10 transition-colors">
-      {/* Top Header */}
-      <div className="w-full max-w-2xl flex items-center justify-between mb-4">
-        <div className="w-16" />
-        <Logo size="xl" />
-        <div className="flex items-center gap-1.5 justify-end">
-          <LanguageToggle />
-          <ThemeToggle />
-        </div>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-between px-4 py-5 sm:py-8 font-sans transition-colors">
+      {/* Unified Top Header with Centered Logo & Right Theme/Cancel */}
+      <AppHeader
+        rightActions={
+          onCancel ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              className="h-8 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Annuler
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {/* Sleek Step Progress Indicator */}
-      <div className="w-full max-w-2xl mb-5 space-y-1.5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground px-0.5">
-          <span>Questionnaire investisseur</span>
-          <span className="font-mono text-[11px]">Étape {currentStep} / 5</span>
+      <div className="w-full max-w-2xl mx-auto my-auto py-4">
+        {/* Sleek Step Progress Indicator */}
+        <div className="w-full mb-5 space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground px-0.5">
+            <span>Questionnaire investisseur</span>
+            <span className="font-mono text-[11px]">Étape {currentStep} / 5</span>
+          </div>
+          <Progress value={progressPercent} className="h-1" />
         </div>
-        <Progress value={progressPercent} className="h-1" />
-      </div>
 
-      {/* Main card using shadcn Card */}
-      <Card className="w-full max-w-2xl bg-card border-border/80 rounded-xl shadow-xs transition-all duration-200">
-        <CardContent className="p-5 sm:p-7">
+        {/* Main card using shadcn Card */}
+        <Card className="w-full bg-card border-border/80 rounded-xl shadow-xs transition-all duration-200">
+          <CardContent className="p-5 sm:p-7">
           {currentStep === 1 && (
             <Step1Identity
               ageRange={ageRange}
@@ -268,6 +277,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               setEsgImportance={setEsgImportance}
               excludedCategories={excludedCategories}
               setExcludedCategories={setExcludedCategories}
+              currencyPreference={currencyPreference}
+              setCurrencyPreference={setCurrencyPreference}
             />
           )}
 
@@ -294,9 +305,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             {currentStep > 1 && (
               <Button
                 type="button"
-                variant="default"
+                variant="outline"
                 onClick={() => setCurrentStep((s) => s - 1)}
-                className="px-6 h-9 rounded-md text-xs sm:text-sm font-medium transition-all shadow-xs active:scale-98"
+                className="px-5 h-10 text-xs sm:text-sm font-medium cursor-pointer"
               >
                 ← Retour
               </Button>
@@ -307,7 +318,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               onClick={() => {
                 if (isCurrentStepValid) setCurrentStep((s) => s + 1);
               }}
-              className="px-6 h-9 rounded-md text-xs sm:text-sm font-medium transition-all shadow-xs active:scale-98"
+              className="px-6 h-10 text-xs sm:text-sm font-medium cursor-pointer"
             >
               Continuer →
             </Button>
@@ -319,16 +330,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           )}
         </div>
       )}
+      </div>
 
-      {onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-        >
-          Annuler et revenir
-        </button>
-      )}
+      {/* Discrete uniform footer disclaimer */}
+      <footer className="w-full max-w-4xl mx-auto pt-6 text-center text-[11px] text-muted-foreground border-t border-border/40 select-none">
+        Simulation éducative · Aucun conseil réglementé · Les performances passées ne garantissent pas les résultats futurs
+      </footer>
     </div>
   );
 };
