@@ -7,13 +7,14 @@ to those weights. The scenario builder reuses the same functions on its portfoli
 
 from __future__ import annotations
 
+import datetime as dt
 import math
 from itertools import combinations
 
 import numpy as np
 import pandas as pd
 
-from alphaforge.data.holdings import holdings_date, holdings_weights, load_holdings
+from alphaforge.data.holdings import holdings_date, holdings_weights, is_complete, load_holdings
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState
@@ -98,20 +99,25 @@ def concentration(target: Target, info: pd.DataFrame) -> dict[str, float]:
     }
 
 
-def etf_overlap(a: str, b: str, holdings_dir=None) -> float | None:
+def etf_overlap(
+    a: str, b: str, holdings_dir=None, as_of: dt.date | str | None = None
+) -> float | None:
     """Share of the portfolio two ETFs have in common: sum over shared names of min(w_a, w_b).
 
     None if either ETF has no cached holdings. With a partial (top-N) list the result is a
     lower bound, since unlisted names cannot be matched.
     """
-    wa, wb = holdings_weights(a, holdings_dir), holdings_weights(b, holdings_dir)
+    wa = holdings_weights(a, holdings_dir, as_of=as_of)
+    wb = holdings_weights(b, holdings_dir, as_of=as_of)
     if not wa or not wb:
         return None
     return float(sum(min(wa[t], wb[t]) for t in wa.keys() & wb.keys()))
 
 
-def _holdings_label(etf: str) -> str:
-    doc = load_holdings(etf) or {}
+def _holdings_label(
+    etf: str, holdings_dir=None, as_of: dt.date | str | None = None
+) -> str:
+    doc = load_holdings(etf, holdings_dir=holdings_dir, as_of=as_of) or {}
     n = len(doc.get("holdings", []))
     scope = "full list" if doc.get("complete", True) else f"top {n} of {doc.get('total_holdings', '?')}"
     return f"{etf} {doc.get('source_name', '?')}, as of {doc.get('as_of', '?')} ({scope})"
@@ -215,23 +221,27 @@ def quant_node(state: GraphState) -> dict:
                 f"correlation of daily CAD returns, {CALENDAR}, {window}",
             )
 
-    etfs = [t for t in tickers if holdings_weights(t)]
+    etfs = [t for t in tickers if holdings_weights(t, as_of=as_of)]
     stale = False
     for a, b in combinations(etfs, 2):
-        overlap = etf_overlap(a, b)
+        overlap = etf_overlap(a, b, as_of=as_of)
         if overlap is None or overlap <= 0:
             continue
-        dates = [d for d in (holdings_date(a), holdings_date(b)) if d]
+        dates = [d for d in (holdings_date(a, as_of=as_of), holdings_date(b, as_of=as_of)) if d]
         stale = stale or any(d > as_of for d in dates)
+        both_complete = is_complete(a, as_of=as_of) and is_complete(b, as_of=as_of)
+        method_str = (
+            "sum over shared holdings of min(weight in A, weight in B); "
+            f"{_holdings_label(a, as_of=as_of)}; {_holdings_label(b, as_of=as_of)}"
+        )
+        if not both_complete:
+            method_str += "; a top-N list gives a lower bound"
         reg.add(
             {"metric": "etf_overlap", "tickers": [a, b], "value": _r4(overlap), "unit": "ratio"},
             source=f"ETF holdings: {a} + {b}",
             date=min(dates) if dates else as_of,
-            url=(load_holdings(a) or {}).get("source_url"),
-            method=(
-                "sum over shared holdings of min(weight in A, weight in B); "
-                f"{_holdings_label(a)}; {_holdings_label(b)}; a top-N list gives a lower bound"
-            ),
+            url=(load_holdings(a, as_of=as_of) or {}).get("source_url"),
+            method=method_str,
         )
     if stale:
         reg.add(

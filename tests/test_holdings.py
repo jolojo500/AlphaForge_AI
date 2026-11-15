@@ -31,23 +31,50 @@ def test_cached_files_are_well_formed(etf):
     assert sum(weights.values()) <= 1.0001
 
 
-def test_full_lists_for_spy_and_xiu():
-    assert load_holdings("SPY")["complete"] and len(holdings_weights("SPY")) >= 400
+def test_full_lists_for_all_etfs():
+    for etf in ("SPY", "XIU.TO", "QQQ", "ESGV"):
+        doc = load_holdings(etf)
+        assert doc is not None and doc["complete"] is True
+    assert len(holdings_weights("SPY")) >= 400
+    assert len(holdings_weights("XIU.TO")) >= 55
+    assert len(holdings_weights("QQQ")) >= 95
+    assert len(holdings_weights("ESGV")) >= 1000
     xiu = holdings_weights("XIU.TO")
-    assert load_holdings("XIU.TO")["complete"] and len(xiu) >= 55
     assert all(t.endswith(".TO") for t in xiu)  # universe convention
     assert {"RY.TO", "SHOP.TO", "ENB.TO"} <= xiu.keys()
 
 
-def test_is_held_respects_partial_lists():
+def test_is_held_respects_partial_lists(tmp_path):
+    # A partial list fixture: absence proves nothing (returns None)
+    partial_doc = {
+        "ticker": "PARTIAL", "as_of": "2026-10-31", "source_url": "https://example.test",
+        "complete": False, "holdings": [{"ticker": "AAPL", "name": "Apple", "weight": 0.1}],
+    }
+    (tmp_path / "PARTIAL.json").write_text(json.dumps(partial_doc), encoding="utf-8")
+    assert is_held("PARTIAL", "AAPL", tmp_path) is True
+    assert is_held("PARTIAL", "JNJ", tmp_path) is None
+    assert is_held("PARTIAL", "XOM", tmp_path) is None
+
+    # Committed ESGV and SPY are complete: absence is a real "False"
     assert is_held("ESGV", "AAPL") is True
-    # ESGV is cached as its top 25 only: absence proves nothing.
-    assert is_held("ESGV", "JNJ") is None
-    assert is_held("ESGV", "XOM") is None
-    # SPY is complete: absence is a real "no".
+    assert is_held("ESGV", "JNJ") is False
+    assert is_held("ESGV", "XOM") is False
     assert is_held("SPY", "XOM") is True
     assert is_held("SPY", "RY.TO") is False
     assert is_held("NOPE", "AAPL") is None
+
+
+def test_dated_snapshots_picked_at_or_before_as_of():
+    # QQQ has dated snapshots 2026-03-31 and 2026-06-30
+    h_early = load_holdings("QQQ", as_of=dt.date(2026, 5, 1))
+    assert h_early is not None and h_early["as_of"] == "2026-03-31"
+
+    h_later = load_holdings("QQQ", as_of=dt.date(2026, 11, 12))
+    assert h_later is not None and h_later["as_of"] == "2026-06-30"
+
+    # Future snapshot fallback when as_of is earlier than all snapshots
+    h_future = load_holdings("QQQ", as_of=dt.date(2020, 1, 1))
+    assert h_future is not None and h_future["as_of"] == "2026-03-31"
 
 
 def test_is_held_false_on_a_complete_fixture(tmp_path):

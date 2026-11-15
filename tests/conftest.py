@@ -11,6 +11,11 @@ def pytest_addoption(parser):
     parser.addoption("--live", action="store_true", help="run tests that need AWS / network")
 
 
+def pytest_configure(config):
+    if not config.getoption("--live"):
+        os.environ["AF_LLM_OFFLINE"] = "1"
+
+
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--live"):
         return

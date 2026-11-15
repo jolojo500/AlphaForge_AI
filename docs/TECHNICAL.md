@@ -353,15 +353,19 @@ La fiabilité logicielle est validée par une suite de tests automatisés exhaus
 
 ---
 
-## 11. Limites Connues et Pistes d'Amélioration
+## 11. Limites Connues et Améliorations Réalisées
 
-En conformité avec les exigences de rigueur financière et académique du concours, les limites du prototype sont déclarées sans ambiguïté :
+En conformité avec les exigences de rigueur financière et académique du concours, les limites initiales du prototype ont été traitées par les mises à niveau de données suivantes :
 
-1. **Détentions partielles pour QQQ et ESGV** :
-   Les compositions de QQQ (Invesco) et ESGV (Vanguard) sont limitées aux 25 premières positions publiques (représentant respectivement 71,3 % et 55,9 % des fonds), car les fichiers de composition intégrale des émetteurs nécessitent un téléchargement interactif. Tout chevauchement calculé constitue donc une borne inférieure.
-2. **Dépôts réglementaires SEC vs Fil d'actualité de presse** :
-   En mode de cache hors ligne (sans clés API Finnhub ou Tavily actives), les événements d'actualité proviennent exclusivement des dépôts officiels SEC EDGAR (Form 8-K, 10-Q, 10-K). Les titres sont inférés des catégories réglementaires sans analyse du texte complet, et les controverses ESG pour Mateo sont limitées aux contestations d'actionnaires inscrites auprès du régulateur.
-3. **Données de chômage canadien non disponibles** :
-   La série `macro_rates.csv` inclut le chômage américain (`UNRATE` via FRED), mais n'intègre pas l'Enquête sur la population active de Statistique Canada. Le module macro applique donc une hypothèse de substituabilité de cycle pour le marché du travail nord-américain.
-4. **Instantané unique des détentions de FNB** :
-   La composition des FNB reflète un instantané unique arrêté à fin 2026. Pour une analyse rétrospective simulée à une date antérieure (ex. 2022 ou 2023), le système consigne une hypothèse précisant que les pondérations réelles des fonds à cette date ont pu varier.
+1. **Compositions intégrales pour QQQ et ESGV (Résolu)** :
+   Les compositions partielles ont été remplacées par les listes complètes issues de sources publiques officielles :
+   - **Vanguard ESGV** : 1 206 positions extraites directement via l'API publique de Vanguard (`complete: true`, couverture de 99,96 %). Le filtrage ESG de Mateo identifie désormais de manière formelle l'absence de titres non éligibles (ex. JNJ).
+   - **Invesco QQQ** : 101 positions en actions extraites des déclarations officielles SEC EDGAR Form NPORT-P (CIK 0001067839) avec résolution CUSIP OpenFIGI (`complete: true`, couverture de 99,43 %). Le chevauchement SPY-QQQ est désormais exact et non une borne inférieure.
+2. **Instantanés temporels datés des détentions de FNB (Résolu)** :
+   Les compositions sont désormais historisées sous `data/cache/holdings/<ETF>/<DATE>.json` (ex. QQQ au 2026-03-31 et 2026-06-30). Le sélecteur déterministe `load_holdings` retient l'instantané le plus récent à ou avant la date d'analyse (`as_of_date`), évitant tout biais de prévoyance. Si la date d'analyse précède tous les instantanés disponibles, le système retient l'instantané le plus ancien et consigne explicitement une hypothèse d'antériorité.
+3. **Données de chômage canadien intégrées (Résolu)** :
+   La série mensuelle de l'Enquête sur la population active (EPA) de Statistique Canada (tableau 14-10-0287-01, vecteur `v2062815`) est intégrée dans `macro_rates.csv` et dans la table `SERIES` de `macro.py`. La règle de décalage de publication applique rigoureusement le premier vendredi du mois suivant le mois de référence, en stricte conformité avec le PRD §5.4.
+4. **Script de rafraîchissement yfinance en une commande (Nouveau)** :
+   Le script `scripts/refresh_data.py` automatise le rechargement des données de marché via `YFinanceProvider` (`prices_daily.csv`, `fx_usdcad_daily.csv`, `corporate_actions.csv`), génère un rapport de comparaison différentielle (lignes ajoutées, plages de dates, cotations récentes) et supporte l'option `--dry-run`.
+5. **Dépôts réglementaires SEC vs Fil d'actualité de presse** :
+   En mode de cache hors ligne (sans clés API Finnhub ou Tavily actives), les événements d'actualité proviennent des dépôts officiels SEC EDGAR (Form 8-K, 10-Q, 10-K) mis en cache.

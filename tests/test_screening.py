@@ -97,8 +97,14 @@ def test_partial_esgv_list_does_not_exclude_absent_names(tmp_path, monkeypatch):
 
 def test_mateo_with_committed_holdings():
     out = screening_node(GraphState(as_of_date=AS_OF, persona="mateo", profile=_profile("mateo")))
-    assert {"AAPL", "JNJ", "PG"} <= set(out["eligible_universe"])
-    assert not {"XOM", "ENB.TO", "CNQ.TO", "BTC-USD", "ETH-USD"} & set(out["eligible_universe"])
+    # AAPL and PG are in Vanguard ESGV; JNJ is absent from ESGV and therefore excluded
+    assert {"AAPL", "PG"} <= set(out["eligible_universe"])
+    assert not {"XOM", "ENB.TO", "CNQ.TO", "BTC-USD", "ETH-USD", "JNJ"} & set(out["eligible_universe"])
+    exclusions = {e["ticker"]: e["reason"] for e in out["exclusions"]}
+    assert "JNJ" in exclusions
+    assert "Absent du FNB Vanguard ESGV" in exclusions["JNJ"]
+    # With full holdings, no partial-coverage assumption note is emitted
+    assert not any("Seules les principales positions" in str(e.value) for e in out["evidence"].values())
 
 
 def test_whatif_excluded_ticker(no_holdings, monkeypatch):

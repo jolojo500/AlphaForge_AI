@@ -75,6 +75,9 @@ FRED_SERIES = {
     "CPIAUCSL": ("U.S. CPI, all urban consumers (index 1982-84=100, SA)", "index", "monthly"),
     "UNRATE": ("U.S. unemployment rate (SA)", "percent", "monthly"),
 }
+STATCAN_SERIES = {
+    "v2062815": ("Canada unemployment rate, LFS (SA)", "percent", "monthly", "Statistics Canada table 14-10-0287-01"),
+}
 
 
 def get(url: str) -> bytes:
@@ -136,6 +139,23 @@ def fred(series_id: str) -> pd.DataFrame:
     return df.dropna()
 
 
+def statcan(vector_id: int) -> pd.DataFrame:
+    url = "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods"
+    payload = json.dumps([{"vectorId": vector_id, "latestN": 65}]).encode("utf-8")
+    req = urllib.request.Request(
+        url, data=payload, headers={"Content-Type": "application/json", "User-Agent": "curl/8.0"}
+    )
+    with urllib.request.urlopen(req, timeout=30) as r:
+        data = json.loads(r.read())
+    points = data[0]["object"]["vectorDataPoint"]
+    rows = []
+    for p in points:
+        d = p["refPer"]
+        if START <= d <= END:
+            rows.append((d, float(p["value"])))
+    return pd.DataFrame(rows, columns=["date", "value"])
+
+
 def build_macro() -> tuple[pd.DataFrame, pd.DataFrame]:
     fx = boc("FXUSDCAD").rename(columns={"value": "usdcad"})
     fx["cadusd"] = (1 / fx["usdcad"]).round(6)
@@ -149,6 +169,11 @@ def build_macro() -> tuple[pd.DataFrame, pd.DataFrame]:
     for sid, (label, unit, freq) in FRED_SERIES.items():
         d = fred(sid)
         d["series_id"], d["label"], d["unit"], d["frequency"], d["source"] = sid, label, unit, freq, "FRED, Federal Reserve Bank of St. Louis"
+        frames.append(d)
+    for sid, (label, unit, freq, src) in STATCAN_SERIES.items():
+        vid = int(sid.lstrip("vV"))
+        d = statcan(vid)
+        d["series_id"], d["label"], d["unit"], d["frequency"], d["source"] = sid, label, unit, freq, src
         frames.append(d)
     macro = pd.concat(frames, ignore_index=True)[["date", "series_id", "value", "unit", "frequency", "label", "source"]]
     return fx, macro.sort_values(["series_id", "date"]).reset_index(drop=True)
