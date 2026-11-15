@@ -385,16 +385,18 @@ See §3.4 and §3.5.
 - **Why.** The "propose" step, made structured: a comparison the jury can verify.
 - **In.** `profile`, `eligible_universe`, `evidence`, `objections` (on a retry). **Out.** three `Scenario` objects + `EP` evidence.
 - **Scenarios.**
-  1. `as_requested` — the user's idea as stated (judge), or an unconstrained risk-based allocation (build). For judge, the rest of the portfolio is the profile baseline scaled to the remaining weight.
-  2. `capped` — the idea with the profile's caps applied.
+  1. `as_requested` — the user's idea as stated (judge), or the stated preferences taken literally (build: equal weight on the matching sectors, e.g. tech + crypto for Amira; all eligible assets if none match). Unconstrained minimum variance was rejected: it puts ~100 % in ZST.TO, which nobody asked for. For judge, the rest of the portfolio is the profile baseline scaled to the remaining weight.
+  2. `capped` — the idea with the profile's caps applied (judge: requested ticker pinned at the cap, rest minimum variance; build: the portfolio closest to the preferences that respects the caps, by least squares).
   3. `profile_baseline` — min-variance or risk parity (scipy) under the profile's constraints. No return forecasts anywhere.
 - **Caps table** (one module-level dict, cited as `assumption` evidence):
 
-  | Persona tolerance | Single stock | Crypto total | Equity total |
-  |---|---|---|---|
-  | high (Amira) | 10% | 10% | 100% |
-  | moderate (Mateo) | 7% | 0% | 70% |
-  | low_moderate (Robert) | 5% | 0% | 40% |
+  | Persona tolerance | Single stock | Single ETF | Crypto total | Equity max | Equity floor |
+  |---|---|---|---|---|---|
+  | high (Amira) | 10% | 25% | 10% | 100% | 80% |
+  | moderate (Mateo) | 7% | 25% | 0% | 70% | 50% |
+  | low_moderate (Robert) | 5% | 25% | 0% | 40% | 20% |
+
+  The equity floor exists because minimum variance without return forecasts otherwise puts even a 15-year growth profile almost entirely in short bonds. The whole table is one dict in `alphaforge/nodes/scenarios.py`, cited as `assumption` evidence.
 
 - **Functions.** `optimize()`, `build_scenarios()`, `scenario_metrics()`.
 - **LLM part.** Only drafts `notes` per scenario, citing ids; Track B supplies `draft_notes(scenario, evidence)`. Until then, notes are templated strings.

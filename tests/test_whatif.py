@@ -60,7 +60,6 @@ def test_whatif_robert_tolerance_rerun():
     assert "screening" in {t["node"] for t in new_state.trace}
 
 
-@pytest.mark.xfail(reason="needs real scenario builder, A-6 #51", strict=False)
 def test_whatif_robert_tolerance_loosens_caps():
     initial_state = run("robert", PERSONAS["robert"]["example_request"])
     new_state = rerun(initial_state, {"field": "risk_tolerance", "value": "high"})
