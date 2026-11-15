@@ -21,6 +21,7 @@ SG_NAME="alphaforge-sg"
 EC2_ROLE_NAME="alphaforge-ec2-role"
 EC2_PROFILE_NAME="alphaforge-ec2-instance-profile"
 DYNAMODB_TABLE="${AF_DYNAMODB_TABLE:-alphaforge-traces}"
+CHECKPOINTS_TABLE="${AF_CHECKPOINTS_TABLE:-alphaforge-checkpoints}"
 
 echo "============================================="
 echo "       AlphaForge AI AWS Deployment"
@@ -79,7 +80,7 @@ redeploy_via_ssm() {
     echo "Public IP: ${PUBLIC_IP}"
 
     echo "Sending update command to ${INSTANCE_ID} via SSM..."
-    DOCKER_CMD="aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com && docker pull ${ECR_URI}:latest && docker rm -f alphaforge || true && docker run -d --name alphaforge --restart always -p 80:8000 --log-driver awslogs --log-opt awslogs-group=/alphaforge/app --log-opt awslogs-region=${AWS_REGION} --log-opt awslogs-create-group=true -e AF_S3_BUCKET=${S3_BUCKET} -e AF_DYNAMODB_TABLE=${DYNAMODB_TABLE} -e AF_TRACE_BACKEND=dynamodb -e AWS_REGION=${AWS_REGION} ${ECR_URI}:latest"
+    DOCKER_CMD="aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com && docker pull ${ECR_URI}:latest && docker rm -f alphaforge || true && docker run -d --name alphaforge --restart always -p 80:8000 --log-driver awslogs --log-opt awslogs-group=/alphaforge/app --log-opt awslogs-region=${AWS_REGION} --log-opt awslogs-create-group=true -e AF_S3_BUCKET=${S3_BUCKET} -e AF_DYNAMODB_TABLE=${DYNAMODB_TABLE} -e AF_TRACE_BACKEND=dynamodb -e AF_CHECKPOINTER=dynamodb -e AF_CHECKPOINTS_TABLE=${CHECKPOINTS_TABLE} -e AWS_REGION=${AWS_REGION} ${ECR_URI}:latest"
 
     CMD_ID=$(aws ssm send-command \
         --instance-ids "${INSTANCE_ID}" \
@@ -176,7 +177,7 @@ full_deploy() {
             \"Statement\": [
                 {\"Effect\": \"Allow\", \"Action\": [\"bedrock:InvokeModel\", \"bedrock:InvokeModelWithResponseStream\"], \"Resource\": \"*\"},
                 {\"Effect\": \"Allow\", \"Action\": [\"s3:*\"], \"Resource\": [\"arn:aws:s3:::${S3_BUCKET}\", \"arn:aws:s3:::${S3_BUCKET}/*\"]},
-                {\"Effect\": \"Allow\", \"Action\": [\"dynamodb:*\"], \"Resource\": [\"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}/*\"]},
+                {\"Effect\": \"Allow\", \"Action\": [\"dynamodb:*\"], \"Resource\": [\"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}/*\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}/*\"]},
                 {\"Effect\": \"Allow\", \"Action\": [\"logs:CreateLogGroup\", \"logs:CreateLogStream\", \"logs:PutLogEvents\", \"logs:DescribeLogStreams\"], \"Resource\": \"*\"}
             ]
         }"
@@ -219,6 +220,8 @@ docker run -d --name alphaforge --restart always \
   -e AF_S3_BUCKET="${S3_BUCKET}" \
   -e AF_DYNAMODB_TABLE="${DYNAMODB_TABLE}" \
   -e AF_TRACE_BACKEND="dynamodb" \
+  -e AF_CHECKPOINTER="dynamodb" \
+  -e AF_CHECKPOINTS_TABLE="${CHECKPOINTS_TABLE}" \
   -e AWS_REGION="${AWS_REGION}" \
   "${ECR_URI}:latest"
 echo "AlphaForge bootstrap complete!"

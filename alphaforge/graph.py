@@ -121,9 +121,10 @@ def ensure_checkpoints_table(table_name: str, region_name: str = "us-east-1") ->
 def get_checkpointer(backend: str | None = None) -> BaseCheckpointSaver:
     """Return configured checkpointer.
 
-    Selected by AF_TRACE_BACKEND=dynamodb; MemorySaver kept for local runs and tests.
+    Selected by AF_CHECKPOINTER=dynamodb (its own switch, independent of the trace store,
+    so it can be turned off on its own); MemorySaver by default, for local runs and tests.
     """
-    selected_backend = (backend or os.getenv("AF_TRACE_BACKEND", "local")).lower()
+    selected_backend = (backend or os.getenv("AF_CHECKPOINTER", "memory")).lower()
     if selected_backend == "dynamodb":
         import boto3
         from langgraph_checkpoint_aws import DynamoDBSaver

@@ -29,12 +29,12 @@ def test_checkpointer_selection(monkeypatch):
     from langgraph_checkpoint_aws import DynamoDBSaver
 
     # Local default returns MemorySaver
-    monkeypatch.setenv("AF_TRACE_BACKEND", "local")
+    monkeypatch.setenv("AF_CHECKPOINTER", "memory")
     cp_local = get_checkpointer()
     assert isinstance(cp_local, MemorySaver)
 
     # DynamoDB backend returns DynamoDBSaver
-    monkeypatch.setenv("AF_TRACE_BACKEND", "dynamodb")
+    monkeypatch.setenv("AF_CHECKPOINTER", "dynamodb")
     cp_ddb = get_checkpointer()
     assert isinstance(cp_ddb, DynamoDBSaver)
 
