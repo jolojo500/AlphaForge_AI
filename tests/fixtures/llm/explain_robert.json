@@ -2,13 +2,13 @@
  "resume": "Comparaison de trois scénarios fictifs pour Robert, qui vise la préservation du capital.",
  "quelles_donnees": [
   {
-   "claim": "Le scénario tel que demandé a une volatilité annualisée de 15,5 %.",
+   "claim": "Le scénario tel que demandé a une volatilité annualisée de 15,8 %.",
    "evidence": [
     "EP2"
    ]
   },
   {
-   "claim": "Le scénario plafonné a une volatilité annualisée de 4,6 %.",
+   "claim": "Le scénario plafonné a une volatilité annualisée de 6,3 %.",
    "evidence": [
     "EP8"
    ]

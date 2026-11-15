@@ -22,6 +22,7 @@ SCENARIO_METRICS: tuple[str, ...] = (
     "sector_concentration_hhi",
     "us_exposure",
     "tax_drag",
+    "fee_drag",
 )
 
 AccountType = Literal["tfsa", "rrsp", "fhsa", "non_registered", "mixed"]

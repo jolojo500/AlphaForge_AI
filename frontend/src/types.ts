@@ -15,6 +15,7 @@ export const SCENARIO_METRIC_LABELS: Record<string, string> = {
   sector_concentration_hhi: 'Concentration (HHI)',
   us_exposure: 'Exposition US',
   tax_drag: 'Friction fiscale estimée',
+  fee_drag: 'Frais de gestion (RFG)',
 };
 
 export interface KycField {
