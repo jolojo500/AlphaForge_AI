@@ -15,6 +15,12 @@ from alphaforge import config
 from alphaforge.state import GraphState
 
 
+def _golden_first(runs: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    """Golden demo runs always listed first, so the replay safety net is never cut off by `limit`."""
+    golden = [r for r in runs if r.get("is_golden")]
+    others = [r for r in runs if not r.get("is_golden")]
+    return golden + others[: max(0, limit - len(golden))]
+
 class TraceStore(abc.ABC):
     @abc.abstractmethod
     def save_run(
@@ -183,7 +189,7 @@ class LocalJsonTraceStore(TraceStore):
                         }
                     )
 
-        return runs[:limit]
+        return _golden_first(runs, limit)
 
 
 class DynamoDBTraceStore(TraceStore):
@@ -371,7 +377,7 @@ class DynamoDBTraceStore(TraceStore):
                             "is_golden": True,
                         }
                     )
-        return items[:limit]
+        return _golden_first(items, limit)
 
 
 def get_trace_store() -> TraceStore:
