@@ -20,6 +20,7 @@ from scipy.optimize import minimize
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import concentration, max_drawdown, stress_2022, volatility
+from alphaforge.personas import PERSONAS
 from alphaforge.state import (
     SCENARIO_METRICS,
     SCENARIO_NAMES,
@@ -549,7 +550,24 @@ def scenarios_node(state: GraphState) -> dict:
                 confidence="assumption",
             )
 
-    # Pass 3: Sourced tax rules evidence entries
+    # Pass 3: Sourced tax rules evidence entries, plus the two limits of the estimate
+    reg.add(
+        "Estimation fiscale limitée à l'impôt fédéral (tranche de 20,5 %) : l'impôt provincial "
+        "n'est pas inclus, la charge fiscale réelle est donc plus élevée dans un compte imposable.",
+        source="hypothèse de calcul",
+        date=as_of,
+        method="scope of the tax-drag estimate",
+        confidence="assumption",
+    )
+    if profile.persona in PERSONAS and profile.account_type == PERSONAS[profile.persona].get("account_type"):
+        reg.add(
+            f"Type de compte « {profile.account_type} » attribué par hypothèse au persona "
+            f"{profile.persona} : le cas de l'atelier ne le précise pas.",
+            source="hypothèse de persona",
+            date=as_of,
+            method="persona default account type",
+            confidence="assumption",
+        )
     for rule in tax_rules_evidence(as_of, profile.account_type):
         reg.add(
             rule["value"],
