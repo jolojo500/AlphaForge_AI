@@ -57,6 +57,17 @@ export interface TraceEntry {
   summary: string;
 }
 
+export interface SavedRunSummary {
+  run_id: string;
+  persona: string;
+  as_of_date: string;
+  request_text: string;
+  created_at: string;
+  status: string;
+  verification_passed?: boolean;
+  is_golden?: boolean;
+}
+
 export interface Exclusion {
   ticker: string;
   reason: string;

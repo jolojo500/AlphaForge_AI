@@ -2,15 +2,16 @@ import React from 'react';
 import { Logo } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, RotateCcw } from 'lucide-react';
 import { DemoPersonas } from './DemoPersonas';
 
 interface WelcomeScreenProps {
   onStart: () => void;
   onDemo: (personaId: string, requestText: string) => void;
+  onReplay?: () => void;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onDemo }) => {
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onDemo, onReplay }) => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-between px-4 py-6 transition-colors">
       {/* Top Bar with Theme Toggle */}
@@ -21,7 +22,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onDemo })
       {/* Centered Hero */}
       <div className="text-center space-y-5 flex flex-col items-center my-auto">
         <Logo size="lg" />
-        <div>
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Button
             type="button"
             onClick={onStart}
@@ -30,6 +31,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onDemo })
             <span>Commencer</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
+          {onReplay && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onReplay}
+              className="px-4 h-9 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-2 border-border/80 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Rejouer une analyse</span>
+            </Button>
+          )}
         </div>
         <DemoPersonas onPick={onDemo} />
       </div>

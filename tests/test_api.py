@@ -332,3 +332,59 @@ def test_invalid_custom_profile_is_rejected(bad):
 def test_unknown_persona_without_profile_is_rejected():
     client = TestClient(app)
     assert client.post("/runs", json={"persona": "custom_user", "request_text": "x"}).status_code == 400
+
+
+def test_list_saved_runs_and_filter():
+    client = TestClient(app)
+    resp = client.get("/runs")
+    assert resp.status_code == 200
+    runs = resp.json()
+    assert isinstance(runs, list)
+    # Must contain at least the 3 golden demo runs
+    golden_ids = {r["run_id"] for r in runs if r.get("is_golden")}
+    assert "golden_robert_tsla" in golden_ids
+    assert "golden_amira_build" in golden_ids
+    assert "golden_mateo_build" in golden_ids
+
+    # Filter by persona
+    resp_robert = client.get("/runs?persona=robert")
+    assert resp_robert.status_code == 200
+    robert_runs = resp_robert.json()
+    assert all(r["persona"] == "robert" for r in robert_runs)
+    assert any(r["run_id"] == "golden_robert_tsla" for r in robert_runs)
+
+
+def test_replay_golden_run_state_and_whatif():
+    client = TestClient(app)
+    # 1. Replay a golden run without any prior memory in store
+    resp = client.get("/runs/golden_robert_tsla")
+    assert resp.status_code == 200
+    state = resp.json()
+    assert state["run_id"] == "golden_robert_tsla"
+    assert state["persona"] == "robert"
+    assert len(state["scenarios"]) == 3
+    assert len(state["trace"]) > 0
+    assert state["verification"]["passed"] is True
+
+    # 2. What-if on the replayed run (should rerun screening without Bedrock)
+    resp_whatif = client.post(
+        "/runs/golden_robert_tsla/whatif",
+        json={"field": "risk_tolerance", "value": "high"},
+    )
+    assert resp_whatif.status_code == 200
+    whatif_data = resp_whatif.json()
+    child_id = whatif_data["run_id"]
+    assert whatif_data["parent_run_id"] == "golden_robert_tsla"
+
+    # Wait for whatif to complete
+    child_state = _wait_final(client, child_id)
+    assert child_state["persona"] == "robert"
+    assert child_state["profile"]["risk_tolerance"] == "high"
+
+    # 3. Diff against replayed parent
+    resp_diff = client.get(f"/runs/{child_id}/diff")
+    assert resp_diff.status_code == 200
+    diff_data = resp_diff.json()
+    assert diff_data["parent_run_id"] == "golden_robert_tsla"
+    assert diff_data["child_run_id"] == child_id
+    assert "scenarios" in diff_data

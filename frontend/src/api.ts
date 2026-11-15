@@ -2,7 +2,7 @@
  * Typed API client for AlphaForge AI backend (PRD 6).
  */
 
-import { GraphState, PersonaMeta, SSEEvent, WhatIfDiff } from './types';
+import { GraphState, PersonaMeta, SavedRunSummary, SSEEvent, WhatIfDiff } from './types';
 
 const API_BASE = '';
 
@@ -60,6 +60,16 @@ export async function fetchRunState(runId: string): Promise<GraphState> {
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Failed to fetch run state: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchSavedRuns(persona?: string): Promise<SavedRunSummary[]> {
+  const url = persona ? `${API_BASE}/runs?persona=${encodeURIComponent(persona)}` : `${API_BASE}/runs`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Failed to fetch saved runs: ${res.statusText}`);
   }
   return res.json();
 }

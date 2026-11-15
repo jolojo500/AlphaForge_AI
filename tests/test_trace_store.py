@@ -146,6 +146,34 @@ def test_get_trace_store_factory(monkeypatch):
     assert isinstance(store_ddb, DynamoDBTraceStore)
 
 
+def test_golden_runs_fixtures():
+    from alphaforge.trace_store import get_golden_run, load_golden_runs
+
+    runs = load_golden_runs()
+    assert len(runs) >= 3
+    run_ids = {r["run_id"] for r in runs}
+    assert "golden_robert_tsla" in run_ids
+    assert "golden_amira_build" in run_ids
+    assert "golden_mateo_build" in run_ids
+
+    # get_golden_run
+    robert = get_golden_run("golden_robert_tsla")
+    assert robert is not None
+    assert robert["persona"] == "robert"
+    assert "final_state" in robert
+    assert len(robert["final_state"]["scenarios"]) == 3
+
+    # list_runs with include_golden=True
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        store = LocalJsonTraceStore(storage_dir=tmp_dir)
+        all_runs = store.list_runs(include_golden=True)
+        assert len(all_runs) >= 3
+
+        filtered = store.list_runs(persona="amira", include_golden=True)
+        assert all(r["persona"] == "amira" for r in filtered)
+        assert any(r["run_id"] == "golden_amira_build" for r in filtered)
+
+
 @pytest.mark.live
 def test_live_dynamodb_read_write():
     """Live test against the real workshop DynamoDB table (alphaforge-traces)."""

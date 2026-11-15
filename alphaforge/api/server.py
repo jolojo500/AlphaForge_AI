@@ -148,6 +148,49 @@ def set_store(new_store: BaseRunStore) -> None:
     store = new_store
 
 
+def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
+    """Attempt to restore a Run and its final state from the trace store or golden runs."""
+    run = store.get(run_id)
+    if run is not None:
+        return run
+
+    try:
+        ts = get_trace_store()
+        run_data = ts.get_run(run_id)
+        if not run_data:
+            return None
+
+        final_state_data = run_data.get("final_state")
+        graph_state = None
+        if final_state_data:
+            graph_state = GraphState.model_validate(final_state_data)
+
+        as_of_date_val = run_data.get("as_of_date")
+        as_of_date = None
+        if as_of_date_val:
+            try:
+                as_of_date = dt.date.fromisoformat(str(as_of_date_val)[:10])
+            except Exception:
+                pass
+
+        run = Run(
+            run_id=run_id,
+            persona=run_data.get("persona", ""),
+            request_text=run_data.get("request_text", ""),
+            as_of_date=as_of_date,
+        )
+        run.status = run_data.get("status", "completed")
+        run.state = graph_state
+        if run.status == "completed":
+            run.record_event({"type": "final", "run_id": run.run_id})
+
+        store.save(run)
+        return run
+    except Exception:
+        logging.exception("Failed to rehydrate run %s from trace store", run_id)
+        return None
+
+
 def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
     try:
         for item in gen_fn(*args):
@@ -280,6 +323,12 @@ def get_personas() -> dict[str, dict[str, Any]]:
     return {k: PERSONAS[k] for k in DEMO_PERSONAS}
 
 
+@app.get("/runs")
+def list_runs(persona: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    ts = get_trace_store()
+    return ts.list_runs(limit=limit, persona=persona, include_golden=True)
+
+
 @app.post("/runs")
 def create_run(req: RunCreateRequest) -> dict[str, str]:
     persona = req.persona
@@ -309,7 +358,7 @@ def create_run(req: RunCreateRequest) -> dict[str, str]:
 
 @app.get("/runs/{run_id}/events")
 async def stream_run_events(run_id: str) -> EventSourceResponse:
-    run = store.get(run_id)
+    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
 
@@ -337,7 +386,7 @@ class WhatIfRequest(BaseModel):
 
 @app.post("/runs/{run_id}/whatif")
 def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
-    parent = store.get(run_id)
+    parent = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
     if parent is None:
         raise HTTPException(status_code=404, detail="Parent run not found")
 
@@ -380,11 +429,11 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
 
 @app.get("/runs/{run_id}/diff")
 def get_run_diff(run_id: str) -> dict[str, Any]:
-    run = store.get(run_id)
+    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
     if run is None or run.parent_run_id is None:
         raise HTTPException(status_code=404, detail="What-if run with parent not found")
 
-    parent = store.get(run.parent_run_id)
+    parent = store.get(run.parent_run_id) or _rehydrate_run_from_trace_store(run.parent_run_id)
     if parent is None:
         raise HTTPException(status_code=404, detail="Parent run not found")
 
@@ -400,7 +449,7 @@ def get_run_diff(run_id: str) -> dict[str, Any]:
 
 @app.post("/runs/{run_id}/answer")
 def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
-    run = store.get(run_id)
+    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
 
@@ -423,7 +472,7 @@ def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
 
 @app.get("/runs/{run_id}")
 def get_run_state(run_id: str):
-    run = store.get(run_id)
+    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
 

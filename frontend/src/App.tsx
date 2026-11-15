@@ -31,6 +31,7 @@ import { SimulationBanner } from './components/SimulationBanner';
 import { ClarificationBox } from './components/ClarificationBox';
 import { WhatIfControls } from './components/WhatIfControls';
 import { WhatIfDiffView } from './components/WhatIfDiffView';
+import { ReplayRunModal } from './components/ReplayRunModal';
 import {
   ArrowLeft,
   SlidersHorizontal,
@@ -38,6 +39,7 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle2,
+  RotateCcw,
 } from 'lucide-react';
 import { Logo } from './components/Logo';
 import { Button } from './components/ui/button';
@@ -65,6 +67,9 @@ export const AppContent: React.FC = () => {
   // What-If state
   const [whatIfDiff, setWhatIfDiff] = useState<WhatIfDiff | null>(null);
   const [isWhatIfRunning, setIsWhatIfRunning] = useState<boolean>(false);
+
+  // Replay Saved Runs modal state
+  const [isReplayModalOpen, setIsReplayModalOpen] = useState<boolean>(false);
 
   // Unsubscribe ref for SSE stream
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -251,6 +256,33 @@ export const AppContent: React.FC = () => {
     }
   };
 
+  // Replay a saved or golden run (demo safety & past trace inspection without Bedrock)
+  const handleReplayRun = async (runId: string) => {
+    try {
+      setRunError(null);
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+      const state = await fetchRunState(runId);
+      setCurrentRunId(runId);
+      setRunState(state);
+      setActiveTrace(state.trace || []);
+      setIsRunning(false);
+      setClarificationQuestion(null);
+      setWhatIfDiff(null);
+      setLastPayload({
+        persona: state.persona,
+        request_text: state.request_text,
+      });
+      setIsReplayModalOpen(false);
+      setView('analysis_results');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setRunError(`Impossible de rejouer l'analyse (${msg}).`);
+    }
+  };
+
   const activeEvidence =
     selectedEvidenceId && runState?.evidence
       ? runState.evidence[selectedEvidenceId] || null
@@ -259,10 +291,18 @@ export const AppContent: React.FC = () => {
   // View 1: Welcome screen (First time user with no localStorage)
   if (view === 'welcome') {
     return (
-      <WelcomeScreen
-        onStart={() => setView('onboarding')}
-        onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
-      />
+      <>
+        <WelcomeScreen
+          onStart={() => setView('onboarding')}
+          onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
+          onReplay={() => setIsReplayModalOpen(true)}
+        />
+        <ReplayRunModal
+          isOpen={isReplayModalOpen}
+          onClose={() => setIsReplayModalOpen(false)}
+          onSelectRun={handleReplayRun}
+        />
+      </>
     );
   }
 
@@ -280,12 +320,20 @@ export const AppContent: React.FC = () => {
   // View 3: Query Screen (Existing user with saved profile in localStorage)
   if (view === 'query' && userProfile) {
     return (
-      <QueryScreen
-        profile={userProfile}
-        onEditProfile={() => setView('onboarding')}
-        onResetProfile={handleResetProfile}
-        onRunQuery={handleStartRun}
-      />
+      <>
+        <QueryScreen
+          profile={userProfile}
+          onEditProfile={() => setView('onboarding')}
+          onResetProfile={handleResetProfile}
+          onRunQuery={handleStartRun}
+          onReplay={() => setIsReplayModalOpen(true)}
+        />
+        <ReplayRunModal
+          isOpen={isReplayModalOpen}
+          onClose={() => setIsReplayModalOpen(false)}
+          onSelectRun={handleReplayRun}
+        />
+      </>
     );
   }
 
@@ -329,6 +377,17 @@ export const AppContent: React.FC = () => {
               className="text-xs cursor-pointer"
             >
               Modifier profil
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsReplayModalOpen(true)}
+              className="gap-1.5 text-xs font-medium cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-primary" />
+              <span className="hidden sm:inline">Rejouer une analyse</span>
+              <span className="sm:hidden">Rejouer</span>
             </Button>
 
             <ThemeToggle />
@@ -490,6 +549,13 @@ export const AppContent: React.FC = () => {
       <EvidenceModal
         evidence={activeEvidence}
         onClose={() => setSelectedEvidenceId(null)}
+      />
+
+      {/* Modal for replaying saved / golden runs */}
+      <ReplayRunModal
+        isOpen={isReplayModalOpen}
+        onClose={() => setIsReplayModalOpen(false)}
+        onSelectRun={handleReplayRun}
       />
 
       {/* Footer */}

@@ -15,6 +15,7 @@ interface QueryScreenProps {
   onEditProfile: () => void;
   onResetProfile: () => void;
   onRunQuery: (payload: BackendRunPayload) => void;
+  onReplay?: () => void;
 }
 
 export const QueryScreen: React.FC<QueryScreenProps> = ({
@@ -22,6 +23,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   onEditProfile,
   onResetProfile,
   onRunQuery,
+  onReplay,
 }) => {
   const [query, setQuery] = useState<string>('');
   const [preparedPayload, setPreparedPayload] = useState<BackendRunPayload | null>(null);
@@ -76,6 +78,18 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Réinitialiser</span>
           </Button>
+
+          {onReplay && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onReplay}
+              className="h-8 gap-1.5 text-xs text-foreground border-border/80 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-primary" />
+              <span>Rejouer une analyse</span>
+            </Button>
+          )}
 
           <div className="h-4 w-px bg-border/60 mx-1" />
 
