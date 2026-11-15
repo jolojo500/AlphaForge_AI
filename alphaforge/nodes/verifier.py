@@ -63,6 +63,7 @@ _SCENARIO_ALIASES = {
     "as_requested": ("as_requested", "demandé", "demandée", "requested"),
     "capped": ("capped", "plafonné", "plafonnée", "plafonnement"),
     "profile_baseline": ("profile_baseline", "référence", "baseline"),
+    "current": ("current", "actuel", "actuelle", "existant", "détenu", "actuels"),
 }
 
 
@@ -229,6 +230,8 @@ def _context_numbers(state: GraphState) -> list[float]:
             out.append(float(p.budget_cad))
         if p.requested_idea:
             out.append(float(p.requested_idea["weight"]))
+        if p.current_holdings:
+            out += [float(v) for v in p.current_holdings.values()]
     return out
 
 

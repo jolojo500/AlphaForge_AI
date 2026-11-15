@@ -449,6 +449,7 @@ class RunCreateRequest(BaseModel):
     as_of_date: dt.date | None = None
     profile_data: dict[str, Any] | None = None
     user_profile: dict[str, Any] | None = None
+    current_holdings: dict[str, Any] | str | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -480,6 +481,11 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
             max_loss = float(max_loss)
         except (TypeError, ValueError):
             max_loss = None
+    current_holdings = data.get("current_holdings")
+    if current_holdings:
+        from alphaforge.holdings import parse_holdings
+
+        current_holdings = parse_holdings(current_holdings)
     return {
         "label": str(data.get("label") or "Profil personnalisé"),
         "objective": str(data.get("objective") or "balanced"),
@@ -492,6 +498,7 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
         "max_loss_pct": max_loss,
         "notes": str(data.get("notes") or ""),
         "example_request": request_text,
+        "current_holdings": current_holdings,
     }
 
 
@@ -536,7 +543,16 @@ def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
     persona, persona_data = req.persona, None
     if req.profile_data:
         # A questionnaire profile travels in the run's own state, never in a global (#113).
-        persona, persona_data = "custom", _custom_persona(req.profile_data, req.request_text)
+        p_data = dict(req.profile_data)
+        if req.current_holdings and not p_data.get("current_holdings"):
+            p_data["current_holdings"] = req.current_holdings
+        persona, persona_data = "custom", _custom_persona(p_data, req.request_text)
+    elif req.current_holdings:
+        from alphaforge.holdings import parse_holdings
+
+        base = dict(PERSONAS.get(persona, {}))
+        base["current_holdings"] = parse_holdings(req.current_holdings)
+        persona_data = base
     elif persona not in DEMO_PERSONAS:
         raise HTTPException(
             status_code=400,
