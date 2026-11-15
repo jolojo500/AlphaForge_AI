@@ -85,7 +85,24 @@ def test_live_red_team(persona):
     assert s.retries["red_team"] <= 3
 
 
-def test_second_pass_blocking_twice_escalates_to_opus_tie_break(use_llm):
+def test_default_second_pass_makes_no_model_call(use_llm):
+    calls = []
+    use_llm({"objections": [obj("blocking")]})
+    route = llm._override
+
+    def counting(messages, kind):
+        if '"severity"' in messages[0][1]:
+            calls.append(kind)
+        return route(messages, kind)
+
+    llm.set_llm_override(counting)
+    s = run("amira", PERSONAS["amira"]["example_request"])
+    assert s.retries["red_team"] == 2
+    assert len(calls) == 1  # default AF_RED_TEAM_RECHECK=off: no model call on second pass
+
+
+def test_second_pass_blocking_twice_escalates_to_opus_tie_break(use_llm, monkeypatch):
+    monkeypatch.setattr(rt.config, "RED_TEAM_RECHECK", True)
     calls = []
     use_llm({"objections": [obj("blocking")]})
     route = llm._override
@@ -102,7 +119,8 @@ def test_second_pass_blocking_twice_escalates_to_opus_tie_break(use_llm):
     assert all(o["severity"] == "warning" for o in s.objections)
 
 
-def test_second_pass_non_blocking_does_not_call_opus(use_llm):
+def test_second_pass_non_blocking_does_not_call_opus(use_llm, monkeypatch):
+    monkeypatch.setattr(rt.config, "RED_TEAM_RECHECK", True)
     calls = []
     use_llm(
         {"objections": [obj("blocking")]},

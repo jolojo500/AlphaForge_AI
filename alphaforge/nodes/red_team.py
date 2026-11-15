@@ -6,8 +6,10 @@ between the profile and a scenario). Objections must cite existing evidence ids.
 
 Loop contract: the node returns {"retries": {"red_team": n + 1}} on every pass. A blocking
 objection sends the run back to the scenario builder (bounded by MAX_RED_TEAM_LOOPS in the
-graph). When Sonnet returns a blocking objection twice, Opus decides as a tie-break. Without a model
-the node is a pass-through that returns no objection.
+graph). By default (AF_RED_TEAM_RECHECK=off), the second pass makes no model call and downgrades
+objections to warnings. When AF_RED_TEAM_RECHECK=on, Sonnet re-checks the rebuilt scenarios, and
+if it blocks twice, Opus decides as a tie-break. Without a model the node is a pass-through that
+returns no objection.
 """
 from __future__ import annotations
 
@@ -130,8 +132,20 @@ def red_team_node(state: GraphState) -> dict:
             summary = f"{len(objections)} objection(s) signalée(s), aucune bloquante."
         return {**update, "objections": objections, "summary": summary}
 
+    if n > 0 and not config.RED_TEAM_RECHECK:
+        # Default (#90): keep objections as warnings without a new model call to preserve latency.
+        kept = [{**o, "severity": "warning"} for o in state.objections]
+        return {
+            **update,
+            "objections": kept,
+            "summary": (
+                "Scénarios reconstruits après objection ; "
+                f"{len(kept)} objection(s) conservée(s) comme avertissement."
+            ),
+        }
+
     if n == 1:
-        # Re-check with Sonnet on the rebuilt scenarios
+        # Re-check with Sonnet on the rebuilt scenarios (AF_RED_TEAM_RECHECK=on)
         try:
             review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
             objections = clean_objections(review, state, first_pass=True)

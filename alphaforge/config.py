@@ -27,4 +27,5 @@ DEFAULT_AS_OF = dt.date(2026, 11, 12)
 MAX_RED_TEAM_LOOPS = 2
 # Agent 3 can be switched off (pass-through) to shorten live demos: AF_RED_TEAM=off
 RED_TEAM_ENABLED = os.getenv("AF_RED_TEAM", "on").lower() not in ("off", "0", "false")
+RED_TEAM_RECHECK = os.getenv("AF_RED_TEAM_RECHECK", "off").lower() in ("on", "1", "true")
 MAX_EXPLAIN_RETRIES = 1
