@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import operator
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -84,6 +84,7 @@ class Scenario(BaseModel):
     notes: list[str] = Field(default_factory=list)
     turnover: float | None = None
     trades: list[dict] | None = None
+    historical_outcomes: dict[str, Any] | None = None
 
 
 def _merge(left: dict, right: dict) -> dict:

@@ -45,11 +45,20 @@ _WORDING = [
     r"\brisk[- ]free\b",
     r"expected returns?",
     r"\bwill (?:return|yield|earn|generate|reach|gain|rise|outperform|grow)\b",
+    r"\bpr[ée]visions?\b",
+    r"\bforecasts?\b",
 ]
 _WORDING_RE = [re.compile(p) for p in _WORDING]
 _NEGATION_RE = re.compile(
     r"\b(?:pas|aucun|aucune|ne|jamais|non|sans|n'|no|not|never|cannot|without)\b[^.;:]{0,30}$"
 )
+
+# Allowed phrasing for historical labels and disclaimers (PRD 5.10, Issue #122).
+ALLOW_LIST_WORDING = [
+    re.compile(r"historique[s]?,?\s+(?:pas|sans|non)\s+(?:une?\s+)?pr[ée]vision", re.IGNORECASE),
+    re.compile(r"(?:pas|sans|aucune?|ne\s+constitue\s+pas)\s+(?:une?\s+)?pr[ée]vision", re.IGNORECASE),
+    re.compile(r"historical,?\s+(?:not|no)\s+(?:a\s+)?forecast", re.IGNORECASE),
+]
 
 _ISO_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 _NUM_RE = re.compile(
@@ -186,13 +195,16 @@ def check_numbers(
 
 
 def check_wording(explanation: dict) -> list[str]:
-    """No advice or forecast phrasing. A negated phrase ("aucun rendement garanti") is allowed."""
+    """No advice or forecast phrasing. Negated phrases and allow-listed labels are allowed."""
     errors = []
     for where, text in _all_text(explanation):
         lowered = text.lower()
         for rx in _WORDING_RE:
             for m in rx.finditer(lowered):
                 if _NEGATION_RE.search(lowered[max(0, m.start() - 40) : m.start()]):
+                    continue
+                context = lowered[max(0, m.start() - 35) : min(len(lowered), m.end() + 35)]
+                if any(al.search(context) for al in ALLOW_LIST_WORDING):
                     continue
                 errors.append(f"{where}: formulation interdite « {m.group(0)} »")
     return errors

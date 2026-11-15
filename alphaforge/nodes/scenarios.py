@@ -578,6 +578,8 @@ def scenarios_node(state: GraphState) -> dict:
             confidence=rule["confidence"],
         )
 
+    from alphaforge.nodes.quant import rolling_returns_stats
+
     scenarios = []
     for name in SCENARIO_NAMES:
         w = weights[name]
@@ -599,9 +601,72 @@ def scenarios_node(state: GraphState) -> dict:
                 method="0.5 * sum(abs(target_weight - current_weight))",
                 confidence="fact",
             )
+
+        # Rolling returns over 1-year and 3-year windows (A-13 / #122)
+        stats_1y = rolling_returns_stats(prices, w, window_years=1)
+        stats_3y = rolling_returns_stats(prices, w, window_years=3)
+
+        outcomes = {
+            "disclaimer": "historique, pas une prévision",
+            "horizon_years": profile.horizon_years,
+            "horizon_covered": profile.horizon_years <= 3,
+        }
+
+        if stats_1y:
+            outcomes["1y"] = stats_1y
+            for metric_k in ("worst", "median", "best", "loss_share"):
+                reg.add(
+                    {
+                        "metric": f"rolling_1y_{metric_k}",
+                        "scenario": name,
+                        "value": _r4(stats_1y[metric_k]),
+                        "unit": "ratio",
+                        "disclaimer": "historique, pas une prévision",
+                    },
+                    source=SOURCE,
+                    date=end,
+                    method=f"Rolling 1-year historical window ({stats_1y['windows_count']} windows), CAD. Historique, pas une prévision.",
+                    confidence="fact",
+                )
+        if stats_3y:
+            outcomes["3y"] = stats_3y
+            for metric_k in ("worst", "median", "best", "loss_share"):
+                reg.add(
+                    {
+                        "metric": f"rolling_3y_{metric_k}",
+                        "scenario": name,
+                        "value": _r4(stats_3y[metric_k]),
+                        "unit": "ratio",
+                        "disclaimer": "historique, pas une prévision",
+                    },
+                    source=SOURCE,
+                    date=end,
+                    method=f"Rolling 3-year historical window ({stats_3y['windows_count']} windows), CAD. Historique, pas une prévision.",
+                    confidence="fact",
+                )
+
+        sc.historical_outcomes = outcomes
         notes = _template_notes(
             name, w, values, ids, caps_eid, requested, flagged, account_type=profile.account_type
         )
+        if stats_1y:
+            notes.append(
+                f"Rendements historiques glissants sur 1 an (historique, pas une prévision) : "
+                f"pire {_pct(stats_1y['worst'])}, médiane {_pct(stats_1y['median'])}, "
+                f"meilleur {_pct(stats_1y['best'])}, part des périodes en perte {_pct(stats_1y['loss_share'])}."
+            )
+        if stats_3y:
+            notes.append(
+                f"Rendements historiques glissants sur 3 ans (historique, pas une prévision) : "
+                f"pire {_pct(stats_3y['worst'])}, médiane {_pct(stats_3y['median'])}, "
+                f"meilleur {_pct(stats_3y['best'])}, part des périodes en perte {_pct(stats_3y['loss_share'])}."
+            )
+        if profile.horizon_years > 3:
+            notes.append(
+                f"L'historique disponible (5 ans) permet de calculer les fenêtres de 1 an et 3 ans ; "
+                f"l'horizon déclaré de {profile.horizon_years} ans n'est pas couvert par les données "
+                "(historique, pas une prévision)."
+            )
         if draft_notes is not None:
             try:
                 notes = list(draft_notes(sc, evidence_so_far | reg.items())) or notes
@@ -644,6 +709,18 @@ def scenarios_node(state: GraphState) -> dict:
                     method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}",
                     confidence="fact" if values_curr[m] is not None else "assumption",
                 )
+        stats_1y_curr = rolling_returns_stats(prices, w_curr, window_years=1)
+        stats_3y_curr = rolling_returns_stats(prices, w_curr, window_years=3)
+        outcomes_curr = {
+            "disclaimer": "historique, pas une prévision",
+            "horizon_years": profile.horizon_years,
+            "horizon_covered": profile.horizon_years <= 3,
+        }
+        if stats_1y_curr:
+            outcomes_curr["1y"] = stats_1y_curr
+        if stats_3y_curr:
+            outcomes_curr["3y"] = stats_3y_curr
+
         notes_curr = [
             f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
             f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
@@ -655,7 +732,13 @@ def scenarios_node(state: GraphState) -> dict:
             notes_curr.append(
                 f"Actifs non analysés ({_pct(unanalysed_share)}) : {', '.join(not_analysed)}."
             )
-        sc_curr = Scenario(name="current", weights=w_curr.to_dict(), metrics=ids_curr, notes=notes_curr)
+        sc_curr = Scenario(
+            name="current",
+            weights=w_curr.to_dict(),
+            metrics=ids_curr,
+            notes=notes_curr,
+            historical_outcomes=outcomes_curr,
+        )
         scenarios.append(sc_curr)
 
     if current_weights is not None:
