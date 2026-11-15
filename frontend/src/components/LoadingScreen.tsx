@@ -1,14 +1,17 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/context/LanguageContext';
+import { TraceEntry } from '../types';
 import { AppHeader } from './AppHeader';
+import { NODE_LABELS } from './NodeTrace';
 
 interface LoadingScreenProps {
   onCancel: () => void;
-  trace?: unknown;
+  trace?: TraceEntry[];
 }
 
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onCancel }) => {
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onCancel, trace = [] }) => {
+  const last = trace.length > 0 ? trace[trace.length - 1] : null;
   const { language } = useLanguage();
   const isEn = language === 'en';
   return (
@@ -26,6 +29,12 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onCancel }) => {
             {isEn
               ? 'Evaluating risk parameters and running portfolio simulations.'
               : 'Évaluation des contraintes et simulation des scénarios de risque.'}
+          </p>
+          {/* One discreet line of live progress: the step the agents just finished */}
+          <p className="text-[11px] text-muted-foreground/80 h-4 tabular-nums" aria-live="polite">
+            {last
+              ? `${isEn ? 'Step' : 'Étape'} ${trace.length} · ${NODE_LABELS[last.node] || last.node}`
+              : ''}
           </p>
         </div>
 
