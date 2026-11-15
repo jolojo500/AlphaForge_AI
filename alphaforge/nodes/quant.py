@@ -99,6 +99,23 @@ def concentration(target: Target, info: pd.DataFrame) -> dict[str, float]:
     }
 
 
+def usd_exposure(target: Target, info: pd.DataFrame) -> float:
+    """Weight in assets priced in USD (BTC-USD and ETH-USD count as USD)."""
+    w = pd.Series({target: 1.0} if isinstance(target, str) else target, dtype=float)
+    w = w / w.sum()
+    if "currency" in info.columns:
+        usd = (info.loc[w.index, "currency"] == "USD").to_numpy()
+    else:
+        usd = info.loc[w.index, "market"].isin(US_MARKETS).to_numpy()
+    return float(w[usd].sum())
+
+
+def effective_sectors(target: Target, info: pd.DataFrame) -> float:
+    """1 / Herfindahl index of sector weights."""
+    hhi = concentration(target, info)["sector_hhi"]
+    return 1.0 / hhi if hhi > 0 else float("nan")
+
+
 def etf_overlap(
     a: str, b: str, holdings_dir=None, as_of: dt.date | str | None = None
 ) -> float | None:

@@ -20,14 +20,23 @@ from scipy.optimize import minimize
 
 from alphaforge.costs import (
     CAPITAL_PRESERVATION_FOREIGN_BOND_CAP,
+    all_in_cost,
     calculate_fee_drag,
     capital_preservation_foreign_bond_evidence,
     etf_mer_evidence,
+    fx_conversion_cost,
     fx_conversion_evidence,
 )
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
-from alphaforge.nodes.quant import concentration, max_drawdown, stress_2022, volatility
+from alphaforge.nodes.quant import (
+    concentration,
+    effective_sectors,
+    max_drawdown,
+    stress_2022,
+    usd_exposure,
+    volatility,
+)
 from alphaforge.nodes.screening import HOLDINGS_DIR, load_esgv
 from alphaforge.personas import PERSONAS
 from alphaforge.state import (
@@ -59,6 +68,22 @@ PREFERENCE_SECTORS = {
     "likes_crypto": {"Crypto asset"},
 }
 EQUITY_CLASSES = {"equity", "etf_equity"}
+# Asset-class codes a question may name in `Profile.requested_allocation`.
+REQUEST_CLASSES = {
+    "crypto": {"crypto"},
+    "equity": EQUITY_CLASSES,
+    "bond": {"etf_bond"},
+    "gold": {"etf_commodity"},
+}
+MIN_LINE = 0.02  # no line under 2 % in `capped` and `profile_baseline`
+MAX_LINES = 12  # at most 12 lines in `capped` and `profile_baseline`
+# High-risk growth profiles (caps table: 80-100 % equities): the baseline targets the middle
+# of the band and holds no ultra-short bond sleeve, which is a cash substitute.
+GROWTH_HIGH_EQUITY_MIN = 0.90
+ULTRA_SHORT_BOND = "ZST.TO"
+REQUEST_TOL = 1e-4
+GAP_LABEL_FR = "Écart de pondération (illustratif)"
+GAP_LABEL_EN = "Weight difference (illustrative)"
 DEFAULT_IDEA_WEIGHT = 0.20  # when a judge request names a ticker but no weight
 OVERLAP_ETF_SHARE = 0.5  # an ETF cited for overlap keeps half of the ETF cap
 CONCENTRATION_SHARE = 0.8  # a line cited for concentration keeps 80 % of its cap
@@ -77,7 +102,12 @@ METHODS = {
     "tax_drag": "estimated annual tax drag based on historical dividend/interest yields and account tax rules",
     "fee_drag": "weighted average management expense ratio (MER) across holdings",
     "esg_proxy_share": "part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect)",
+    "currency_usd_exposure": "share of the weights in assets priced in USD (BTC-USD and ETH-USD count as USD)",
+    "effective_sectors": "1 / Herfindahl index of the weights by universe sector label",
+    "all_in_cost": "fee drag + one-time FX conversion cost on the USD-priced share + estimated annual tax drag",
 }
+EXTRA_METRICS: tuple[str, ...] = ("currency_usd_exposure", "effective_sectors", "all_in_cost")
+EXTRA_UNITS = {"currency_usd_exposure": "ratio", "effective_sectors": "count", "all_in_cost": "ratio"}
 
 
 # --- caps ---------------------------------------------------------------------------------
@@ -159,8 +189,11 @@ def optimize(
     target: pd.Series | None = None,
     fixed: dict[str, float] | None = None,
     equity_floor: bool = True,
+    min_line: float = 0.0,
 ) -> pd.Series:
     """Long-only weights under the caps (scipy SLSQP). No expected returns anywhere.
+
+    min_line: lower bound of every line that is not pinned (used by `limit_lines`).
 
     target None: minimum variance. target given: closest portfolio to `target` (least squares).
     fixed: tickers pinned to a weight. If the solver fails, falls back to inverse-volatility
@@ -170,7 +203,7 @@ def optimize(
     n = len(tickers)
     fixed = fixed or {}
     ub = _asset_caps(tickers, info, caps)
-    lb = np.zeros(n)
+    lb = np.minimum(np.full(n, float(min_line)), ub)
     pinned = np.array([t in fixed for t in tickers])
     lb[pinned] = ub[pinned] = [fixed[t] for t in tickers if t in fixed]
     eq, cr = _group_masks(tickers, info)
@@ -206,6 +239,67 @@ def optimize(
         w = np.where(pinned, lb, 0.0)
         w[~pinned] = _fill(1.0 / vol[~pinned], ub[~pinned], 1.0 - w.sum())
     return _clean(pd.Series(w, index=tickers))
+
+
+def _valid(w: pd.Series, info, caps, fixed, equity_floor: bool, min_line: float) -> bool:
+    """Caps, floors, sum to 1 and the minimum line size all hold for `w`."""
+    tickers = list(w.index)
+    ub = _asset_caps(tickers, info, caps)
+    lb = np.minimum(np.full(len(tickers), float(min_line)), ub)
+    for i, t in enumerate(tickers):
+        if t in fixed:
+            lb[i] = ub[i] = fixed[t]
+    eq, cr = _group_masks(tickers, info)
+    return _feasible(w.to_numpy(), lb, ub, eq, cr, caps, equity_floor)
+
+
+def limit_lines(
+    w: pd.Series,
+    cov: pd.DataFrame,
+    info: pd.DataFrame,
+    caps: dict,
+    *,
+    fixed: dict[str, float] | None = None,
+    equity_floor: bool = True,
+    min_line: float = MIN_LINE,
+    max_lines: int = MAX_LINES,
+    min_variance: bool = False,
+) -> pd.Series:
+    """No dust: at most `max_lines` lines and none under `min_line` (deterministic).
+
+    Keeps the largest lines of `w` (ties broken by ticker), then takes on those lines, under
+    the same caps and floors and with `min_line` as a lower bound, the minimum-variance
+    portfolio (`min_variance`, for a scenario that was a minimum-variance one) or else the
+    closest portfolio to `w`.
+    A minimum-variance scenario starts from the lines already at `min_line` or more and adds
+    the next largest one until the caps can be met; otherwise `max_lines` lines are kept. A pinned line (`fixed`, the requested idea) keeps its weight even
+    when it is under `min_line`. Returns `w` unchanged if no subset satisfies the caps.
+    """
+    fixed = {t: v for t, v in (fixed or {}).items() if t in w.index and v > 1e-6}
+    free = w.drop(labels=list(fixed))
+    if len(w) <= max_lines and (free >= min_line - 1e-9).all():
+        return w
+    ub = dict(zip(free.index, _asset_caps(list(free.index), info, caps), strict=True))
+    var = {t: float(cov.at[t, t]) for t in free.index}
+    # largest first; equal weights (to 0.01 %) go to the less volatile line, then by ticker
+    order = [
+        t for t in sorted(free.index, key=lambda t: (-round(float(free[t]), 4), var[t], t))
+        if ub[t] >= min_line
+    ]
+    room = min(max(max_lines - len(fixed), 0), len(order))
+    start = max(1, sum(1 for t in order[:room] if free[t] >= min_line - 1e-9))
+    # minimum variance: as few lines as the caps allow; closest-to-`w`: as many as allowed
+    sizes = range(start, room + 1) if min_variance else [room, *range(start, room)]
+    for k in sizes:
+        keep = sorted(set(order[:k]) | set(fixed))
+        sub = optimize(
+            cov.loc[keep, keep], info, caps,
+            target=None if min_variance else w.reindex(keep).fillna(0.0),
+            fixed=fixed, equity_floor=equity_floor, min_line=min_line,
+        )
+        if _valid(sub, info, caps, fixed, equity_floor, min_line):
+            return sub
+    return w
 
 
 # --- scenarios ----------------------------------------------------------------------------
@@ -306,6 +400,117 @@ def _preference_portfolio(profile: Profile, universe: list[str], info: pd.DataFr
     return pd.Series(1.0 / len(picks), index=picks)
 
 
+def _num(x) -> float:
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return 0.0
+    return v if math.isfinite(v) and v > 0 else 0.0
+
+
+def _ratio(x) -> float:
+    """A weight as a ratio: values above 1 are read as percentages."""
+    v = _num(x)
+    return v / 100.0 if v > 1.0 else v
+
+
+def requested_idea_of(profile: Profile) -> dict | None:
+    """The single idea named by the question ({"ticker", "weight"}), if any."""
+    idea = profile.requested_idea
+    return idea if isinstance(idea, dict) and idea.get("ticker") else None
+
+
+def translate_request(profile: Profile, info: pd.DataFrame) -> dict | None:
+    """What the question asks for, as weights on universe tickers. None for a build request.
+
+    Returns {"kind", "weights" (ticker -> weight), "groups" (label, tickers, asked weight),
+    "blocked" (tickers the remainder must not use), "problems" (French sentences)}.
+    `requested_allocation` wins over `requested_idea`. A class weight ("crypto", "equity",
+    "bond", "gold") is split equally across the universe assets of that class, whether or not
+    screening kept them: the as_requested scenario always shows what was asked.
+    """
+    by_upper = {str(t).upper(): t for t in info.index}
+    alloc = profile.requested_allocation
+    if alloc:
+        explicit: dict[str, float] = {}
+        classes: dict[str, float] = {}
+        problems: list[str] = []
+        for key, raw in alloc.items():
+            wt = _ratio(raw)
+            k = str(key).strip()
+            if k.lower() in REQUEST_CLASSES:
+                classes[k.lower()] = classes.get(k.lower(), 0.0) + wt
+            elif k.upper() in by_upper:
+                t = by_upper[k.upper()]
+                explicit[t] = explicit.get(t, 0.0) + wt
+            else:
+                problems.append(f"« {k} » ({wt:.1%}) n'est pas dans l'univers analysé")
+        weights = dict(explicit)
+        groups = [(t, [t], wt) for t, wt in sorted(explicit.items())]
+        blocked = set(explicit)
+        for code, wt in sorted(classes.items()):
+            in_class = [t for t in info.index if info.at[t, "asset_class"] in REQUEST_CLASSES[code]]
+            blocked.update(in_class)
+            members = sorted(t for t in in_class if t not in explicit)
+            if not members:
+                problems.append(f"aucun actif de la classe « {code} » à pondérer")
+                continue
+            for t in members:
+                weights[t] = weights.get(t, 0.0) + wt / len(members)
+            groups.append((code, members, wt))
+        total = sum(weights.values())
+        if total > 1.0 + REQUEST_TOL:
+            problems.append(f"les poids demandés totalisent {total:.1%}, plus que 100 %")
+            weights = {t: w / total for t, w in weights.items()}
+        if not weights:
+            problems.append("aucun poids de la demande n'a pu être associé à un actif analysé")
+        return {"kind": "allocation", "weights": weights, "groups": groups,
+                "blocked": blocked, "problems": problems}
+    idea = requested_idea_of(profile)
+    if idea:
+        t = by_upper.get(str(idea["ticker"]).strip().upper())
+        w_req = min(_ratio(idea.get("weight")) or DEFAULT_IDEA_WEIGHT, 1.0)
+        if t is None:
+            return {"kind": "idea", "weights": {}, "groups": [], "blocked": set(),
+                    "problems": [f"« {idea['ticker']} » n'est pas dans l'univers analysé"]}
+        return {"kind": "idea", "weights": {t: w_req}, "groups": [(t, [t], w_req)],
+                "blocked": {t}, "problems": []}
+    if profile.requested_vehicle:
+        return {"kind": "vehicle", "weights": {}, "groups": [], "blocked": set(),
+                "problems": [f"« {profile.requested_vehicle} » est hors de l'univers analysé et "
+                             "aucun actif analysé ne lui a été associé"]}
+    return None
+
+
+def request_gaps(as_requested: pd.Series | dict, request: dict | None) -> list[str]:
+    """Requested assets or weights that are NOT in as_requested (empty list = all present)."""
+    if not request:
+        return []
+    w = dict(as_requested)
+    out = list(request["problems"])
+    for label, tickers, asked in request["groups"]:
+        got = sum(float(w.get(t, 0.0)) for t in tickers)
+        if abs(got - asked) > REQUEST_TOL:
+            out.append(f"{label} : {asked:.1%} demandé, {got:.1%} dans le scénario")
+    return out
+
+
+def _with_remainder(asked: dict[str, float], filler: pd.Series) -> pd.Series:
+    """`asked` at exactly its weights, the remainder spread like `filler`."""
+    rest = max(1.0 - sum(asked.values()), 0.0)
+    out = pd.Series(asked, dtype=float)
+    if rest > 1e-9 and len(filler) and filler.sum() > 0:
+        out = pd.concat([out, filler / filler.sum() * rest])
+    return out
+
+
+def growth_calibration(profile: Profile) -> dict | None:
+    """Baseline calibration for a high-risk growth profile, read from the caps table."""
+    if profile.objective == "growth" and effective_risk(profile.risk_tolerance, profile.risk_capacity) == "high":
+        return {"equity_min": GROWTH_HIGH_EQUITY_MIN, "excluded": ULTRA_SHORT_BOND}
+    return None
+
+
 def build_scenarios(
     profile: Profile,
     eligible: list[str],
@@ -320,46 +525,166 @@ def build_scenarios(
     """Weights of the scenarios and the caps used. `prices` must cover every ticker.
 
     `per_ticker` caps come from blocking objections and apply to the lines they cite only;
-    the requested idea in `capped` stays at the profile cap (#116)."""
+    the requested idea in `capped` stays at the profile cap (#116). `current_weights`, when
+    given, are the analysed holdings at their DECLARED weights (they may sum to less than 1)."""
     profile_caps = caps_for(profile, rounds)
     caps = {**profile_caps, "per_ticker": dict(per_ticker or {})}
+    opt_caps = caps
+    calib = growth_calibration(profile)
+    if calib:
+        opt_caps = {
+            **caps,
+            "equity_min": max(caps["equity_min"], calib["equity_min"]),
+            "per_ticker": {**caps["per_ticker"], calib["excluded"]: 0.0},
+        }
     universe = [t for t in sorted(eligible) if t not in set(drop)] or sorted(eligible)
     cov = prices.pct_change(fill_method=None).dropna().cov().loc[universe, universe]
-    baseline = optimize(cov, info, caps)
+    baseline = optimize(cov, info, opt_caps)
 
-    idea = profile.requested_idea if profile.request_type == "judge" else None
-    ticker = idea.get("ticker") if idea else None
-    w_cap = 0.0
-    if ticker in prices.columns:
-        w_req = min(max(float(idea.get("weight") or DEFAULT_IDEA_WEIGHT), 0.0), 1.0)
-        if current_weights is not None:
+    request = translate_request(profile, info)
+    asked = {t: w for t, w in (request or {}).get("weights", {}).items() if t in prices.columns}
+    fixed_capped: dict[str, float] = {}
+    capped_floor = True
+    if request and request["kind"] == "allocation" and asked:
+        blocked = request["blocked"]
+        pref = _preference_portfolio(profile, universe, info)
+        filler = pref.drop(labels=[t for t in pref.index if t in blocked])
+        if filler.empty:
+            filler = baseline.drop(labels=[t for t in baseline.index if t in blocked])
+        as_requested = _with_remainder(asked, filler)
+        target = as_requested.reindex(universe).fillna(0.0)
+        capped = optimize(cov, info, opt_caps, target=target, equity_floor=False)
+        capped_floor = False
+    elif request and request["kind"] == "idea" and asked:
+        ticker, w_req = next(iter(asked.items()))
+        as_requested = None
+        if current_weights is not None and current_weights.sum() >= 1.0 - 1e-3:
             from alphaforge.holdings import build_as_requested_from_current
 
-            as_req_dict = build_as_requested_from_current(current_weights.to_dict(), ticker, w_req)
-            as_requested = pd.Series(as_req_dict)
-        else:
-            rest = baseline.drop(ticker, errors="ignore")
-            as_requested = pd.concat([rest / rest.sum() * (1.0 - w_req), pd.Series({ticker: w_req})])
+            cand = pd.Series(build_as_requested_from_current(current_weights.to_dict(), ticker, w_req))
+            if abs(float(cand.get(ticker, 0.0)) - w_req) <= REQUEST_TOL:
+                as_requested = cand
+        if as_requested is None:  # the idea at exactly its stated weight, the rest is the baseline
+            as_requested = _with_remainder({ticker: w_req}, baseline.drop(ticker, errors="ignore"))
         if ticker in universe:
             w_cap = min(w_req, float(_asset_caps([ticker], info, profile_caps)[0]))
-            capped = optimize(cov, info, caps, fixed={ticker: w_cap})
+            fixed_capped = {ticker: w_cap}
+            capped = optimize(cov, info, opt_caps, fixed=fixed_capped)
         else:
             capped = baseline.copy()  # excluded by a constraint: capped at zero
     else:
         as_requested = _preference_portfolio(profile, universe, info)
-        capped = optimize(cov, info, caps, target=as_requested, equity_floor=False)
+        capped = optimize(cov, info, opt_caps, target=as_requested, equity_floor=False)
+        capped_floor = False
 
     if "esg_tilt" in profile.preferences:
         esgv = load_esgv()
         esg_proxy_set = {h.get("ticker") for h in (esgv or {}).get("holdings", [])} | {"ESGV"}
-        fixed_capped = {ticker: w_cap} if (ticker and ticker in universe) else {}
-        capped = apply_esg_tilt(capped, universe, info, caps, esg_proxy_set, fixed=fixed_capped)
-        baseline = apply_esg_tilt(baseline, universe, info, caps, esg_proxy_set)
+        capped = apply_esg_tilt(capped, universe, info, opt_caps, esg_proxy_set, fixed=fixed_capped)
+        baseline = apply_esg_tilt(baseline, universe, info, opt_caps, esg_proxy_set)
+
+    tilted = "esg_tilt" in profile.preferences  # a tilted scenario is kept close to its tilt
+    if profile.objective != "capital_preservation":
+        capped = limit_lines(capped, cov, info, opt_caps, fixed=fixed_capped, equity_floor=capped_floor,
+                             min_variance=capped_floor and not tilted)
+        baseline = limit_lines(baseline, cov, info, opt_caps, min_variance=not tilted)
 
     weights = {"as_requested": _clean(as_requested), "capped": capped, "profile_baseline": baseline}
     if current_weights is not None:
-        weights["current"] = _clean(current_weights)
+        w_cur = current_weights[current_weights > 1e-6].sort_index()
+        weights["current"] = w_cur  # declared weights, never rescaled
     return weights, caps
+
+
+def resolve_current(profile: Profile, info: pd.DataFrame) -> dict | None:
+    """Declared holdings split into analysed, not analysed and cash. Nothing is rescaled.
+
+    Weights at or under 1 in total are declared weights and are kept as they are; larger
+    totals are percentages (up to 100) or dollar amounts, turned into shares of the declared
+    total. A holding outside the universe keeps its declared weight: through a documented
+    proxy when one exists, otherwise as "not analysed". What is left is cash.
+    """
+    from alphaforge.holdings import COMMON_PROXIES
+
+    raw = {str(k).strip(): _num(v) for k, v in (profile.current_holdings or {}).items()}
+    raw = {k: v for k, v in raw.items() if k and v > 0}
+    extra = {str(k).strip(): _ratio(v) for k, v in (profile.holdings_unanalysed or {}).items()}
+    extra = {k: v for k, v in extra.items() if k and v > 0}
+    if not raw and not extra:
+        return None
+    total = sum(raw.values())
+    if total <= 1.0 + 1e-6:
+        divisor = 1.0  # declared weights
+    elif total <= 100.0 + 1e-6:
+        divisor = 100.0  # percentages
+    else:
+        divisor = total  # dollar amounts
+    by_upper = {str(t).upper(): t for t in info.index}
+    analysed: dict[str, float] = {}
+    proxies: dict[str, str] = {}
+    unanalysed = dict(extra)
+    for k, v in raw.items():
+        w = v / divisor
+        up = k.upper()
+        if up in by_upper:
+            analysed[by_upper[up]] = analysed.get(by_upper[up], 0.0) + w
+        elif up in COMMON_PROXIES and up not in {e.upper() for e in extra}:
+            proxies[k] = COMMON_PROXIES[up]
+            analysed[proxies[k]] = analysed.get(proxies[k], 0.0) + w
+        else:
+            unanalysed[k] = unanalysed.get(k, 0.0) + w
+    known = sum(analysed.values()) + sum(unanalysed.values())
+    if profile.holdings_cash is not None:
+        cash = min(_ratio(profile.holdings_cash), max(1.0 - known, 0.0))
+    else:
+        cash = max(1.0 - known, 0.0)
+    return {
+        "analysed": {t: round(w, 6) for t, w in analysed.items()},
+        "proxies": proxies,
+        "unanalysed": {t: round(w, 6) for t, w in unanalysed.items()},
+        "cash": round(cash, 6),
+    }
+
+
+def weight_gaps(
+    analysed: dict[str, float],
+    cash: float,
+    target: dict[str, float],
+    budget_cad: float | None = None,
+) -> tuple[list[dict], float]:
+    """Illustrative weight differences between the declared holdings and a scenario.
+
+    Only known amounts move: the analysed holdings (budget × declared weight) and cash. The
+    scenario weights apply to that part; holdings that are not analysed are left as they are
+    and never appear here. No line is an order: each entry is a difference in weight (share
+    of the whole portfolio) and, when the budget is known, the same difference in dollars.
+    Turnover = 0.5 × (sum of absolute differences + cash used).
+    """
+    investable = sum(analysed.values()) + cash
+    gaps: list[dict] = []
+    moved = 0.0
+    net = 0.0
+    for t in sorted(set(analysed) | set(target)):
+        cur = float(analysed.get(t, 0.0))
+        tgt = float(target.get(t, 0.0)) * investable
+        diff = round(tgt - cur, 4)
+        moved += abs(diff)
+        net += diff
+        if abs(diff) < 1e-4:
+            continue
+        gap = {
+            "ticker": t,
+            "current_weight": round(cur, 4),
+            "target_weight": round(tgt, 4),
+            "change": diff,
+            "action": GAP_LABEL_FR,
+            "action_en": GAP_LABEL_EN,
+        }
+        if budget_cad and budget_cad > 0:
+            gap["amount_cad"] = round(diff * budget_cad, 2)
+        gaps.append(gap)
+    gaps.sort(key=lambda g: (-abs(g["change"]), g["ticker"]))
+    return gaps, round((moved + abs(net)) / 2.0, 4)
 
 
 def scenario_metrics(
@@ -374,11 +699,14 @@ def scenario_metrics(
     """The fixed metric values (PRD 3.3, Issue #118, #119), computed with quant, tax and cost functions."""
     w = weights.to_dict()
     conc = concentration(w, info)
+    usd_exp = usd_exposure(w, info)
+    eff_sec = effective_sectors(w, info)
     stress = stress_2022(prices, w)
     tax_date = as_of or (prices.index[-1].date() if len(prices) else dt.date.today())
     tax_d = scenario_tax_drag(weights, account_type, tax_date, info)
     fee_d = calculate_fee_drag(weights, info)
     esg_s = calculate_esg_proxy_share(weights, holdings_dir=holdings_dir, as_of=tax_date)
+    fx_c = fx_conversion_cost(usd_exp)
     return {
         "volatility_ann": volatility(prices, w),
         "max_drawdown": max_drawdown(prices, w),
@@ -389,6 +717,10 @@ def scenario_metrics(
         "tax_drag": tax_d,
         "fee_drag": fee_d,
         "esg_proxy_share": esg_s,
+        "currency_usd_exposure": usd_exp,
+        "effective_sectors": eff_sec,
+        "fx_conversion_cost": fx_c,
+        "all_in_cost": all_in_cost(fee_d, fx_c, tax_d)["value"],
     }
 
 
@@ -483,6 +815,7 @@ def _template_notes(
     flagged,
     account_type: str = "non_registered",
     language: str = "fr",
+    asked_text: str | None = None,
 ) -> list[str]:
     is_en = language == "en"
     if is_en:
@@ -495,7 +828,9 @@ def _template_notes(
         if "esg_proxy_share" in ids and values.get("esg_proxy_share") is not None:
             risk += f" ESG proxy share {_pct(values['esg_proxy_share'])} ({ids['esg_proxy_share']})."
         if name == "as_requested":
-            if requested in weights:
+            if asked_text:
+                head = f"Allocation as requested: {asked_text}; the remainder follows the stated preferences."
+            elif requested in weights:
                 head = (
                     f"Idea as requested: {weights[requested]:.0%} in {requested}, "
                     "the remainder according to the reference allocation."
@@ -531,7 +866,9 @@ def _template_notes(
         if "esg_proxy_share" in ids and values.get("esg_proxy_share") is not None:
             risk += f" Part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect) : {_pct(values['esg_proxy_share'])} ({ids['esg_proxy_share']})."
         if name == "as_requested":
-            if requested in weights:
+            if asked_text:
+                head = f"Répartition telle que demandée : {asked_text} ; le reste suit les préférences déclarées."
+            elif requested in weights:
                 head = (
                     f"Idée telle que demandée : {weights[requested]:.0%} dans {requested}, "
                     "le reste selon l'allocation de référence."
@@ -592,29 +929,30 @@ def scenarios_node(state: GraphState) -> dict:
     info = provider.asset_info()
     blocking = [o for o in state.objections if o.get("severity") == "blocking"]
     rounds = state.retries.get("red_team", 0) if blocking else 0
-    idea = profile.requested_idea if profile.request_type == "judge" else None
-    requested = idea.get("ticker") if idea else None
-    if requested not in info.index:
-        requested = None
+    request = translate_request(profile, info)
+    requested = None
+    if request and request["kind"] == "idea" and request["weights"]:
+        requested = next(iter(request["weights"]))
     per_ticker, drop, changes = targeted_changes(
         blocking, state.evidence, eligible, info, caps_for(profile), requested
     )
-    # Resolve current holdings if provided (#120)
+    # Declared holdings: analysed part, not-analysed part and cash, never rescaled (#120, P0-2)
     current_weights: pd.Series | None = None
     proxies_used: dict[str, str] = {}
-    not_analysed: list[str] = []
-    unanalysed_share = 0.0
-    if profile.current_holdings:
-        from alphaforge.holdings import resolve_holdings
-
-        mapped_w, proxies_used, not_analysed, unanalysed_share = resolve_holdings(
-            profile.current_holdings, set(info.index)
-        )
-        if mapped_w:
-            current_weights = pd.Series(mapped_w)
+    unanalysed: dict[str, float] = dict(profile.holdings_unanalysed or {})
+    cash_share = 0.0
+    held = resolve_current(profile, info)
+    if held:
+        proxies_used, unanalysed, cash_share = held["proxies"], held["unanalysed"], held["cash"]
+        if held["analysed"]:
+            current_weights = pd.Series(held["analysed"], dtype=float)
+    not_analysed = sorted(unanalysed)
+    unanalysed_share = round(sum(unanalysed.values()), 4)
+    analysed_share = round(float(current_weights.sum()), 4) if current_weights is not None else 0.0
 
     current_tickers = set(current_weights.index) if current_weights is not None else set()
-    tickers = sorted(set(eligible) | ({requested} if requested else set()) | current_tickers)
+    asked_tickers = set((request or {}).get("weights", {}))
+    tickers = sorted(set(eligible) | asked_tickers | current_tickers)
     prices = provider.prices_cad(tickers, state.as_of_date)
 
     weights, caps = build_scenarios(
@@ -672,11 +1010,15 @@ def scenarios_node(state: GraphState) -> dict:
             confidence="assumption",
         )
     if not_analysed:
+        lines = ", ".join(f"{t} ({_pct(unanalysed[t])})" for t in not_analysed)
         reg.add(
-            f"Titres non analysés du portefeuille actuel ({_pct(unanalysed_share)}) : {', '.join(sorted(not_analysed))}.",
+            f"Titres non analysés du portefeuille actuel ({_pct(unanalysed_share)}) : {lines}. "
+            "Ils restent à leur poids déclaré : ils ne sont ni repondérés ni inclus dans les "
+            "écarts de pondération.",
             source="screening",
             date=as_of,
-            method="assets outside the 31-asset universe without proxy excluded from analysis",
+            method="assets outside the 31-asset universe without proxy are kept at their declared "
+            "weight and left out of the analysis",
             confidence="assumption",
         )
 
@@ -831,7 +1173,7 @@ def scenarios_node(state: GraphState) -> dict:
         )
 
     for name in SCENARIO_NAMES:
-        usd_share = all_values[name].get("us_exposure") or 0.0
+        usd_share = all_values[name].get("currency_usd_exposure") or 0.0
         fx_ev = fx_conversion_evidence(as_of, usd_share, name)
         reg.add(
             fx_ev["value"],
@@ -855,6 +1197,9 @@ def scenarios_node(state: GraphState) -> dict:
 
     from alphaforge.nodes.quant import rolling_returns_stats
 
+    asked_text = None
+    if request and request["kind"] == "allocation" and request["groups"]:
+        asked_text = ", ".join(f"{wt:.0%} {label}" for label, _, wt in request["groups"])
     scenarios = []
     for name in SCENARIO_NAMES:
         w = weights[name]
@@ -862,10 +1207,8 @@ def scenarios_node(state: GraphState) -> dict:
         ids = scenario_ids[name]
         sc = Scenario(name=name, weights=w.to_dict(), metrics=ids)
         if current_weights is not None:
-            from alphaforge.holdings import calculate_trades_and_turnover
-
-            trades, turnover = calculate_trades_and_turnover(
-                current_weights.to_dict(), w.to_dict(), profile.budget_cad
+            trades, turnover = weight_gaps(
+                current_weights.to_dict(), cash_share, w.to_dict(), profile.budget_cad
             )
             sc.trades = trades
             sc.turnover = turnover
@@ -873,7 +1216,8 @@ def scenarios_node(state: GraphState) -> dict:
                 {"metric": "turnover", "scenario": name, "value": turnover, "unit": "ratio"},
                 source="current holdings vs scenario weights",
                 date=end,
-                method="0.5 * sum(abs(target_weight - current_weight))",
+                method="0.5 * (sum(abs(target_weight - current_weight)) + cash used), on the "
+                "analysed holdings and cash only; illustrative weight differences, not orders",
                 confidence="fact",
             )
         # Rolling returns over 1-year and 3-year windows (A-13 / #122)
@@ -930,6 +1274,7 @@ def scenarios_node(state: GraphState) -> dict:
             flagged,
             account_type=profile.account_type,
             language=lang,
+            asked_text=asked_text,
         )
         if stats_1y:
             notes.append(
@@ -976,11 +1321,17 @@ def scenarios_node(state: GraphState) -> dict:
 
     # Fourth reference column: client's current portfolio (#120)
     if current_weights is not None:
-        w_curr = weights["current"]
+        w_curr = weights["current"]  # declared weights; may sum to less than 1
+        w_part = w_curr / w_curr.sum()  # the analysed part on its own, for the metrics only
+        partial = analysed_share < 1.0 - 1e-4
+        part_note = (
+            f", computed on the analysed part only ({analysed_share:.1%} of the declared "
+            "portfolio, taken as 100 %)" if partial else ""
+        )
         values_curr = {
             k: _r4(v)
             for k, v in scenario_metrics(
-                w_curr, prices, info, account_type=profile.account_type, as_of=as_of
+                w_part, prices, info, account_type=profile.account_type, as_of=as_of
             ).items()
         }
         ids_curr = {}
@@ -997,7 +1348,7 @@ def scenarios_node(state: GraphState) -> dict:
                     source="Règles fiscales ARC et convention fiscale Canada-É.-U.",
                     url="https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years.html",
                     date=end,
-                    method=f"{METHODS['tax_drag']}, compte {profile.account_type}",
+                    method=f"{METHODS['tax_drag']}, compte {profile.account_type}{part_note}",
                     confidence="assumption",
                 )
             elif m == "fee_drag":
@@ -1011,7 +1362,7 @@ def scenarios_node(state: GraphState) -> dict:
                     source="Ratios de dépenses de gestion (RFG/MER) des émetteurs de FNB",
                     url="https://www.blackrock.com/ca/investors/en/products/product-list",
                     date=end,
-                    method=f"{METHODS['fee_drag']}, moyenne pondérée des RFG du portefeuille actuel",
+                    method=f"{METHODS['fee_drag']}, moyenne pondérée des RFG du portefeuille actuel{part_note}",
                     confidence="assumption",
                 )
             else:
@@ -1019,7 +1370,7 @@ def scenarios_node(state: GraphState) -> dict:
                     {"metric": m, "scenario": "current", "value": values_curr[m], "unit": "ratio"},
                     source=SOURCE,
                     date=end,
-                    method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}",
+                    method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}{part_note}",
                     confidence="fact" if values_curr[m] is not None else "assumption",
                 )
         if "esg_tilt" in profile.preferences:
@@ -1036,8 +1387,8 @@ def scenarios_node(state: GraphState) -> dict:
                 method="part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect), portefeuille actuel",
                 confidence="assumption",
             )
-        stats_1y_curr = rolling_returns_stats(prices, w_curr, window_years=1)
-        stats_3y_curr = rolling_returns_stats(prices, w_curr, window_years=3)
+        stats_1y_curr = rolling_returns_stats(prices, w_part, window_years=1)
+        stats_3y_curr = rolling_returns_stats(prices, w_part, window_years=3)
         outcomes_curr = {
             "disclaimer": "historique, pas une prévision",
             "horizon_years": profile.horizon_years,
@@ -1048,30 +1399,39 @@ def scenarios_node(state: GraphState) -> dict:
         if stats_3y_curr:
             outcomes_curr["3y"] = stats_3y_curr
 
-        if lang == "en":
-            notes_curr = [
-                f"Client's current portfolio composed of {len(w_curr)} analyzed asset(s).",
-                f"Annualized volatility {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
-                f"historical maximum loss {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
-            ]
-            if proxies_used:
-                notes_curr.append(f"Assets with proxy: {', '.join(proxies_used.keys())}.")
-            if not_analysed:
-                notes_curr.append(
-                    f"Unanalyzed assets ({_pct(unanalysed_share)}): {', '.join(not_analysed)}."
-                )
-        else:
-            notes_curr = [
-                f"Portefeuille actuel du client composé de {len(w_curr)} actif(s) analysé(s).",
-                f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
-                f"perte maximale historique {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
-            ]
-            if proxies_used:
-                notes_curr.append(f"Actifs avec proxy : {', '.join(proxies_used.keys())}.")
-            if not_analysed:
-                notes_curr.append(
-                    f"Actifs non analysés ({_pct(unanalysed_share)}) : {', '.join(not_analysed)}."
-                )
+        en = lang == "en"
+        notes_curr = [
+            f"Client's current portfolio: {len(w_curr)} analysed asset(s), {_pct(analysed_share)} of the declared portfolio."
+            if en
+            else f"Portefeuille actuel du client : {len(w_curr)} actif(s) analysé(s), soit {_pct(analysed_share)} du portefeuille déclaré.",
+            f"Annualized volatility {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
+            f"historical maximum loss {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']})."
+            if en
+            else f"Volatilité annualisée {_pct(values_curr['volatility_ann'])} ({ids_curr['volatility_ann']}), "
+            f"perte maximale historique {_pct(values_curr['max_drawdown'])} ({ids_curr['max_drawdown']}).",
+        ]
+        if partial:
+            notes_curr.append(
+                "These metrics describe the analysed part only; weights are the declared ones, not rescaled."
+                if en
+                else "Ces mesures portent sur la partie analysée seulement ; les poids sont ceux déclarés, sans repondération."
+            )
+        if proxies_used:
+            notes_curr.append(
+                f"{'Assets with proxy' if en else 'Actifs avec proxy'}{'' if en else ' '}: {', '.join(proxies_used.keys())}."
+            )
+        if not_analysed:
+            notes_curr.append(
+                f"Not analysed, kept as declared ({_pct(unanalysed_share)}): {', '.join(not_analysed)}."
+                if en
+                else f"Non analysé, conservé tel que déclaré ({_pct(unanalysed_share)}) : {', '.join(not_analysed)}."
+            )
+        if cash_share > 1e-4:
+            notes_curr.append(
+                f"Undeclared remainder treated as cash: {_pct(cash_share)}."
+                if en
+                else f"Reste non déclaré traité comme des liquidités : {_pct(cash_share)}."
+            )
         sc_curr = Scenario(
             name="current",
             weights=w_curr.to_dict(),
@@ -1080,6 +1440,102 @@ def scenarios_node(state: GraphState) -> dict:
             historical_outcomes=outcomes_curr,
         )
         scenarios.append(sc_curr)
+
+    # --- appended after every existing entry so that earlier evidence ids do not move -------
+    # New scenario metrics: USD currency exposure, effective sectors, all-in cost (P1 c)
+    def add_extra(sc: Scenario, values: dict, note: str = "") -> None:
+        ids_x: dict[str, str] = {}
+        for m in EXTRA_METRICS:
+            val: dict = {"metric": m, "scenario": sc.name, "value": values.get(m), "unit": EXTRA_UNITS[m]}
+            if m == "all_in_cost":
+                val["components"] = all_in_cost(
+                    values.get("fee_drag"), values.get("fx_conversion_cost"), values.get("tax_drag")
+                )["components"]
+            ids_x[m] = reg.add(
+                val,
+                source=price_source if m != "all_in_cost" else "RFG des émetteurs, grille de change des courtiers, règles fiscales ARC",
+                date=end,
+                method=f"{METHODS[m]}{note}",
+                confidence="assumption" if m == "all_in_cost" or values.get(m) is None else "fact",
+            )
+        # Evidence items for extra metrics are registered in evidence registry;
+        # sc.metrics keeps only the frozen SCENARIO_METRICS keys (and esg_proxy_share if active).
+
+    for sc in scenarios:
+        if sc.name == "current":
+            add_extra(sc, values_curr, part_note)
+        else:
+            add_extra(sc, all_values[sc.name])
+
+    # How the question was translated into weights, and whether it is all there (P0-1)
+    gaps = request_gaps(weights["as_requested"], request)
+    if request:
+        if request["groups"]:
+            asked_desc = "; ".join(
+                f"{label} {wt:.1%}" + (f" (réparti également entre {', '.join(ts)})" if len(ts) > 1 else "")
+                for label, ts, wt in request["groups"]
+            )
+        else:
+            asked_desc = "aucun poids associé à un actif analysé"
+        rest = max(1.0 - sum(request["weights"].values()), 0.0)
+        fill = (
+            "les préférences déclarées du profil" if request["kind"] == "allocation"
+            else "le portefeuille actuel ou l'allocation de référence"
+        )
+        text = f"Demande traduite en pondérations pour le scénario demandé : {asked_desc}."
+        if rest > REQUEST_TOL:
+            text += f" Le reste ({rest:.1%}) suit {fill}."
+        if profile.requested_vehicle:
+            text += (
+                f" Le véhicule nommé dans la question ({profile.requested_vehicle}) est hors de "
+                "l'univers analysé : il est représenté par l'actif analysé correspondant."
+            )
+        reg.add(text, source="question de l'utilisateur (profil analysé)", date=as_of,
+                method="requested_allocation / requested_idea mapped to universe tickers; a class "
+                "weight is split equally across the universe assets of that class",
+                confidence="assumption")
+    if gaps:
+        reg.add(
+            "Je n'ai pas pu traduire votre demande en portefeuille : " + " ; ".join(gaps) + ".",
+            source="contrôle du scénario demandé", date=as_of,
+            method="check that every requested asset and weight is present in as_requested",
+            confidence="assumption",
+        )
+    calib = growth_calibration(profile)
+    if calib:
+        reg.add(
+            f"Profil de croissance à risque élevé : la table des plafonds prévoit 80 % à 100 % "
+            f"d'actions ; l'allocation de référence vise au moins {calib['equity_min']:.0%} d'actions "
+            f"et ne détient pas d'obligations à très court terme ({calib['excluded']}), qui "
+            "tiennent lieu de liquidités.",
+            source="PRD 5.7 caps table", date=as_of,
+            method="baseline calibration for a high-risk growth profile (middle of the equity band)",
+            confidence="assumption",
+        )
+    reg.add(
+        f"Lignes des scénarios plafonné et de référence : au plus {MAX_LINES} lignes et aucune sous "
+        f"{MIN_LINE:.0%} (sauf l'idée demandée, gardée à son poids plafonné).",
+        source="règle de construction AlphaForge", date=as_of,
+        method="largest lines kept, then closest portfolio under the same caps with a minimum line size",
+        confidence="assumption",
+    )
+    if current_weights is not None:
+        reg.add(
+            {
+                "metric": "current_analysed_share",
+                "scenario": "current",
+                "value": analysed_share,
+                "unit": "ratio",
+                "unanalysed_share": unanalysed_share,
+                "cash_share": round(cash_share, 4),
+                "note": "Les mesures du portefeuille actuel sont calculées sur la partie analysée "
+                "seulement ; les titres non analysés restent à leur poids déclaré et les écarts "
+                "de pondération (illustratifs) ne portent que sur la partie analysée et les liquidités.",
+            },
+            source="portefeuille déclaré", date=as_of,
+            method="declared weights, never rescaled: analysed part, not-analysed part, cash remainder",
+            confidence="assumption",
+        )
 
     if lang == "en":
         summary = (
@@ -1097,6 +1553,12 @@ def scenarios_node(state: GraphState) -> dict:
         )
         if rounds:
             summary += " Révisés après objections : " + ("; ".join(changes) or "aucun changement") + "."
+    if gaps:
+        summary += (
+            " The request could not be fully translated into a portfolio: "
+            if lang == "en"
+            else " Je n'ai pas pu traduire entièrement votre demande en portefeuille : "
+        ) + " ; ".join(gaps) + "."
     from alphaforge.guardrails import check_guardrails
 
     guardrails = check_guardrails(profile, scenarios, {**state.evidence, **reg.items()})

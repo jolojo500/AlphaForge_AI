@@ -128,3 +128,18 @@ def test_requested_ticker_is_analysed_and_correlated():
     traded_value = find_one(ev, metric="avg_daily_traded_value_20d_cad", ticker="TSLA")
     assert traded_value is not None and numeric(traded_value) > 0
     assert traded_value.value["observations"] <= 20
+
+
+def test_usd_exposure_and_effective_sectors():
+    from alphaforge.nodes.quant import effective_sectors, usd_exposure
+
+    info = get_provider().asset_info()
+    assert usd_exposure({"RY.TO": 0.5, "TD.TO": 0.5}, info) == 0.0
+    assert usd_exposure({"SPY": 0.6, "RY.TO": 0.4}, info) == pytest.approx(0.6)
+    assert usd_exposure({"BTC-USD": 0.3, "XIU.TO": 0.7}, info) == pytest.approx(0.3)
+
+    eff = effective_sectors({"RY.TO": 0.5, "TD.TO": 0.5}, info)
+    assert eff == pytest.approx(1.0)
+    eff_two = effective_sectors({"SPY": 0.5, "RY.TO": 0.5}, info)
+    assert eff_two == pytest.approx(2.0)
+

@@ -184,3 +184,136 @@ def test_requested_idea_is_never_dropped_by_an_objection():
     out = _run(ROBERT_TSLA, evidence={"EQ1": c},
                objections=_obj("TSLA est trop volatile.", "EQ1"), retries={"red_team": 1})
     assert _by_name(out)["capped"].weights["TSLA"] == pytest.approx(0.03, abs=TOL)
+
+
+def test_issue_163_as_requested_built_from_question_and_three_questions_differ():
+    """Verify #163: as_requested is built from requested_allocation/requested_idea.
+    Three different questions produce different as_requested scenarios.
+    """
+    p_build = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build"
+    )
+    out_build = _run(p_build)
+    w_build = _by_name(out_build)["as_requested"].weights
+
+    p_crypto = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build",
+        requested_allocation={"crypto": 0.50}
+    )
+    out_crypto = _run(p_crypto)
+    w_crypto = _by_name(out_crypto)["as_requested"].weights
+    crypto_total = w_crypto.get("BTC-USD", 0.0) + w_crypto.get("ETH-USD", 0.0)
+    assert crypto_total == pytest.approx(0.50, abs=1e-3)
+
+    p_btc = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build",
+        requested_allocation={"BTC-USD": 0.15}
+    )
+    out_btc = _run(p_btc)
+    w_btc = _by_name(out_btc)["as_requested"].weights
+    assert w_btc.get("BTC-USD", 0.0) == pytest.approx(0.15, abs=1e-3)
+
+    assert w_build != w_crypto
+    assert w_crypto != w_btc
+    assert w_build != w_btc
+
+
+def test_issue_163_missing_asset_generates_gap_evidence():
+    """Verify #163: missing requested asset blocks run with clear text."""
+    p_bad = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build",
+        requested_allocation={"UNKNOWN_TICKER_XYZ": 0.25}
+    )
+    out = _run(p_bad)
+    ev_values = [str(e.value) for e in out["evidence"].values()]
+    assert any("Je n'ai pas pu traduire votre demande en portefeuille" in v for v in ev_values)
+
+
+def test_issue_164_holdings_never_rescaled_and_order_limits():
+    """Verify #164: declared BTC 30%, SOL 40%, budget 100 000 $ ->
+    BTC move never above 30 000 $, SOL never appears in trades.
+    """
+    p = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build",
+        budget_cad=100000.0,
+        current_holdings={"BTC-USD": 0.30, "SOL": 0.40},
+    )
+    out = _run(p)
+    sc_by_name = _by_name(out)
+    assert "current" in sc_by_name
+    curr_sc = sc_by_name["current"]
+
+    assert curr_sc.weights.get("BTC-USD") == pytest.approx(0.30, abs=1e-4)
+    assert "SOL" not in curr_sc.weights
+
+    capped_sc = sc_by_name["capped"]
+    assert capped_sc.trades is not None
+    tickers_in_trades = {t["ticker"] for t in capped_sc.trades}
+    assert "SOL" not in tickers_in_trades
+
+    for trade in capped_sc.trades:
+        if trade["ticker"] == "BTC-USD":
+            assert abs(trade.get("amount_cad", 0.0)) <= 30000.0 + 1e-2
+
+
+def test_issue_172_minimum_line_size_and_max_lines():
+    """Verify #172: capped and profile_baseline have at most 12 lines,
+    no line under 2%, and sum to 1.
+    """
+    p = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build",
+        preferences=["likes_crypto", "prefers_cad"]
+    )
+    out = _run(p)
+    sc_by_name = _by_name(out)
+
+    for sc_name in ("capped", "profile_baseline"):
+        sc = sc_by_name[sc_name]
+        lines = {t: w for t, w in sc.weights.items() if w > 1e-4}
+        assert len(lines) <= 12
+        assert all(w >= 0.02 - 1e-6 for w in lines.values())
+        assert sum(lines.values()) == pytest.approx(1.0, abs=TOL)
+
+
+def test_issue_177_high_risk_baseline_recalibration():
+    """Verify #177: high-risk growth baseline targets >= 90% equities
+    and holds 0% in ultra-short bond ZST.TO.
+    """
+    p = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build"
+    )
+    out = _run(p)
+    base_sc = _by_name(out)["profile_baseline"]
+
+    assert base_sc.weights.get("ZST.TO", 0.0) == pytest.approx(0.0, abs=1e-6)
+
+    info = get_provider().asset_info()
+    eq_share = sum(w for t, w in base_sc.weights.items() if info.at[t, "asset_class"] in ("equity", "etf_equity"))
+    assert eq_share >= 0.90 - TOL
+
+
+def test_issue_174_all_in_cost_evidence():
+    """Verify #174: all-in cost and fx conversion cost evidence present."""
+    p = Profile(
+        persona="mateo", objective="growth", horizon_years=25,
+        risk_tolerance="high", risk_capacity="high", request_type="build"
+    )
+    out = _run(p)
+    ev = out["evidence"]
+
+    aic_entries = [e for e in ev.values() if isinstance(e.value, dict) and e.value.get("metric") == "all_in_cost"]
+    assert len(aic_entries) >= 3
+    for e in aic_entries:
+        assert "components" in e.value
+        assert "fee_drag" in e.value["components"]
+        assert "fx_conversion_cost" in e.value["components"]
+        assert "tax_drag" in e.value["components"]
+        assert e.value["unit"] == "ratio"
+
