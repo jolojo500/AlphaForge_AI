@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import abc
 import datetime as dt
+import hashlib
 import json
 import logging
 import os
 import re
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -32,18 +34,18 @@ class DossierExistsError(FileExistsError):
 
 
 def sanitize_username(username: str) -> str:
-    """Sanitise username for S3 key and filesystem paths.
+    """Sanitise a username for S3 keys and file paths: only [A-Za-z0-9._-].
 
-    Strictly allows only [A-Za-z0-9._-]. Never builds keys from raw input.
+    A name that had to be altered gets a short hash of the original appended, so two different
+    usernames can never map to the same dossier.
     """
     raw = (username or "").strip()
-    raw = raw.replace("/", "_").replace("\\", "_")
     cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", raw)
-    cleaned = cleaned.strip("._")
-    cleaned = re.sub(r"_+", "_", cleaned)
-    if not cleaned:
-        cleaned = "user"
-    return cleaned
+    cleaned = re.sub(r"_+", "_", cleaned).strip("._")[:64]
+    if cleaned == raw and cleaned:
+        return cleaned
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:10]
+    return f"{cleaned or 'user'}-{digest}"
 
 
 def get_dossier_s3_key(username: str) -> str:
@@ -96,8 +98,19 @@ class LocalUserDossierStore(UserDossierStore):
         p.write_text(content, encoding="utf-8")
 
 
+def _is_missing(exc: Exception) -> bool:
+    resp = getattr(exc, "response", None)
+    code = str(resp.get("Error", {}).get("Code", "")) if isinstance(resp, dict) else ""
+    return code in ("404", "NoSuchKey", "NotFound")
+
+
 class S3UserDossierStore(UserDossierStore):
-    """S3-backed user dossier storage with transparent local fallback."""
+    """S3-backed dossier storage.
+
+    Only "object not found" means the dossier is missing. Any other S3 error is raised: treating
+    an outage as "no dossier" would recreate the file and erase the user's history. The local
+    store is used only when no bucket is configured.
+    """
 
     def __init__(
         self,
@@ -124,63 +137,47 @@ class S3UserDossierStore(UserDossierStore):
         else:
             self._s3 = None
 
+    @property
+    def _use_s3(self) -> bool:
+        return self._s3 is not None and bool(self.bucket_name)
+
     def dossier_exists(self, username: str) -> bool:
-        if self._s3 is not None and self.bucket_name:
-            key = get_dossier_s3_key(username)
-            try:
-                self._s3.head_object(Bucket=self.bucket_name, Key=key)
-                return True
-            except Exception as exc:
-                err_code = ""
-                if hasattr(exc, "response") and isinstance(exc.response, dict):
-                    err_code = str(exc.response.get("Error", {}).get("Code", ""))
-                if err_code in ("404", "NoSuchKey", "NotFound"):
-                    return False
-                logger.warning("S3 dossier_exists check failed (%s); checking local fallback", exc)
-                return self.fallback.dossier_exists(username)
-        return self.fallback.dossier_exists(username)
+        if not self._use_s3:
+            return self.fallback.dossier_exists(username)
+        try:
+            self._s3.head_object(Bucket=self.bucket_name, Key=get_dossier_s3_key(username))
+            return True
+        except Exception as exc:
+            if _is_missing(exc):
+                return False
+            raise
 
     def read_dossier(self, username: str) -> str | None:
-        if self._s3 is not None and self.bucket_name:
-            key = get_dossier_s3_key(username)
-            try:
-                resp = self._s3.get_object(Bucket=self.bucket_name, Key=key)
-                body = resp["Body"].read()
-                return body.decode("utf-8") if isinstance(body, bytes) else str(body)
-            except Exception as exc:
-                err_code = ""
-                if hasattr(exc, "response") and isinstance(exc.response, dict):
-                    err_code = str(exc.response.get("Error", {}).get("Code", ""))
-                if err_code in ("404", "NoSuchKey", "NotFound"):
-                    return self.fallback.read_dossier(username)
-                logger.warning("S3 read_dossier failed (%s); checking local fallback", exc)
-                return self.fallback.read_dossier(username)
-        return self.fallback.read_dossier(username)
+        if not self._use_s3:
+            return self.fallback.read_dossier(username)
+        try:
+            resp = self._s3.get_object(Bucket=self.bucket_name, Key=get_dossier_s3_key(username))
+        except Exception as exc:
+            if _is_missing(exc):
+                return None
+            raise
+        body = resp["Body"].read()
+        return body.decode("utf-8") if isinstance(body, bytes) else str(body)
 
     def write_dossier(self, username: str, content: str) -> None:
-        s3_written = False
-        key = get_dossier_s3_key(username)
-        if self._s3 is not None and self.bucket_name:
-            try:
-                self._s3.put_object(
-                    Bucket=self.bucket_name,
-                    Key=key,
-                    Body=content.encode("utf-8"),
-                    ContentType="text/markdown; charset=utf-8",
-                    Metadata={"username": sanitize_username(username)},
-                )
-                s3_written = True
-            except Exception as exc:
-                logger.warning(
-                    "Failed to write dossier to S3 %s/%s (%s); writing to local fallback",
-                    self.bucket_name,
-                    key,
-                    exc,
-                )
-
-        if not s3_written:
+        if not self._use_s3:
             self.fallback.write_dossier(username, content)
+            return
+        self._s3.put_object(
+            Bucket=self.bucket_name,
+            Key=get_dossier_s3_key(username),
+            Body=content.encode("utf-8"),
+            ContentType="text/markdown; charset=utf-8",
+        )
 
+
+# One writer at a time: appends are read-modify-write on a single object.
+_write_lock = threading.Lock()
 
 _global_dossier_store: UserDossierStore | None = None
 
@@ -538,7 +535,7 @@ def _build_decision_section(
 # --- Public API functions -----------------------------------------------------------
 
 
-def create_dossier(
+def _create_dossier_unlocked(
     username: str,
     email: str | None = None,
     profile: dict[str, Any] | None = None,
@@ -569,12 +566,12 @@ def create_dossier(
     return content
 
 
-def append_profile_update(username: str, profile: dict[str, Any]) -> str:
+def _append_profile_update_unlocked(username: str, profile: dict[str, Any]) -> str:
     """Append a dated 'Mise à jour du profil' section to the user's dossier (creates if missing)."""
     store = get_dossier_store()
     existing = store.read_dossier(username)
     if not existing:
-        return create_dossier(username=username, profile=profile)
+        return _create_dossier_unlocked(username=username, profile=profile)
 
     now_utc = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     section = _build_profile_update_section(profile=profile, updated_at=now_utc)
@@ -583,7 +580,7 @@ def append_profile_update(username: str, profile: dict[str, Any]) -> str:
     return new_content
 
 
-def append_decision(
+def _append_decision_unlocked(
     username: str,
     run_state: GraphState | dict[str, Any],
     run_id: str | None = None,
@@ -602,7 +599,7 @@ def append_decision(
         state_prof = _get_val(run_state, "profile", default=None)
         if state_prof:
             prof_dict = state_prof if isinstance(state_prof, dict) else state_prof.model_dump(mode="json")
-        existing = create_dossier(username=username, profile=prof_dict)
+        existing = _create_dossier_unlocked(username=username, profile=prof_dict)
 
     now_utc = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
     decision_section = _build_decision_section(
@@ -613,6 +610,33 @@ def append_decision(
     new_content = existing.rstrip() + "\n\n---\n\n" + decision_section + "\n"
     store.write_dossier(username, new_content)
     return new_content
+
+
+def create_dossier(
+    username: str,
+    email: str | None = None,
+    profile: dict[str, Any] | None = None,
+    raise_if_exists: bool = False,
+) -> str:
+    """Create the dossier (header, notice, profile at creation). Never overwrites an existing one."""
+    with _write_lock:
+        return _create_dossier_unlocked(username, email, profile, raise_if_exists)
+
+
+def append_profile_update(username: str, profile: dict[str, Any]) -> str:
+    """Append a dated profile update (creates the dossier if missing)."""
+    with _write_lock:
+        return _append_profile_update_unlocked(username, profile)
+
+
+def append_decision(
+    username: str,
+    run_state: GraphState | dict[str, Any],
+    run_id: str | None = None,
+) -> str:
+    """Append a dated section for a finished run (creates the dossier if missing)."""
+    with _write_lock:
+        return _append_decision_unlocked(username, run_state, run_id)
 
 
 def read_dossier(username: str) -> str | None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -206,15 +207,19 @@ def test_append_decision_from_real_offline_run(clean_dossier_storage: LocalUserD
 def test_sanitised_key():
     """Keys are strictly sanitised to [A-Za-z0-9._-] and never built from raw input."""
     assert sanitize_username("normal_user-123.test") == "normal_user-123.test"
-    assert sanitize_username("user/with/slashes") == "user_with_slashes"
-    assert sanitize_username("../../etc/passwd") == "etc_passwd"
-    assert sanitize_username("john doe!@#$%^&*()") == "john_doe"
-    assert sanitize_username("...leading.dots...") == "leading.dots"
-    assert sanitize_username("") == "user"
+    for raw, stem in [
+        ("user/with/slashes", "user_with_slashes"),
+        ("../../etc/passwd", "etc_passwd"),
+        ("john doe!@#$%^&*()", "john_doe"),
+        ("...leading.dots...", "leading.dots"),
+        ("", "user"),
+    ]:
+        out = sanitize_username(raw)
+        assert re.fullmatch(rf"{re.escape(stem)}-[0-9a-f]{{10}}", out), out
 
     # Key format
     assert get_dossier_s3_key("amira") == "users/amira/dossier.md"
-    assert get_dossier_s3_key("../unsafe/user") == "users/unsafe_user/dossier.md"
+    assert re.fullmatch(r"users/unsafe_user-[0-9a-f]{10}/dossier\.md", get_dossier_s3_key("../unsafe/user"))
 
 
 def test_endpoint_returns_only_callers_dossier(clean_dossier_storage: LocalUserDossierStore):
@@ -362,19 +367,26 @@ def test_s3_backend_stub_client_and_transparent_fallback(tmp_path: Path):
     # read_dossier must read from S3
     assert read_dossier("claire") == content
 
-    # Now simulate S3 failure: transparent fallback to local
-    failing_s3 = FakeS3Client(should_fail=True)
-    fallback_store = S3UserDossierStore(
+    # An S3 outage is an error, never "no dossier": the history must not be recreated from scratch.
+    failing_store = S3UserDossierStore(
         bucket_name="alphaforge-test-bucket",
-        s3_client=failing_s3,
+        s3_client=FakeS3Client(should_fail=True),
         local_fallback=local_store,
     )
-    set_dossier_store_override(fallback_store)
+    set_dossier_store_override(failing_store)
+    with pytest.raises(Exception):  # noqa: B017
+        append_decision("claire", {"run_id": "r1"})
+    assert not local_store.dossier_exists("claire")
+    set_dossier_store_override(None)
 
-    # Writing should not crash; it writes to local fallback
-    fallback_content = create_dossier("david", email="david@alphaforge.demo", profile={"objective": "balanced"})
-    assert local_store.dossier_exists("david")
-    assert fallback_store.read_dossier("david") == fallback_content
+
+def test_different_usernames_never_share_a_dossier():
+    from alphaforge.user_dossier import sanitize_username
+
+    assert sanitize_username("claire") == "claire"
+    assert sanitize_username("a@b") != sanitize_username("a_b")
+    assert sanitize_username("a/b") != sanitize_username("a_b")
+    assert re.fullmatch(r"[A-Za-z0-9._-]+", sanitize_username("../../etc/passwd"))
 
 
 def test_register_creates_dossier_via_api(clean_dossier_storage: LocalUserDossierStore):

@@ -679,13 +679,12 @@ def update_user_profile_endpoint(
 
 
 @app.get("/users/me/dossier")
-@app.get("/user/dossier")
 def get_user_dossier_endpoint(
     user: Annotated[User, Depends(get_current_user)],
 ) -> Response:
     """Download own user dossier in Markdown format (PRD C-16)."""
     try:
-        from alphaforge.user_dossier import read_dossier
+        from alphaforge.user_dossier import read_dossier, sanitize_username
 
         content = read_dossier(user.username)
     except Exception as exc:
@@ -699,7 +698,7 @@ def get_user_dossier_endpoint(
         content=content,
         media_type="text/markdown; charset=utf-8",
         headers={
-            "Content-Disposition": f'attachment; filename="dossier_{user.username}.md"',
+            "Content-Disposition": f'attachment; filename="dossier_{sanitize_username(user.username)}.md"',
         },
     )
 
