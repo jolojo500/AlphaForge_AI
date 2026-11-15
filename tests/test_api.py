@@ -96,7 +96,7 @@ def test_full_run_streaming_and_get_state():
     assert "cost" in state
     assert "cost_cad" in state["cost"]
     assert state["cost"]["is_estimate"] is True
-    assert state["cost"]["pricing_source"] == "https://aws.amazon.com/bedrock/pricing/"
+    assert state["cost"]["pricing_source"] == "https://platform.claude.com/docs/en/about-claude/pricing"
     assert state["cost"]["confidence"] == "assumption"
 
 

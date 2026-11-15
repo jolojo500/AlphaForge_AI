@@ -26,13 +26,21 @@ def lookup_model_pricing(model_name: str) -> dict[str, float]:
     return config.BEDROCK_PRICING["global.anthropic.claude-sonnet-5-5"]
 
 
+def _usd_to_cad() -> float:
+    """Last published Bank of Canada USD/CAD rate in the dataset (fallback: config)."""
+    try:
+        from alphaforge.data.provider import get_provider
+
+        return float(get_provider().fx()["usdcad"].dropna().iloc[-1])
+    except Exception:  # noqa: BLE001
+        return config.USD_TO_CAD_RATE
+
+
 def calculate_run_cost(trace: list[dict[str, Any]] | None) -> dict[str, Any]:
     """Calculate token totals, latency and cost in CAD for a run based on its trace.
 
-    Prices are based on documented AWS Bedrock list pricing (PRD 2, O-6) cited as an assumption:
-    Source: https://aws.amazon.com/bedrock/pricing/
-    Date: 2026-11-12
-    FX assumption: 1 USD = 1.40 CAD (Bank of Canada benchmark range).
+    Prices: config.BEDROCK_PRICING (Anthropic list prices used as an estimate of Bedrock
+    cost, cited with their source and date). USD→CAD: last Bank of Canada rate in the data.
     """
     total_input = 0
     total_output = 0
@@ -83,13 +91,13 @@ def calculate_run_cost(trace: list[dict[str, Any]] | None) -> dict[str, Any]:
         m["total_tokens"] += in_tok + out_tok
         m["latency_ms"] += lat_ms
         m["cost_usd"] += item_cost_usd
-        m["cost_cad"] += item_cost_usd * config.USD_TO_CAD_RATE
+        m["cost_cad"] += item_cost_usd * _usd_to_cad()
 
     for m in models_data.values():
         m["cost_usd"] = round(m["cost_usd"], 6)
         m["cost_cad"] = round(m["cost_cad"], 6)
 
-    total_cost_cad = total_cost_usd * config.USD_TO_CAD_RATE
+    total_cost_cad = total_cost_usd * _usd_to_cad()
 
     return {
         "cost_cad": round(total_cost_cad, 6),
@@ -102,7 +110,8 @@ def calculate_run_cost(trace: list[dict[str, Any]] | None) -> dict[str, Any]:
         "is_estimate": True,
         "pricing_source": config.BEDROCK_PRICE_SOURCE_URL,
         "pricing_date": config.BEDROCK_PRICE_DATE,
-        "usd_to_cad_rate": config.USD_TO_CAD_RATE,
+        "pricing_basis": config.BEDROCK_PRICE_BASIS,
+        "usd_to_cad_rate": _usd_to_cad(),
         "confidence": "assumption",
         "models": models_data,
     }

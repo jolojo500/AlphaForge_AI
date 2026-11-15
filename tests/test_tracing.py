@@ -72,21 +72,21 @@ def test_traced_decorator_with_llm_calls():
 
 def test_lookup_model_pricing():
     sonnet = lookup_model_pricing("global.anthropic.claude-sonnet-5-5")
-    assert sonnet["input_usd_per_1m"] == 3.00
-    assert sonnet["output_usd_per_1m"] == 15.00
+    assert sonnet["input_usd_per_1m"] == 2.00
+    assert sonnet["output_usd_per_1m"] == 10.00
 
     haiku = lookup_model_pricing("global.anthropic.claude-haiku-5-5")
-    assert haiku["input_usd_per_1m"] == 0.80
-    assert haiku["output_usd_per_1m"] == 4.00
+    assert haiku["input_usd_per_1m"] == 0.10
+    assert haiku["output_usd_per_1m"] == 0.50
 
     opus = lookup_model_pricing("global.anthropic.claude-opus-5-5")
-    assert opus["input_usd_per_1m"] == 15.00
-    assert opus["output_usd_per_1m"] == 75.00
+    assert opus["input_usd_per_1m"] == 4.00
+    assert opus["output_usd_per_1m"] == 20.00
 
     # Fallback by substring
-    assert lookup_model_pricing("anthropic.claude-haiku-v1")["input_usd_per_1m"] == 0.80
-    assert lookup_model_pricing("anthropic.claude-opus-v1")["input_usd_per_1m"] == 15.00
-    assert lookup_model_pricing("unknown-model")["input_usd_per_1m"] == 3.00
+    assert lookup_model_pricing("anthropic.claude-haiku-v1")["input_usd_per_1m"] == 0.10
+    assert lookup_model_pricing("anthropic.claude-opus-v1")["input_usd_per_1m"] == 4.00
+    assert lookup_model_pricing("unknown-model")["input_usd_per_1m"] == 2.00
 
 
 def test_calculate_run_cost_empty_trace():
@@ -101,7 +101,7 @@ def test_calculate_run_cost_empty_trace():
     assert cost["is_estimate"] is True
     assert cost["pricing_source"] == config.BEDROCK_PRICE_SOURCE_URL
     assert cost["pricing_date"] == config.BEDROCK_PRICE_DATE
-    assert cost["usd_to_cad_rate"] == 1.40
+    assert cost["usd_to_cad_rate"] == pytest.approx(1.4255)  # last Bank of Canada rate in the data
     assert cost["confidence"] == "assumption"
 
 
@@ -141,15 +141,14 @@ def test_calculate_run_cost_with_llm_entries():
     assert cost["total_latency_ms"] == 770
 
     # Pricing calculation:
-    # Sonnet: (1000 * 3.0 + 200 * 15.0) / 1M = (3000 + 3000) / 1M = 0.006 USD
-    # Haiku: (500 * 0.8 + 100 * 4.0) / 1M = (400 + 400) / 1M = 0.0008 USD
-    # Total USD = 0.0068 USD
-    # Total CAD = 0.0068 * 1.40 = 0.00952 CAD
-    assert cost["cost_usd"] == pytest.approx(0.0068, rel=1e-3)
-    assert cost["cost_cad"] == pytest.approx(0.00952, rel=1e-3)
+    # Sonnet: (1000 * 2.0 + 200 * 10.0) / 1M = 0.004 USD
+    # Haiku: (500 * 0.10 + 100 * 0.50) / 1M = 0.0001 USD
+    # Total CAD = 0.0041 * 1.4255 (Bank of Canada, 2026-11-12)
+    assert cost["cost_usd"] == pytest.approx(0.0041, rel=1e-3)
+    assert cost["cost_cad"] == pytest.approx(0.0041 * 1.4255, rel=1e-3)
 
     models = cost["models"]
     assert "global.anthropic.claude-sonnet-5-5" in models
     assert "global.anthropic.claude-haiku-5-5" in models
-    assert models["global.anthropic.claude-sonnet-5-5"]["cost_usd"] == pytest.approx(0.006)
-    assert models["global.anthropic.claude-haiku-5-5"]["cost_usd"] == pytest.approx(0.0008)
+    assert models["global.anthropic.claude-sonnet-5-5"]["cost_usd"] == pytest.approx(0.004)
+    assert models["global.anthropic.claude-haiku-5-5"]["cost_usd"] == pytest.approx(0.0001)

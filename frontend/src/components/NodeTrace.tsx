@@ -23,8 +23,8 @@ const NODE_LABELS: Record<string, string> = {
   verifier: 'Vérificateur déterministe',
 };
 
-// Fallback pricing table (Bedrock list prices in USD per 1M tokens as of 2026-11-12, 1 USD = 1.40 CAD)
-// Documented assumption source: https://aws.amazon.com/bedrock/pricing/
+// Fallback only, when the server sent no cost block: Anthropic list prices (USD per 1M tokens,
+// 2026-11-03) used as an estimate; the server converts with the Bank of Canada USD/CAD rate.
 const USD_TO_CAD = 1.40;
 
 function calculateEstimatedCad(trace: TraceEntry[]): number {
@@ -35,14 +35,14 @@ function calculateEstimatedCad(trace: TraceEntry[]): number {
     const inTok = entry.input_tokens || 0;
     const outTok = entry.output_tokens || 0;
 
-    let inRate = 3.0; // Sonnet 5.5
-    let outRate = 15.0;
+    let inRate = 2.0; // Sonnet 5.5
+    let outRate = 10.0;
     if (model.includes('opus')) {
-      inRate = 15.0;
-      outRate = 75.0;
+      inRate = 4.0;
+      outRate = 20.0;
     } else if (model.includes('haiku')) {
-      inRate = 0.8;
-      outRate = 4.0;
+      inRate = 0.1;
+      outRate = 0.5;
     }
     totalUsd += (inTok * inRate + outTok * outRate) / 1_000_000.0;
   }
@@ -240,15 +240,15 @@ export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) 
               {/* Assumption & Source URL Citation (PRD 2, O-6) */}
               <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1 border-t border-border/40">
                 <span>
-                  Estimation basée sur la grille tarifaire officielle AWS Bedrock (au 2026-11-12, 1 USD = 1,40 CAD).
+                  Estimation (hypothèse) : tarifs publics d'Anthropic au 2026-11-03, utilisés comme ordre de grandeur ; Amazon Bedrock facture ses propres tarifs. Conversion au dernier taux USD/CAD de la Banque du Canada.
                 </span>
                 <a
-                  href="https://aws.amazon.com/bedrock/pricing/"
+                  href="https://platform.claude.com/docs/en/about-claude/pricing"
                   target="_blank"
                   rel="noreferrer"
                   className="text-primary hover:underline inline-flex items-center gap-0.5"
                 >
-                  Tarifs Bedrock <ExternalLink className="w-2.5 h-2.5" />
+                  Tarifs publics <ExternalLink className="w-2.5 h-2.5" />
                 </a>
               </div>
             </div>

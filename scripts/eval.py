@@ -404,7 +404,7 @@ Une campagne d'évaluation systématique et automatisée a été menée pour val
 {table}
 
 #### Coût et latence par persona (estimations Bedrock)
-Source tarifaire : AWS Bedrock List Prices (2026-11-12, https://aws.amazon.com/bedrock/pricing/, 1 USD = 1.40 CAD)
+Hypothèse tarifaire : tarifs publics d'Anthropic au 2026-11-03 (https://platform.claude.com/docs/en/about-claude/pricing), utilisés comme ordre de grandeur ; Amazon Bedrock facture ses propres tarifs. Conversion au dernier taux USD/CAD de la Banque du Canada.
 
 {cost_table}
 
