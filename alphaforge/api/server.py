@@ -600,6 +600,17 @@ def whatif_run(run_id: str, req: WhatIfRequest, request: Request) -> dict[str, s
     return {"run_id": child_run.run_id, "parent_run_id": parent.run_id}
 
 
+def _final_state(run: Run) -> GraphState | None:
+    """The run's final state, read from the checkpoint if the worker has not stored it yet."""
+    if run.state is not None:
+        return run.state
+    try:
+        state = get_state(run.run_id)
+    except Exception:  # noqa: BLE001
+        return None
+    return state if state.verification is not None else None
+
+
 @app.get("/runs/{run_id}/diff")
 def get_run_diff(run_id: str, request: Request) -> dict[str, Any]:
     run = _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
@@ -610,10 +621,11 @@ def get_run_diff(run_id: str, request: Request) -> dict[str, Any]:
     if parent is None:
         raise HTTPException(status_code=404, detail="Parent run not found")
 
-    if run.state is None or parent.state is None:
+    run_state, parent_state = _final_state(run), _final_state(parent)
+    if run_state is None or parent_state is None:
         raise HTTPException(status_code=400, detail="Both runs must be completed to diff")
 
-    diff = diff_scenarios(parent.state, run.state)
+    diff = diff_scenarios(parent_state, run_state)
     diff["change"] = run.change
     diff["parent_run_id"] = parent.run_id
     diff["child_run_id"] = run.run_id
@@ -625,9 +637,10 @@ def compare_runs(run_a: str, run_b: str, request: Request) -> dict[str, Any]:
     """Compare two completed runs using diff_scenarios (PRD 7, C-9)."""
     r_a = _authorize(store.get(run_a) or _rehydrate_run_from_trace_store(run_a), request)
     r_b = _authorize(store.get(run_b) or _rehydrate_run_from_trace_store(run_b), request)
-    if r_a.state is None or r_b.state is None:
+    s_a, s_b = _final_state(r_a), _final_state(r_b)
+    if s_a is None or s_b is None:
         raise HTTPException(status_code=400, detail="Both runs must be completed to compare")
-    diff = diff_scenarios(r_a.state, r_b.state)
+    diff = diff_scenarios(s_a, s_b)
     diff["run_a_id"] = r_a.run_id
     diff["run_b_id"] = r_b.run_id
     return diff
