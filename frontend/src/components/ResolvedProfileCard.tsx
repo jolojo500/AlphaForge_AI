@@ -78,6 +78,7 @@ const PREFERENCE_LABELS_FR: Record<string, string> = {
   likes_crypto: 'Cryptoactifs',
   wants_diversification: 'Diversification',
   wants_balance: 'Équilibre',
+  esg_tilt: 'Biais ESG (responsable)',
 };
 
 const PREFERENCE_LABELS_EN: Record<string, string> = {
@@ -85,6 +86,7 @@ const PREFERENCE_LABELS_EN: Record<string, string> = {
   likes_crypto: 'Cryptoassets',
   wants_diversification: 'Diversification',
   wants_balance: 'Balance',
+  esg_tilt: 'ESG Tilt (responsible)',
 };
 
 const ACCOUNT_TYPE_LABELS_FR: Record<string, string> = {

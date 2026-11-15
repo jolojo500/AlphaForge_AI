@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 import re
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,7 @@ from alphaforge.costs import (
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import concentration, max_drawdown, stress_2022, volatility
+from alphaforge.nodes.screening import HOLDINGS_DIR, load_esgv
 from alphaforge.personas import PERSONAS
 from alphaforge.state import (
     SCENARIO_METRICS,
@@ -63,6 +65,7 @@ CONCENTRATION_SHARE = 0.8  # a line cited for concentration keeps 80 % of its ca
 _OVERLAP_RE = re.compile(r"chevauch|overlap|double emploi|détient déjà|deja|déjà")
 _DROP_RE = re.compile(r"exclu|controvers|esg|contradi|interdit")
 _CONC_RE = re.compile(r"concentr|taux|obligat|secteur|duration|devise|currency|rate|sensib")
+ESG_TILT_NON_MEMBER_REDUCTION = 0.50  # fixed factor reducing non-member equity weight by 50%
 SOURCE = "prices_daily.csv + fx_usdcad_daily.csv"
 METHODS = {
     "volatility_ann": "annualised std of daily log returns of the scenario rebalanced daily, CAD",
@@ -73,6 +76,7 @@ METHODS = {
     "us_exposure": "weight in US-listed assets (crypto not counted)",
     "tax_drag": "estimated annual tax drag based on historical dividend/interest yields and account tax rules",
     "fee_drag": "weighted average management expense ratio (MER) across holdings",
+    "esg_proxy_share": "part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect)",
 }
 
 
@@ -207,6 +211,95 @@ def optimize(
 # --- scenarios ----------------------------------------------------------------------------
 
 
+def calculate_esg_proxy_share(
+    weights: pd.Series | dict[str, float],
+    holdings_dir: Path | str | dt.date | None = None,
+    as_of: dt.date | str | None = None,
+) -> float:
+    """Share of the portfolio in ESG-proxy assets (ESGV holdings or ESGV ETF)."""
+    w = weights.to_dict() if isinstance(weights, pd.Series) else dict(weights)
+    esgv = load_esgv(holdings_dir=holdings_dir, as_of=as_of)
+    held = {h.get("ticker") for h in (esgv or {}).get("holdings", [])}
+    held.add("ESGV")
+    return float(sum(float(weight) for ticker, weight in w.items() if ticker in held))
+
+
+def apply_esg_tilt(
+    weights: pd.Series,
+    universe: list[str],
+    info: pd.DataFrame,
+    caps: dict,
+    esg_proxy_set: set[str],
+    fixed: dict[str, float] | None = None,
+    reduction_factor: float = ESG_TILT_NON_MEMBER_REDUCTION,
+) -> pd.Series:
+    """Deterministic tilt favouring covered ESG-proxy assets inside existing caps.
+
+    Among equity lines, reduces non-member equity weights by `reduction_factor`
+    and reallocates the released weight to eligible ESG-proxy equity assets
+    (ESGV ETF and ESGV-member stocks) without exceeding any asset cap.
+    Non-equity lines (bonds, crypto, gold) and fixed weights are untouched.
+    """
+    fixed = fixed or {}
+    w = weights.copy()
+    tickers = list(w.index)
+
+    non_member_eq = [
+        t for t in tickers
+        if info.at[t, "asset_class"] in EQUITY_CLASSES
+        and t not in esg_proxy_set
+        and t not in fixed
+    ]
+    member_eq = [
+        t for t in universe
+        if info.at[t, "asset_class"] in EQUITY_CLASSES
+        and t in esg_proxy_set
+        and t not in fixed
+    ]
+
+    if not non_member_eq or not member_eq:
+        return _clean(w)
+
+    released = 0.0
+    for t in non_member_eq:
+        reduction = w[t] * reduction_factor
+        w[t] -= reduction
+        released += reduction
+
+    if released <= 1e-9:
+        return _clean(w)
+
+    ub_dict = {t: float(_asset_caps([t], info, caps)[0]) for t in member_eq}
+    cur_weights = {t: float(w.get(t, 0.0)) for t in member_eq}
+    headroom = {t: max(0.0, ub_dict[t] - cur_weights[t]) for t in member_eq}
+    total_headroom = sum(headroom.values())
+
+    if total_headroom <= 1e-9:
+        for t in non_member_eq:
+            w[t] += released * (w[t] / sum(w[t] for t in non_member_eq))
+        return _clean(w)
+
+    alloc = min(released, total_headroom)
+    # Prefer ESGV ETF first if eligible, then member stocks sorted by headroom
+    for t in sorted(member_eq, key=lambda x: (x != "ESGV", -headroom[x], x)):
+        add = min(headroom[t], alloc)
+        cur_weights[t] += add
+        alloc -= add
+        if alloc <= 1e-9:
+            break
+
+    for t, new_val in cur_weights.items():
+        w[t] = new_val
+
+    leftover = released - min(released, total_headroom)
+    if leftover > 1e-9:
+        sum_non = sum(w[t] for t in non_member_eq)
+        for t in non_member_eq:
+            w[t] += leftover * (w[t] / sum_non)
+
+    return _clean(w)
+
+
 def _preference_portfolio(profile: Profile, universe: list[str], info: pd.DataFrame) -> pd.Series:
     sectors = set().union(*(PREFERENCE_SECTORS.get(p, set()) for p in profile.preferences))
     picks = [t for t in universe if info.at[t, "sector"] in sectors] or list(universe)
@@ -236,6 +329,7 @@ def build_scenarios(
 
     idea = profile.requested_idea if profile.request_type == "judge" else None
     ticker = idea.get("ticker") if idea else None
+    w_cap = 0.0
     if ticker in prices.columns:
         w_req = min(max(float(idea.get("weight") or DEFAULT_IDEA_WEIGHT), 0.0), 1.0)
         if current_weights is not None:
@@ -255,6 +349,13 @@ def build_scenarios(
         as_requested = _preference_portfolio(profile, universe, info)
         capped = optimize(cov, info, caps, target=as_requested, equity_floor=False)
 
+    if "esg_tilt" in profile.preferences:
+        esgv = load_esgv()
+        esg_proxy_set = {h.get("ticker") for h in (esgv or {}).get("holdings", [])} | {"ESGV"}
+        fixed_capped = {ticker: w_cap} if (ticker and ticker in universe) else {}
+        capped = apply_esg_tilt(capped, universe, info, caps, esg_proxy_set, fixed=fixed_capped)
+        baseline = apply_esg_tilt(baseline, universe, info, caps, esg_proxy_set)
+
     weights = {"as_requested": _clean(as_requested), "capped": capped, "profile_baseline": baseline}
     if current_weights is not None:
         weights["current"] = _clean(current_weights)
@@ -268,6 +369,7 @@ def scenario_metrics(
     *,
     account_type: str = "non_registered",
     as_of: dt.date | None = None,
+    holdings_dir: Path | str | dt.date | None = None,
 ) -> dict:
     """The fixed metric values (PRD 3.3, Issue #118, #119), computed with quant, tax and cost functions."""
     w = weights.to_dict()
@@ -276,6 +378,7 @@ def scenario_metrics(
     tax_date = as_of or (prices.index[-1].date() if len(prices) else dt.date.today())
     tax_d = scenario_tax_drag(weights, account_type, tax_date, info)
     fee_d = calculate_fee_drag(weights, info)
+    esg_s = calculate_esg_proxy_share(weights, holdings_dir=holdings_dir, as_of=tax_date)
     return {
         "volatility_ann": volatility(prices, w),
         "max_drawdown": max_drawdown(prices, w),
@@ -285,6 +388,7 @@ def scenario_metrics(
         "us_exposure": conc["us_exposure"],
         "tax_drag": tax_d,
         "fee_drag": fee_d,
+        "esg_proxy_share": esg_s,
     }
 
 
@@ -388,6 +492,8 @@ def _template_notes(
         )
         if "tax_drag" in ids and values.get("tax_drag") is not None:
             risk += f" Estimated annual tax drag {_pct(values['tax_drag'])} ({ids['tax_drag']})."
+        if "esg_proxy_share" in ids and values.get("esg_proxy_share") is not None:
+            risk += f" ESG proxy share {_pct(values['esg_proxy_share'])} ({ids['esg_proxy_share']})."
         if name == "as_requested":
             if requested in weights:
                 head = (
@@ -422,6 +528,8 @@ def _template_notes(
         )
         if "tax_drag" in ids and values.get("tax_drag") is not None:
             risk += f" Friction fiscale annuelle estimée {_pct(values['tax_drag'])} ({ids['tax_drag']})."
+        if "esg_proxy_share" in ids and values.get("esg_proxy_share") is not None:
+            risk += f" Part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect) : {_pct(values['esg_proxy_share'])} ({ids['esg_proxy_share']})."
         if name == "as_requested":
             if requested in weights:
                 head = (
@@ -453,6 +561,14 @@ def _template_notes(
     loc_note = asset_location_note(account_type)
     if loc_note and loc_note not in notes:
         notes.append(loc_note)
+    if "esg_proxy_share" in ids:
+        esg_limit_note = (
+            "Share of the portfolio in assets held by the ESGV fund (indirect indicator): limited to U.S. equities, not an ESG score nor a sustainability guarantee."
+            if is_en
+            else "Part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect) : limitée aux actions américaines, ne constitue pas un score ESG ni une garantie de durabilité."
+        )
+        if esg_limit_note not in notes:
+            notes.append(esg_limit_note)
     return notes
 
 
@@ -627,6 +743,50 @@ def scenarios_node(state: GraphState) -> dict:
                 url="https://www.blackrock.com/ca/investors/en/products/product-list",
                 date=end,
                 method=f"{METHODS['fee_drag']}, moyenne pondérée des RFG de l'allocation",
+                confidence="assumption",
+            )
+
+    # Pass 2c: ESG tilt proxy assumption evidence and scenario metric
+    if "esg_tilt" in profile.preferences:
+        esgv_doc = load_esgv(HOLDINGS_DIR, as_of=as_of)
+        esgv_date_str = esgv_doc.get("as_of", "2026-09-30") if esgv_doc else "2026-09-30"
+        try:
+            esgv_date = dt.date.fromisoformat(esgv_date_str)
+        except ValueError:
+            esgv_date = as_of
+        source_url = (
+            esgv_doc.get("source_url")
+            if esgv_doc
+            else "https://investor.vanguard.com/investment-products/etfs/profile/esgv"
+        )
+        held_tickers = {h.get("ticker") for h in (esgv_doc or {}).get("holdings", [])} | {"ESGV"}
+        eligible_proxy = sorted(set(eligible) & held_tickers)
+        proxy_tickers_str = ", ".join(eligible_proxy)
+
+        reg.add(
+            f"Proxy ESG (préférence esg_tilt) : titres admissibles membres du fonds Vanguard ESGV ou le FNB lui-même ({proxy_tickers_str}) au {esgv_date_str}. "
+            "Limites méthodologiques : actions américaines uniquement, l'appartenance n'est pas un score ESG continu, "
+            "les actions canadiennes, obligations et or ne sont pas couverts par ce filtre.",
+            source="Vanguard ESGV holdings",
+            url=source_url,
+            date=esgv_date,
+            method=f"proxy ESG via composition ESGV au {esgv_date_str} : actions américaines uniquement, l'appartenance n'est pas un score, actions canadiennes/obligations/or non couvertes",
+            confidence="assumption",
+        )
+
+        for name in SCENARIO_NAMES:
+            values = all_values[name]
+            scenario_ids[name]["esg_proxy_share"] = reg.add(
+                {
+                    "metric": "esg_proxy_share",
+                    "scenario": name,
+                    "value": values["esg_proxy_share"],
+                    "unit": "ratio",
+                },
+                source="Vanguard ESGV holdings",
+                url=source_url,
+                date=esgv_date,
+                method="part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect)",
                 confidence="assumption",
             )
 
@@ -861,6 +1021,20 @@ def scenarios_node(state: GraphState) -> dict:
                     method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}",
                     confidence="fact" if values_curr[m] is not None else "assumption",
                 )
+        if "esg_tilt" in profile.preferences:
+            ids_curr["esg_proxy_share"] = reg.add(
+                {
+                    "metric": "esg_proxy_share",
+                    "scenario": "current",
+                    "value": values_curr["esg_proxy_share"],
+                    "unit": "ratio",
+                },
+                source="Vanguard ESGV holdings",
+                url=source_url,
+                date=esgv_date,
+                method="part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect), portefeuille actuel",
+                confidence="assumption",
+            )
         stats_1y_curr = rolling_returns_stats(prices, w_curr, window_years=1)
         stats_3y_curr = rolling_returns_stats(prices, w_curr, window_years=3)
         outcomes_curr = {

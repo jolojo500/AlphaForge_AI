@@ -65,9 +65,28 @@ _WORD_WEIGHTS = [
 ]
 # A request is specific enough to build from if it names any of these.
 _INTENT_RE = re.compile(
-    r"portefeuille|allocation|r[ée]partition|[ée]quilibr|diversifi|responsable|esg|"
+    r"portefeuille|allocation|r[ée]partition|[ée]quilibr|diversifi|responsable|durable|esg|"
     r"horizon|\bans?\b|retraite|crypto|techno|action|obligation|fnb|etf|revenu|"
-    r"pr[ée]serv|croissance|risque|\$|%|\d|portfolio|balanced|growth|income|years?",
+    r"pr[ée]serv|croissance|risque|\$|%|\d|portfolio|balanced|growth|income|years?|sustainable",
+    re.I,
+)
+
+STRICT_ESG_RE = re.compile(
+    r"\b(?:sans\s+[ée]nergies?(?:\s+fossiles?)?|sans\s+p[ée]trole|fossil[- ]free|no\s+fossil(?:\s+fuels?)?|"
+    r"uniquement\s+esg|only\s+esg|strictly\s+esg|strictement\s+esg|"
+    r"(?:exclure|exclusion)\s+.*?(?:esg|fossile|p[ée]trole|non[- ]esg)|"
+    r"exclude\s+.*?(?:esg|fossil|oil|non[- ]esg))\b",
+    re.I,
+)
+
+SOFT_ESG_RE = re.compile(
+    r"\b(?:meilleur(?:e?s?)?\s+(?:profil\s+)?esg|better\s+esg|"
+    r"plus\s+responsable(?:s)?|more\s+responsible|"
+    r"plus\s+durable(?:s)?|more\s+sustainable|"
+    r"(?:favoriser|privil[ée]gier|tilt|biais|orientation|accent)\s+(?:sur\s+|vers\s+|en\s+|pour\s+)?(?:l'|le\s+|les\s+)?esg|"
+    r"(?:favor|favour|prefer)\s+(?:the\s+)?esg|esg\s+tilt|"
+    r"(?:pr[ée]f[ée]rence|souhait)\s+(?:pour\s+|en\s+)?(?:l'|le\s+)?esg|esg\s+preference|"
+    r"sensible\s+[àa]\s+(?:l'|le\s+)?esg)\b",
     re.I,
 )
 
@@ -95,7 +114,10 @@ SYSTEM = (
     "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
     "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
     "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
-    "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income). "
+    "Strict wording ('sans énergies fossiles', 'uniquement ESG', 'exclure') maps to extra_constraints: esg_only. "
+    "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income, esg_tilt). "
+    "Soft ESG wishes ('meilleur ESG', 'plus responsable', 'plus durable', 'better ESG', 'more sustainable') "
+    "map to extra_preferences: esg_tilt. "
     "conflicts: up to 2 short French sentences about a contradiction between the request and "
     "the persona hypotheses, or an empty list. No advice, no forecast."
 )
@@ -175,12 +197,22 @@ def _regex_extract(text: str) -> Extraction:
         act = "mixed"
     elif re.search(r"\b(?:non[- ]enregistr[ée]|taxable|imposable)\b", lowered):
         act = "non_registered"
+
+    extra_constraints: list[str] = []
+    extra_preferences: list[str] = []
+    if STRICT_ESG_RE.search(lowered):
+        extra_constraints.append("esg_only")
+    elif SOFT_ESG_RE.search(lowered):
+        extra_preferences.append("esg_tilt")
+
     return Extraction(
         request_type="judge" if ticker else "build",
         ticker=ticker,
         weight_pct=weight,
         horizon_years=horizon,
         account_type=act,
+        extra_constraints=extra_constraints,
+        extra_preferences=extra_preferences,
     )
 
 
@@ -228,11 +260,22 @@ def extract_profile(
         "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
         "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
         "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
-        "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income). "
+        "Strict wording ('sans énergies fossiles', 'uniquement ESG', 'exclure') maps to extra_constraints: esg_only. "
+        "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income, esg_tilt). "
+        "Soft ESG wishes ('meilleur ESG', 'plus responsable', 'plus durable', 'better ESG', 'more sustainable') "
+        "map to extra_preferences: esg_tilt. "
         f"{conflicts_inst}"
     )
     try:
-        return llm.call_json(prompt, Extraction, kind=kind, system=system, llm=llm_client), False
+        res = llm.call_json(prompt, Extraction, kind=kind, system=system, llm=llm_client)
+        lowered_p = primary_text.lower()
+        if STRICT_ESG_RE.search(lowered_p) and "esg_only" not in res.extra_constraints:
+            res.extra_constraints.append("esg_only")
+            if "esg_tilt" in res.extra_preferences:
+                res.extra_preferences.remove("esg_tilt")
+        elif not STRICT_ESG_RE.search(lowered_p) and SOFT_ESG_RE.search(lowered_p) and "esg_tilt" not in res.extra_preferences:
+            res.extra_preferences.append("esg_tilt")
+        return res, False
     except llm.LLMError:
         return _regex_extract(text), True
 
