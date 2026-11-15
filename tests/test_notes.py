@@ -31,7 +31,7 @@ def test_one_call_for_three_scenarios_and_valid_notes_replace_templates(base):
         calls.append(kind)
         return reply(
             as_requested=[{"claim": "Perte maximale historique de 23,2 %, la plus forte des trois.", "evidence": [m["as_requested"]["max_drawdown"]]}],
-            capped=[{"claim": "Le plafond réduit la perte historique à 6,1 %.", "evidence": [m["capped"]["max_drawdown"]]}],
+            capped=[{"claim": "Le plafond réduit la perte historique à 5,7 %.", "evidence": [m["capped"]["max_drawdown"]]}],
             profile_baseline=[{"claim": "La volatilité historique la plus basse du comparatif.", "evidence": [m["profile_baseline"]["volatility_ann"]]}],
         )
 

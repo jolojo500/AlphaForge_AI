@@ -31,6 +31,11 @@ def apply_change(
     if field == "risk_tolerance":
         return profile.model_copy(update={"risk_tolerance": str(value)})
 
+    if field == "risk_capacity":
+        if str(value) not in ("low", "moderate", "high"):
+            raise ValueError("risk_capacity must be low, moderate or high")
+        return profile.model_copy(update={"risk_capacity": str(value)})
+
     if field in ("exclude_ticker", "exclude_asset"):
         ticker = str(value).upper()
         current = list(profile.excluded_tickers)

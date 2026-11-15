@@ -248,3 +248,12 @@ def test_live_canonical_requests(persona):
         assert p.conflicts
     else:
         assert p.request_type == "build"
+
+
+def test_tolerance_far_above_capacity_is_a_conflict():
+    from alphaforge.nodes.profile import detect_conflict
+
+    out = detect_conflict(tolerance="high", horizon_years=10, constraints=[], idea=None, capacity="low")
+    assert any("capacité" in c for c in out)
+    assert not detect_conflict(tolerance="low_moderate", horizon_years=4, constraints=[], idea=None,
+                               capacity="low")

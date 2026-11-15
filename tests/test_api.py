@@ -270,7 +270,7 @@ def test_whatif_api_flow():
     diff = diff_resp.json()
     assert "scenarios" in diff
     assert "capped" in diff["scenarios"]
-    assert diff["scenarios"]["capped"]["weights"]["TSLA"]["old"] == pytest.approx(0.05)
+    assert diff["scenarios"]["capped"]["weights"]["TSLA"]["old"] == pytest.approx(0.03)  # capacity low binds (#115)
 
     # Compare two runs via /runs/compare (C-9)
     compare_resp = client.get(f"/runs/compare?run_a={parent_id}&run_b={child_id}")

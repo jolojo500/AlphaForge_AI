@@ -18,7 +18,14 @@ from scipy.optimize import minimize
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import concentration, max_drawdown, stress_2022, volatility
-from alphaforge.state import SCENARIO_METRICS, SCENARIO_NAMES, GraphState, Profile, Scenario
+from alphaforge.state import (
+    SCENARIO_METRICS,
+    SCENARIO_NAMES,
+    GraphState,
+    Profile,
+    Scenario,
+    effective_risk,
+)
 from alphaforge.tracing import traced
 
 try:  # Track B supplies LLM-drafted notes in B-6; templated notes until then
@@ -56,7 +63,7 @@ METHODS = {
 
 
 def caps_for(profile: Profile, rounds: int = 0) -> dict[str, float]:
-    caps = dict(CAPS.get(profile.risk_tolerance, CAPS["moderate"]))
+    caps = dict(CAPS.get(effective_risk(profile.risk_tolerance, profile.risk_capacity), CAPS["moderate"]))
     if rounds:
         f = TIGHTEN**rounds
         for k in ("single_stock", "etf", "crypto_total", "equity_max"):
@@ -333,11 +340,24 @@ def scenarios_node(state: GraphState) -> dict:
     weights, caps = build_scenarios(profile, eligible, prices, info, rounds=rounds, drop=drop)
 
     as_of = state.as_of_date
+    level = effective_risk(profile.risk_tolerance, profile.risk_capacity)
+    binding = (
+        "la capacité de risque"
+        if level != profile.risk_tolerance
+        else "la tolérance au risque"
+    )
     caps_eid = reg.add(
-        {"metric": "caps", "tolerance": profile.risk_tolerance, "value": _caps_text(caps)},
+        {
+            "metric": "caps",
+            "tolerance": profile.risk_tolerance,
+            "capacity": profile.risk_capacity,
+            "effective": level,
+            "value": f"{_caps_text(caps)} ; niveau retenu : {level}, fixé par {binding}",
+        },
         source="PRD 5.7 caps table",
         date=as_of,
-        method=f"caps for risk tolerance {profile.risk_tolerance}"
+        method=f"caps for the lower of tolerance ({profile.risk_tolerance}) and capacity "
+        f"({profile.risk_capacity}) = {level}"
         + (f", tightened x{TIGHTEN**rounds:.2f} after objections" if rounds else ""),
         confidence="assumption",
     )
