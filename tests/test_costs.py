@@ -55,7 +55,7 @@ def test_fx_conversion_cost_assumption():
 
 
 def test_capital_preservation_foreign_bond_cap_in_caps_for():
-    # Robert is capital_preservation -> foreign_fixed_income_unhedged cap = 0.0
+    # Robert is capital_preservation -> foreign_fixed_income_unhedged cap = 12.5 % per ETF
     p_robert = Profile(
         persona="robert",
         objective="capital_preservation",
@@ -65,7 +65,7 @@ def test_capital_preservation_foreign_bond_cap_in_caps_for():
     )
     caps_r = caps_for(p_robert)
     assert caps_r.get("foreign_fixed_income_unhedged") == CAPITAL_PRESERVATION_FOREIGN_BOND_CAP
-    assert caps_r["foreign_fixed_income_unhedged"] == 0.0
+    assert caps_r["foreign_fixed_income_unhedged"] == 0.125
 
     # Amira is growth -> no foreign fixed income cap
     p_amira = Profile(
@@ -83,7 +83,7 @@ def test_capital_preservation_evidence():
     ev = capital_preservation_foreign_bond_evidence(dt.date(2026, 11, 12))
     assert ev["confidence"] == "assumption"
     assert ev["url"] == FOREIGN_BOND_URL
-    assert ev["value"]["cap"] == 0.0
+    assert ev["value"]["cap"] == 0.125
     assert "AGG" in ev["value"]["reason"]
 
 
@@ -116,10 +116,10 @@ def test_scenarios_node_includes_fee_drag_and_assumptions():
         assert eid in ev
         assert ev[eid].confidence == "assumption"
         assert ev[eid].value["metric"] == "fee_drag"
-        # Foreign bonds AGG and TLT should be 0.0 in capped and profile_baseline
+        # Each unhedged foreign bond ETF stays at or under 12.5 % in capped and profile_baseline
         if sc.name in ("capped", "profile_baseline"):
-            assert sc.weights.get("AGG", 0.0) == 0.0
-            assert sc.weights.get("TLT", 0.0) == 0.0
+            assert sc.weights.get("AGG", 0.0) <= 0.125 + 1e-6
+            assert sc.weights.get("TLT", 0.0) <= 0.125 + 1e-6
 
     # Sourced ETF MER entries exist
     etf_mer_entries = [e for e in ev.values() if isinstance(e.value, dict) and e.value.get("metric") == "etf_mer"]

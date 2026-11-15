@@ -91,14 +91,16 @@ NORBERTS_GAMBIT_NOTE = (
 )
 
 # Currency cap for capital preservation profiles
-CAPITAL_PRESERVATION_FOREIGN_BOND_CAP = 0.0
-FOREIGN_BOND_SOURCE = "Normes de gestion de portefeuille et d'allocation d'actifs (CFA Institute / FP Canada)"
+CAPITAL_PRESERVATION_FOREIGN_BOND_CAP = 0.125
+FOREIGN_BOND_SOURCE = "Règle de conception AlphaForge (hypothèse) ; contexte : gestion du risque de change, CFA Institute"
 FOREIGN_BOND_URL = "https://www.cfainstitute.org/en/membership/professional-development/refresher-readings/currency-management"
 FOREIGN_BOND_REASON = (
-    "Pour un profil visant la préservation du capital, l'exposition aux obligations étrangères "
-    "non couvertes en devises (ex. AGG, TLT) est plafonnée à 0,0 % afin d'éviter le risque de change non rémunéré. "
-    "L'univers ne comportant pas de FNB obligataire international couvert en CAD (CAD-hedged), "
-    "l'allocation obligataire est concentrée sur les titres canadiens en CAD (XBB.TO, ZST.TO)."
+    "Pour un profil visant la préservation du capital, chaque FNB obligataire étranger non couvert "
+    "en devises (AGG, TLT) est plafonné à 12,5 % afin de limiter le risque de change non rémunéré. "
+    "Limite de l'univers : il ne contient que deux FNB obligataires canadiens (XBB.TO, ZST.TO, "
+    "25 % chacun au plus) et aucun FNB obligataire couvert en CAD ; environ 25 % du portefeuille "
+    "reste donc exposé au dollar américain (obligations américaines ou or). Un plafond à 0 % ne "
+    "ferait que déplacer cette part vers l'or, plus volatil."
 )
 
 
