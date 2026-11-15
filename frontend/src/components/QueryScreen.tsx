@@ -4,6 +4,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { UserOnboardingProfile, BackendRunPayload } from '../types';
 import { ArrowUpRight, Settings, RotateCcw } from 'lucide-react';
 import { prepareBackendPayload } from '../api';
+import { DemoPersonas } from './DemoPersonas';
 import { PayloadModal } from './PayloadModal';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,9 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
             </p>
           </div>
         </form>
+        <div className="pt-6">
+          <DemoPersonas onPick={(persona, request_text) => onRunQuery({ persona, request_text })} />
+        </div>
       </div>
 
       {/* Empty bottom spacer for perfect centering */}

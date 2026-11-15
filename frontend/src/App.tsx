@@ -13,7 +13,6 @@ import {
   answerRun,
   createWhatIf,
   fetchRunDiff,
-  createMockAnalysisState,
 } from './api';
 import { ThemeProvider } from './components/ThemeProvider';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -178,16 +177,9 @@ export const AppContent: React.FC = () => {
       unsubscribeRef.current = unsub;
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.warn('Backend call failed, using fallback mode:', errorMessage);
-      if (userProfile) {
-        setRunError(
-          `Connexion au backend impossible (${errorMessage}). Affichage des résultats prévisionnels en mode secours.`
-        );
-        const fallbackState = createMockAnalysisState(userProfile, payload.request_text);
-        setRunState(fallbackState);
-      } else {
-        setRunError(errorMessage || 'Erreur lors du démarrage du calcul');
-      }
+      setRunError(
+        `Connexion au moteur d'analyse impossible (${errorMessage}). Aucun résultat n'est affiché : réessayez.`
+      );
       setIsRunning(false);
     }
   };
@@ -265,7 +257,12 @@ export const AppContent: React.FC = () => {
 
   // View 1: Welcome screen (First time user with no localStorage)
   if (view === 'welcome') {
-    return <WelcomeScreen onStart={() => setView('onboarding')} />;
+    return (
+      <WelcomeScreen
+        onStart={() => setView('onboarding')}
+        onDemo={(persona, request_text) => handleStartRun({ persona, request_text })}
+      />
+    );
   }
 
   // View 2: Onboarding Questionnaire (5 steps)

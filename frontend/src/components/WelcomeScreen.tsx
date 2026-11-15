@@ -3,12 +3,14 @@ import { Logo } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { DemoPersonas } from './DemoPersonas';
 
 interface WelcomeScreenProps {
   onStart: () => void;
+  onDemo: (personaId: string, requestText: string) => void;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart, onDemo }) => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-between px-4 py-6 transition-colors">
       {/* Top Bar with Theme Toggle */}
@@ -29,11 +31,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
+        <DemoPersonas onPick={onDemo} />
       </div>
 
       {/* Discreet footer */}
       <div className="text-[11px] text-muted-foreground/60 select-none text-center">
-        Moteur d'aide à la décision financière · PolyFinances 2026
+        Simulation éducative · Aucun conseil personnalisé · PolyFinances 2026
       </div>
     </div>
   );

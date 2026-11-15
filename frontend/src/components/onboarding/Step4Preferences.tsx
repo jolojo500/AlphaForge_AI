@@ -52,8 +52,6 @@ export const Step4Preferences: React.FC<Step4Props> = ({
 
   const exclusionChoices = [
     'Énergies fossiles & controverses climatiques',
-    'Armement, tabac & jeux d’argent',
-    'Titres hautement spéculatifs non rentables',
     'Cryptoactifs & devises virtuelles',
     'Aucune exclusion particulière',
   ];

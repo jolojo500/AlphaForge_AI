@@ -170,14 +170,20 @@ export function prepareBackendPayload(
   }
   if (profile.excludedCategories) {
     profile.excludedCategories.forEach((ex) => {
-      if (ex.includes('controverses')) constraints.push('no_controversies');
-      if (ex.includes('tabac') || ex.includes('armes')) constraints.push('no_weapons_tobacco');
-      if (ex.includes('spéculatifs')) constraints.push('no_speculation');
+      // Only constraints the engine implements are sent (see screening.py).
+      if (ex.includes('fossiles')) constraints.push('esg_only', 'no_controversies');
       if (ex.includes('Cryptoactifs')) constraints.push('no_crypto');
     });
   }
 
-  const preferences: string[] = [...profile.interestedSectors];
+  // Map questionnaire labels to the preference tokens the scenario builder understands
+  // (PREFERENCE_SECTORS in alphaforge/nodes/scenarios.py); other labels pass through.
+  const preferences: string[] = profile.interestedSectors.map((s) =>
+    /tech|ia\b/i.test(s) ? 'likes_tech' : s
+  );
+  if (/modérée|majeurs/i.test(profile.cryptoPreference) && !preferences.includes('likes_crypto')) {
+    preferences.push('likes_crypto');
+  }
   if (profile.currencyPreference.includes('CAD')) {
     preferences.push('prefers_cad');
   }
@@ -191,7 +197,7 @@ export function prepareBackendPayload(
       horizon_years: horizonYears,
       risk_tolerance: riskTolerance,
       risk_capacity: riskCapacity,
-      constraints,
+      constraints: Array.from(new Set(constraints)),
       preferences,
       budget_cad: profile.simulatedCapital,
       notes: profile.additionalNotes,
@@ -200,226 +206,4 @@ export function prepareBackendPayload(
 
   console.log('[AlphaForge] Payload prepared for backend execution:', payload);
   return payload;
-}
-
-/**
- * Creates simulated GraphState to preview multi-agent analysis results
- * without requiring the FastAPI backend to be live.
- */
-export function createMockAnalysisState(
-  profile: UserOnboardingProfile,
-  requestText: string
-): GraphState {
-  const isNvda = requestText.toLowerCase().includes('nvda') || requestText.toLowerCase().includes('nvidia');
-
-  return {
-    as_of_date: '2026-02-14',
-    persona: 'robert',
-    request_text: requestText,
-    profile: {
-      persona: 'robert',
-      objective: 'capital_preservation',
-      horizon_years: 4,
-      risk_tolerance: 'low_moderate',
-      risk_capacity: 'low',
-      constraints: ['no_crypto'],
-      preferences: profile.interestedSectors,
-      budget_cad: profile.simulatedCapital,
-      request_type: isNvda ? 'judge' : 'build',
-      requested_idea: isNvda ? { ticker: 'NVDA', weight: 0.25 } : null,
-      excluded_tickers: ['BTC', 'ETH', 'SOL'],
-      conflicts: isNvda
-        ? [
-            `25% dans NVDA face à une tolérance au risque Faible à modéré et un horizon de 4 ans (${profile.primaryObjective}).`,
-            'Volatilité du titre (38%) incohérente avec la préservation du capital à court terme.',
-          ]
-        : [],
-      clarification_needed: null,
-    },
-    eligible_universe: ['NVDA', 'MSFT', 'XBB.TO', 'VDY.TO', 'ZAG.TO', 'XIU.TO'],
-    exclusions: [
-      {
-        ticker: 'SOL',
-        reason: 'Cryptoactif exclu par la contrainte de profil (Exclusion totale 0%).',
-        evidence_id: 'ev_rule_crypto',
-      },
-      {
-        ticker: 'BTC',
-        reason: 'Cryptoactif exclu par la contrainte de profil (Exclusion totale 0%).',
-        evidence_id: 'ev_rule_crypto',
-      },
-    ],
-    evidence: {
-      ev_rule_crypto: {
-        id: 'ev_rule_crypto',
-        value: 'Exclusion crypto 0%',
-        source: 'Profil investisseur questionnaire (Étape 04)',
-        date: '2026-02-14',
-        date_kind: 'observation',
-        url: null,
-        method: 'Contrainte stricte utilisateur',
-        confidence: 'fact',
-      },
-      ev_nvda_vol: {
-        id: 'ev_nvda_vol',
-        value: '38.4% annualisée',
-        source: 'Données historiques Yahoo Finance / BNCD',
-        date: '2026-02-10',
-        date_kind: 'observation',
-        url: 'https://finance.yahoo.com/quote/NVDA',
-        method: 'Écart-type des rendements logarithmiques sur 3 ans',
-        confidence: 'fact',
-      },
-      ev_nvda_stress: {
-        id: 'ev_nvda_stress',
-        value: '-50.3%',
-        source: 'Simulation historique Stress Test 2022',
-        date: '2026-02-14',
-        date_kind: 'observation',
-        url: null,
-        method: 'Backtest drawdowns 2022',
-        confidence: 'fact',
-      },
-    },
-    events: [
-      {
-        ticker: 'NVDA',
-        headline: 'Croissance des centres de données IA et demande record',
-        published_at: '2026-02-12',
-        relevant: true,
-        kind: 'earnings',
-        risk_type: 'market',
-        material: true,
-        evidence_id: 'ev_nvda_vol',
-      },
-    ],
-    scenarios: [
-      {
-        name: 'as_requested',
-        weights: { NVDA: 0.25, 'XBB.TO': 0.45, 'VDY.TO': 0.30 },
-        metrics: {
-          volatility_ann: '15.8%',
-          max_drawdown: '-22.4%',
-          stress_2022: '-18.1%',
-          top_weight: '45% (XBB.TO)',
-          sector_concentration_hhi: '0.28',
-          us_exposure: '25%',
-        },
-        notes: [
-          'Scénario incluant 25% de NVDA tel que demandé.',
-          'Dépasse le seuil de volatilité toléré pour une retraite dans 4 ans.',
-        ],
-      },
-      {
-        name: 'capped',
-        weights: { NVDA: 0.08, 'XBB.TO': 0.52, 'VDY.TO': 0.40 },
-        metrics: {
-          volatility_ann: '9.2%',
-          max_drawdown: '-11.3%',
-          stress_2022: '-9.5%',
-          top_weight: '52% (XBB.TO)',
-          sector_concentration_hhi: '0.22',
-          us_exposure: '8%',
-        },
-        notes: [
-          'Exposition NVDA plafonnée à 8% pour respecter la baisse maximale tolérée de 15%.',
-          'Pondération renforcée en obligations canadiennes (XBB.TO) et dividendes (VDY.TO).',
-        ],
-      },
-      {
-        name: 'profile_baseline',
-        weights: { 'XBB.TO': 0.60, 'VDY.TO': 0.30, 'XIU.TO': 0.10 },
-        metrics: {
-          volatility_ann: '7.1%',
-          max_drawdown: '-8.2%',
-          stress_2022: '-7.0%',
-          top_weight: '60% (XBB.TO)',
-          sector_concentration_hhi: '0.20',
-          us_exposure: '0%',
-        },
-        notes: [
-          'Portefeuille de référence 100% aligné sur la préservation du capital sans titre individuel volatil.',
-        ],
-      },
-    ],
-    objections: [
-      {
-        scenario: 'as_requested',
-        objection:
-          'Une pondération de 25% dans une action de croissance technologique fait courir un risque de baisse de 22%, supérieur au seuil toléré de 15%.',
-        evidence: ['ev_nvda_vol', 'ev_nvda_stress'],
-        severity: 'blocking',
-      },
-    ],
-    explanation: {
-      resume:
-        'Pour un départ à la retraite prévu dans 4 ans avec un objectif de préservation du capital, allouer 25% à NVIDIA présente un risque excessif face à votre seuil de tolérance (15%). Le scénario plafonné à 8% ou le profil de référence permettent de capter de la croissance tout en protégeant votre capital fictif.',
-      quelles_donnees: [
-        {
-          claim: 'La volatilité historique de NVDA sur 3 ans atteint 38.4% et sa perte en 2022 a été de -50.3%.',
-          evidence: ['ev_nvda_vol', 'ev_nvda_stress'],
-        },
-      ],
-      pourquoi_ce_choix: [
-        {
-          claim: 'Le scénario plafonné (8% NVDA) maintient la perte simulée 2022 sous les 10% tout en participant au secteur IA.',
-          evidence: ['ev_nvda_vol'],
-        },
-      ],
-      limites: [
-        {
-          claim: 'Les simulations reposent sur des données historiques et ne constituent pas un conseil en investissement réglementé.',
-          evidence: ['ev_rule_crypto'],
-        },
-      ],
-      ce_qui_changerait_la_reponse: [
-        {
-          claim: 'Un allongement de votre horizon de retraite au-delà de 8 ans permettrait une part action plus substantielle.',
-          evidence: [],
-        },
-      ],
-      incertitude: 'Faible sur le risque de marché; incertitude moyenne sur les gains technologiques futurs.',
-      scenario_le_plus_coherent: 'capped',
-      avertissement:
-        'Simulation pédagogique et second avis automatisé. Aucune transaction réelle ne sera exécutée.',
-    },
-    verification: {
-      passed: true,
-      errors: [],
-    },
-    retries: {},
-    trace: [
-      {
-        node: 'profile',
-        started_at: '2026-02-14T10:00:00Z',
-        ended_at: '2026-02-14T10:00:01Z',
-        summary: 'Profil utilisateur chargé depuis le questionnaire (Horizon: 4 ans, Objectif: Préservation).',
-      },
-      {
-        node: 'screening',
-        started_at: '2026-02-14T10:00:01Z',
-        ended_at: '2026-02-14T10:00:02Z',
-        summary: 'Exclusion des cryptomonnaies (0% crypto). Filtrage univers 6 titres éligibles.',
-      },
-      {
-        node: 'quant',
-        started_at: '2026-02-14T10:00:02Z',
-        ended_at: '2026-02-14T10:00:03Z',
-        summary: 'Calcul des 3 scénarios (as_requested, capped, profile_baseline) et métriques de risque.',
-      },
-      {
-        node: 'red_team',
-        started_at: '2026-02-14T10:00:03Z',
-        ended_at: '2026-02-14T10:00:04Z',
-        summary: 'Alerte objection levée sur as_requested (dépassement perte max 15%).',
-      },
-      {
-        node: 'explain',
-        started_at: '2026-02-14T10:00:04Z',
-        ended_at: '2026-02-14T10:00:05Z',
-        summary: 'Génération de l’explication transparente avec preuves reliées.',
-      },
-    ],
-    run_id: 'run_mock_preview',
-  };
 }

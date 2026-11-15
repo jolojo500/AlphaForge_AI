@@ -230,6 +230,38 @@ class AnswerRequest(BaseModel):
     text: str = Field(..., description="Answer to the clarifying question")
 
 
+DEMO_PERSONAS = ("amira", "mateo", "robert")
+TOLERANCES = {"low", "low_moderate", "moderate", "high"}
+CAPACITIES = {"low", "moderate", "high"}
+
+
+def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
+    """Validated persona-table entry for a questionnaire profile (400 on bad values)."""
+    tolerance = data.get("risk_tolerance", "moderate")
+    capacity = data.get("risk_capacity", "moderate")
+    if tolerance not in TOLERANCES:
+        raise HTTPException(400, f"risk_tolerance must be one of {sorted(TOLERANCES)}")
+    if capacity not in CAPACITIES:
+        raise HTTPException(400, f"risk_capacity must be one of {sorted(CAPACITIES)}")
+    try:
+        horizon = int(data.get("horizon_years", 5))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "horizon_years must be an integer") from None
+    if not 1 <= horizon <= 50:
+        raise HTTPException(400, "horizon_years must be between 1 and 50")
+    return {
+        "label": str(data.get("label") or "Profil personnalisé"),
+        "objective": str(data.get("objective") or "balanced"),
+        "horizon_years": horizon,
+        "risk_tolerance": tolerance,
+        "risk_capacity": capacity,
+        "constraints": [str(c) for c in data.get("constraints") or []],
+        "preferences": [str(c) for c in data.get("preferences") or []],
+        "budget_cad": data.get("budget_cad"),
+        "example_request": request_text,
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -237,43 +269,24 @@ def health() -> dict[str, str]:
 
 @app.get("/personas")
 def get_personas() -> dict[str, dict[str, Any]]:
-    return PERSONAS
+    return {k: PERSONAS[k] for k in DEMO_PERSONAS}
 
 
 @app.post("/runs")
 def create_run(req: RunCreateRequest) -> dict[str, str]:
-    if req.persona not in PERSONAS:
-        if req.profile_data:
-            PERSONAS[req.persona] = {
-                "label": req.profile_data.get("label", "Profil personnalisé"),
-                "objective": req.profile_data.get("objective", "balanced"),
-                "horizon_years": int(req.profile_data.get("horizon_years", 5)),
-                "risk_tolerance": req.profile_data.get("risk_tolerance", "moderate"),
-                "risk_capacity": req.profile_data.get("risk_capacity", "moderate"),
-                "constraints": list(req.profile_data.get("constraints", [])),
-                "preferences": list(req.profile_data.get("preferences", [])),
-                "budget_cad": req.profile_data.get("budget_cad"),
-                "example_request": req.request_text,
-            }
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown persona '{req.persona}'. Allowed: {list(PERSONAS.keys())}",
-            )
-    elif req.profile_data and req.persona == "custom_user":
-        PERSONAS[req.persona].update({
-            "label": req.profile_data.get("label", "Profil personnalisé"),
-            "objective": req.profile_data.get("objective", "balanced"),
-            "horizon_years": int(req.profile_data.get("horizon_years", 5)),
-            "risk_tolerance": req.profile_data.get("risk_tolerance", "moderate"),
-            "risk_capacity": req.profile_data.get("risk_capacity", "moderate"),
-            "constraints": list(req.profile_data.get("constraints", [])),
-            "preferences": list(req.profile_data.get("preferences", [])),
-            "budget_cad": req.profile_data.get("budget_cad"),
-            "example_request": req.request_text,
-        })
+    persona = req.persona
+    if req.profile_data:
+        # A questionnaire profile is registered under its own key for this run only,
+        # so concurrent users never overwrite each other and the demo personas stay intact.
+        persona = f"custom_{uuid.uuid4().hex[:12]}"
+        PERSONAS[persona] = _custom_persona(req.profile_data, req.request_text)
+    elif persona not in DEMO_PERSONAS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown persona '{persona}'. Allowed: {list(DEMO_PERSONAS)}",
+        )
     run = store.create(
-        persona=req.persona,
+        persona=persona,
         request_text=req.request_text,
         as_of_date=req.as_of_date,
     )
