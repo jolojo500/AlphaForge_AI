@@ -428,3 +428,108 @@ def test_hard_gates_high_interest_debt_note():
     assert len(p.hard_gate_notes) >= 1
     assert any("dettes" in note.lower() for note in p.hard_gate_notes)
     assert any("dettes" in c.lower() for c in p.conflicts)
+
+
+def test_judge_exact_profile_replay():
+    """Verify the judge's exact profile behaviour (findings 1-4, 7)."""
+    from alphaforge.guardrails import check_guardrails
+    from alphaforge.state import Scenario
+
+    persona_data = {
+        "label": "Profil du juge",
+        "objective": "growth",
+        "horizon_years": 25,
+        "risk_tolerance": "high",
+        "risk_capacity": "high",
+        "account_type": "tfsa",
+        "budget_cad": 100_000.0,
+        "max_loss_pct": 25,
+        "crypto_preference": "15 % et plus",
+        "sector_cap_pct": 40,
+        "currency_preference": "mixte (CAD / USD)",
+        "age_band": "18-29",
+        "preferences": ["esg_tilt", "likes_energy"],
+        "current_holdings": {"BTC-USD": 0.30, "SOL": 0.40},
+        "has_emergency_fund": True,
+        "has_high_interest_debt": False,
+        "investment_knowledge": "intermediate",
+        "net_worth_share": 0.20,
+    }
+    state = GraphState(
+        as_of_date=dt.date(2026, 11, 15),
+        persona="custom",
+        persona_data=persona_data,
+        request_text="Je veux évaluer mon allocation et garder 50 % en crypto.",
+    )
+    res = profile_node(state)
+    p = res["profile"]
+
+    # 1. Profile fields match questionnaire
+    assert p.account_type == "tfsa"
+    assert p.budget_cad == 100_000.0
+    assert p.risk_tolerance == "high"
+    assert p.risk_capacity == "high"
+    assert p.age_band == "18-29"
+    assert p.max_loss_12m == pytest.approx(0.25)
+    assert p.crypto_target_min == pytest.approx(0.15)
+    assert p.sector_cap == pytest.approx(0.40)
+    assert p.currency_pref == "mixed"
+
+    # 2. Holdings: unanalysed SOL 40% kept, BTC 30%, cash 30%, never rescaled
+    assert p.holdings_unanalysed == {"SOL": 0.40}
+    assert p.not_analysed_holdings == ["SOL"]
+    assert p.current_holdings["BTC-USD"] == pytest.approx(0.30)
+    assert p.holdings_cash == pytest.approx(0.30)
+
+    # 3. TFSA room exceeded (78k vs 100k) flagged in conflicts
+    assert any("78 000 $" in c and "100 000 $" in c for c in p.conflicts)
+    room_ev = next(e for e in res["evidence"].values() if e.value.get("metric") == "tfsa_room")
+    assert room_ev.value["room_cad"] == 78000.0
+    assert room_ev.value["excess_cad"] == 22000.0
+
+    # 4. Guardrails check
+    sc = Scenario(
+        name="capped",
+        weights={"AAPL": 0.30, "MSFT": 0.20, "BTC-USD": 0.05, "XIU.TO": 0.45},
+        metrics={"stress_2022": "EQ1", "max_drawdown": "EQ2", "top_weight": "EQ3"},
+    )
+    from alphaforge.state import Evidence
+    ev_map = {
+        **res["evidence"],
+        "EQ1": Evidence(
+            id="EQ1", value={"metric": "stress_2022", "value": -0.26},
+            source="test", date=dt.date(2026, 11, 15), method="test",
+        ),
+        "EQ2": Evidence(
+            id="EQ2", value={"metric": "max_drawdown", "value": -0.315},
+            source="test", date=dt.date(2026, 11, 15), method="test",
+        ),
+        "EQ3": Evidence(
+            id="EQ3", value={"metric": "top_weight", "value": 0.30},
+            source="test", date=dt.date(2026, 11, 15), method="test",
+        ),
+    }
+    gr = check_guardrails(p, [sc], ev_map)
+    limits_status = {g["limit"]: g["status"] for g in gr}
+
+    # TFSA room is a breach
+    assert limits_status["tfsa_room"] == "breach"
+    # Max loss 25% vs 26% stress and 31.5% drawdown is a breach
+    loss_entries = [g for g in gr if g["limit"] == "max_loss_12m"]
+    assert all(g["status"] == "breach" for g in loss_entries)
+    # Crypto target min 15% vs 5% observed is a breach
+    assert limits_status["crypto_target_min"] == "breach"
+    # Spot crypto in TFSA is a breach
+    assert limits_status["account_eligibility"] == "breach"
+
+
+def test_question_vehicle_and_allocation_extraction():
+    """Finding 1 & 5: vehicle outside universe and allocation parsing."""
+    from alphaforge.nodes.profile import _regex_extract
+
+    ext = _regex_extract("15 % Bitcoin via BTCC.B")
+    assert ext.requested_vehicle == "BTCC.B"
+    assert ext.requested_allocation == {"BTC-USD": 0.15}
+
+    ext2 = _regex_extract("Garder 50 % en crypto")
+    assert ext2.requested_allocation == {"crypto": 0.50}

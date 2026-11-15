@@ -30,9 +30,6 @@ MAX_TOOL_CALLS = 8
 MAX_CLASSIFIED = 40
 MAX_EVENTS = 12
 LOOKBACK_DAYS = 180
-TOP_HOLDINGS = 2
-
-ENERGY_NAMES = ("XOM", "ENB.TO", "CNQ.TO")
 
 
 @lru_cache(maxsize=1)
@@ -133,27 +130,27 @@ def classify_item(item: NewsItem, focus: str, llm_client=None) -> tuple[Classifi
 
 
 # ----------------------------------------------------------------------- planning
-def default_plan(state: GraphState) -> list[tuple[str, str]]:
-    """Fixed query plan, used first and whenever the planner model is unavailable."""
+def named_assets(state: GraphState) -> list[str]:
+    """Universe tickers named in the question, in a stable order (final report, finding 6).
+
+    Only what Agent 1 parsed from the question counts: the requested idea and the tickers of
+    the requested allocation. Preferences, constraints and examples never add an asset.
+    """
     p = state.profile
-    eligible = set(state.eligible_universe)
-    plan: list[tuple[str, str]] = []
-    if p and p.requested_idea:
-        t = p.requested_idea["ticker"]
-        plan.append(("news", t))
-        if _universe().get(t, {}).get("asset_class", "").startswith("etf"):
-            plan.append(("holdings", t))
-    if p and "no_controversies" in p.constraints:
-        for t in ENERGY_NAMES:
-            plan.append(("news", t))
-            plan.append(("search", f"{_universe()[t]['name']} ESG controversy"))
-    if p and "likes_crypto" in p.preferences and "BTC-USD" in eligible:
-        plan.append(("news", "BTC-USD"))
-    if p and "likes_tech" in p.preferences:
-        plan += [("news", t) for t in ("NVDA", "TSLA") if t in eligible]
-    if not plan:
-        plan.append(("holdings", "SPY"))
-    return list(dict.fromkeys(plan))
+    if p is None:
+        return []
+    universe = _universe()
+    out: list[str] = []
+    idea = (p.requested_idea or {}).get("ticker")
+    for t in [idea, *sorted(p.requested_allocation or {})]:
+        if t and t in universe and t not in out:
+            out.append(t)
+    return out
+
+
+def default_plan(state: GraphState) -> list[tuple[str, str]]:
+    """Fixed query plan: news for each asset named in the question, nothing otherwise."""
+    return [("news", t) for t in named_assets(state)]
 
 
 def _plan_prompt(state: GraphState, log: list[str], left: int, suggestion: list) -> str:
@@ -161,7 +158,7 @@ def _plan_prompt(state: GraphState, log: list[str], left: int, suggestion: list)
     return (
         f"Investor: tolerance={p.risk_tolerance}, horizon={p.horizon_years} years, "
         f"constraints={p.constraints}, request type={p.request_type}, idea={p.requested_idea}.\n"
-        f"Tool calls left: {left}.\nAllowed tickers: {', '.join(sorted(state.eligible_universe))}.\n"
+        f"Tool calls left: {left}.\nAllowed tickers: {', '.join(named_assets(state)) or 'none'}.\n"
         f"Done so far: {log or 'nothing'}.\nSuggested next steps: {suggestion[:3] or 'none'}.\n"
         "Pick ONE next lookup that most improves the risk picture of what the investor asks about, "
         "or 'done'. Actions: news(ticker), search(query), holdings(etf ticker)."
@@ -169,12 +166,12 @@ def _plan_prompt(state: GraphState, log: list[str], left: int, suggestion: list)
 
 
 def _valid(action: Action, state: GraphState, seen: set) -> tuple[str, str] | None:
-    universe = _universe()
-    if action.action == "news" and action.ticker in universe:
+    named = set(named_assets(state))  # the model may only look up what the question names
+    if action.action == "news" and action.ticker in named:
         call = ("news", action.ticker)
-    elif action.action == "holdings" and (action.ticker or "") in universe:
+    elif action.action == "holdings" and (action.ticker or "") in named:
         call = ("holdings", action.ticker)
-    elif action.action == "search" and action.query and 3 <= len(action.query) <= 120:
+    elif action.action == "search" and named and action.query and 3 <= len(action.query) <= 120:
         call = ("search", action.query.strip())
     else:
         return None
@@ -201,6 +198,8 @@ def gather(state: GraphState, llm_client=None) -> tuple[list[NewsItem], list[str
     log: list[str] = []
     while len(seen) < MAX_TOOL_CALLS:
         call = None
+        if not queue and not seen:
+            break  # no asset named in the question: nothing to look up
         if state.profile and seen and planner_enabled():  # first step: always the fixed plan
             try:
                 act = llm.call_json(
@@ -230,30 +229,65 @@ def gather(state: GraphState, llm_client=None) -> tuple[list[NewsItem], list[str
             items += [i for i in got if start <= i.published_date <= as_of]
             log.append(f"search({arg!r}) -> {len(got)}")
         else:
+            # Composition only: the fund's holdings are not named in the question, so no
+            # news is fetched for them.
             held = fetch_etf_holdings(arg)
             log.append(f"holdings({arg}) -> {len(held)}")
-            for h in held[:TOP_HOLDINGS]:
-                if h["ticker"] in _universe():
-                    queue.insert(0, ("news", h["ticker"]))
     return items, warnings, log, len(seen)
 
 
+_ACCESSION_RE = re.compile(r"(?<!\d)(\d{10}-?\d{2}-?\d{6})(?!\d)")
+
+
+def filing_id(item: NewsItem) -> str | None:
+    """SEC accession number of a filing (18 digits), read from its URL, else None."""
+    if not item.url:
+        return None
+    m = _ACCESSION_RE.search(item.url)
+    return m.group(1).replace("-", "") if m else None
+
+
+def _dedup_key(item: NewsItem) -> str:
+    """Filing/accession id when there is one, else the URL without query string or fragment."""
+    acc = filing_id(item)
+    if acc:
+        return f"accession:{acc}"
+    if item.url:
+        return re.sub(r"[?#].*$", "", item.url.strip()).rstrip("/").lower()
+    return f"{item.provider}:{item.ticker}:{item.headline}"
+
+
 def _select(items: list[NewsItem], as_of: dt.date) -> list[NewsItem]:
-    """Drop look-ahead and duplicates, interleave tickers, cap at MAX_CLASSIFIED."""
+    """Drop look-ahead and duplicates, interleave tickers, cap at MAX_CLASSIFIED.
+
+    Duplicates: same filing (accession id) or same URL; the same story from two outlets on
+    the same day; and repeated filings of one company with an identical title, where only
+    the most recent is kept (a run of identical "Form 8-K" lines reads as a duplicate).
+    """
     uniq: dict[str, NewsItem] = {}
     titles: set[tuple[str, str, dt.date]] = set()
-    for i in items:
+    filing_titles: set[tuple[str, str]] = set()
+    ordered = sorted(
+        (i for i in items if i.published_date is not None and i.published_date <= as_of),
+        key=lambda x: (x.published_at, x.url or ""),
+        reverse=True,
+    )
+    for i in ordered:
         d = i.published_date
-        if d is None or d > as_of:
+        title = re.sub(r"\W+", " ", i.headline.lower()).strip()
+        key = _dedup_key(i)
+        if key in uniq:
             continue
-        key = (i.ticker, re.sub(r"\W+", " ", i.headline.lower()).strip(), d)
-        url = i.url or f"{i.provider}:{i.headline}"
-        if url in uniq or (key in titles and i.provider != "sec_edgar"):
-            continue  # same story from another outlet; filings share titles but not urls
-        titles.add(key)
-        uniq[url] = i
+        if i.provider == "sec_edgar":
+            if (i.ticker, title) in filing_titles:
+                continue  # an older filing with the same title as one already kept
+            filing_titles.add((i.ticker, title))
+        elif (i.ticker, title, d) in titles:
+            continue  # same story from another outlet
+        titles.add((i.ticker, title, d))
+        uniq[key] = i
     by_ticker: dict[str, list[NewsItem]] = {}
-    for i in sorted(uniq.values(), key=lambda x: (x.published_at, x.url or ""), reverse=True):
+    for i in uniq.values():  # already newest first
         by_ticker.setdefault(i.ticker, []).append(i)
     out: list[NewsItem] = []
     queues = [by_ticker[k] for k in sorted(by_ticker)]
@@ -337,12 +371,25 @@ def events_node(state: GraphState) -> dict:
                 "classifier": how,
             }
         )
-    note = (
-        f"{len(chosen)} élément(s) lus, {len(events)} retenu(s) ; outils : {'; '.join(log) or 'aucun'}. "
-        + " ".join(warnings)
-    ).strip()
+    named = named_assets(state)
+    is_en = getattr(state, "language", "fr") == "en"
+    if named:
+        note = (
+            f"{len(chosen)} élément(s) lus, {len(events)} retenu(s) ; outils : {'; '.join(log) or 'aucun'}. "
+            + " ".join(warnings)
+        ).strip()
+    elif is_en:
+        note = "The question names no specific asset: no asset-specific news was read."
+    else:
+        note = (
+            "La question ne nomme aucun actif précis : aucune actualité propre à un actif "
+            "n'a été lue."
+        )
     reg.add(
-        value={"metric": "news_items_retained", "value": len(events), "note": note},
+        value={
+            "metric": "news_items_retained", "value": len(events), "note": note,
+            "assets": named,
+        },
         source="data/cache/news",
         date=state.as_of_date,
         method="count of news items kept after the as-of filter and classification",
@@ -356,7 +403,9 @@ def events_node(state: GraphState) -> dict:
             method="warning recorded during live news retrieval or fallback to cache",
             confidence="assumption",
         )
-    if events:
+    if not named:
+        summary = note
+    elif events:
         summary = f"{len(events)} actualité(s) retenue(s) sur {len(chosen)} lue(s), {calls} appel(s) d'outil."
     else:
         summary = f"Aucune actualité datée avant l'analyse pour cette demande ({calls} appel(s) d'outil)."

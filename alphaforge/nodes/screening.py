@@ -17,6 +17,12 @@ from alphaforge.data.holdings import load_holdings
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState, Profile
+from alphaforge.tax import (
+    QUALIFIED_INVESTMENTS_SOURCE,
+    REGISTERED_ACCOUNT_URLS,
+    REGISTERED_ACCOUNTS,
+    SPOT_CRYPTO_REASON_FR,
+)
 from alphaforge.tracing import traced
 
 HOLDINGS_DIR = config.CACHE_DIR / "holdings"
@@ -77,6 +83,30 @@ def class_and_geo_filters(profile: Profile, universe: pd.DataFrame) -> list[Hit]
                     Hit(row["ticker"], reason, UNIVERSE_SOURCE, f"constraint {constraint} on asset_class/market")
                 )
     return hits
+
+
+def account_eligibility_filter(profile: Profile, universe: pd.DataFrame) -> list[Hit]:
+    """Spot cryptoassets are not qualified investments in a TFSA, RRSP or FHSA (finding 4).
+
+    Non-registered and mixed accounts are unchanged. The rule has no dedicated source URL
+    in `alphaforge.tax`, so it is recorded as an assumption against the CRA account page.
+    """
+    account = (profile.account_type or "").lower()
+    if account not in REGISTERED_ACCOUNTS:
+        return []
+    reason = SPOT_CRYPTO_REASON_FR[0].upper() + SPOT_CRYPTO_REASON_FR[1:] + "."
+    return [
+        Hit(
+            row["ticker"],
+            reason,
+            QUALIFIED_INVESTMENTS_SOURCE,
+            f"account eligibility: spot cryptoasset in a registered account ({account})",
+            confidence="assumption",
+            url=REGISTERED_ACCOUNT_URLS.get(account),
+        )
+        for _, row in universe.iterrows()
+        if row["asset_class"] == "crypto"
+    ]
 
 
 def load_esgv(
@@ -173,6 +203,8 @@ def apply_constraints(
         for t in sorted(profile.excluded_tickers)
         if t in set(universe["ticker"])
     ]
+    # Account eligibility comes before the profile's own constraints: it is the legal reason.
+    hits += account_eligibility_filter(profile, universe)
     hits += class_and_geo_filters(profile, universe)
     esg_hits, notes = esg_exclusions(profile, universe, holdings_dir=holdings_dir, as_of=as_of)
     hits += esg_hits
@@ -212,6 +244,7 @@ def screening_node(state: GraphState) -> dict:
         )
 
     requested = (profile.requested_idea or {}).get("ticker")
+    asked = {requested} | set(profile.requested_allocation or {})
     exclusions = []
     for h in hits:
         eid = reg.add(
@@ -223,13 +256,20 @@ def screening_node(state: GraphState) -> dict:
             confidence=h.confidence,
         )
         ex = {"ticker": h.ticker, "reason": h.reason, "evidence_id": eid}
-        if h.ticker == requested:
+        if h.ticker in asked or (
+            "crypto" in asked and h.method.startswith(("account eligibility", "constraint no_crypto"))
+        ):
             ex["requested"] = True  # never silently dropped: the scenario builder flags it
+        if h.method.startswith("account eligibility"):
+            ex["rule"] = "account_eligibility"
         exclusions.append(ex)
 
     summary = f"{len(eligible)} actifs admissibles, {len(exclusions)} exclus."
-    if any(ex.get("requested") for ex in exclusions):
-        summary += f" L'actif demandé ({requested}) est exclu par une contrainte et sera signalé."
+    flagged = sorted(ex["ticker"] for ex in exclusions if ex.get("requested"))
+    if flagged:
+        summary += (
+            f" L'actif demandé ({', '.join(flagged)}) est exclu par une contrainte et sera signalé."
+        )
     return {
         "eligible_universe": eligible,
         "exclusions": exclusions,

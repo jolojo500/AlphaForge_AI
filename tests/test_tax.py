@@ -149,3 +149,47 @@ def test_profile_account_type_extraction_and_whatif():
 
     with pytest.raises(ValueError):
         apply_change(p, "account_type", "invalid_type")
+
+
+def test_tfsa_room_limits_and_age_band():
+    """Issue #169: TFSA room calculation for age bands and budget excess check."""
+    from alphaforge.tax import (
+        tfsa_room_check,
+        tfsa_room_evidence,
+        tfsa_room_for_age,
+        tfsa_room_for_band,
+        tfsa_room_sentences,
+    )
+
+    # Age 29 in 2026: turned 18 in 2015 -> 78 000 $
+    assert tfsa_room_for_age(29, 2026) == 78000
+    assert tfsa_room_for_band("18-29", 2026) == 78000
+    assert tfsa_room_for_band("18–29 ans", 2026) == 78000
+
+    # Under 18 has 0 room
+    assert tfsa_room_for_age(17, 2026) == 0
+
+    # 100 000 $ budget in 18-29 band exceeds 78 000 $ by 22 000 $
+    check = tfsa_room_check("tfsa", 100_000.0, "18-29")
+    assert check is not None
+    assert check["room"] == 78000.0
+    assert check["budget"] == 100000.0
+    assert check["excess"] == 22000.0
+    assert check["age_band"] == "18-29"
+
+    # Within room -> None
+    assert tfsa_room_check("tfsa", 70_000.0, "18-29") is None
+
+    # Non-registered -> None
+    assert tfsa_room_check("non_registered", 100_000.0, "18-29") is None
+
+    # Sourced assumption evidence
+    ev = tfsa_room_evidence(check, AS_OF)
+    assert ev["confidence"] == "assumption"
+    assert ev["url"].startswith("https://www.canada.ca/")
+    assert ev["value"]["metric"] == "tfsa_room"
+    assert ev["value"]["room_cad"] == 78000.0
+
+    fr, en = tfsa_room_sentences(check)
+    assert "100 000 $" in fr and "78 000 $" in fr and "22 000 $" in fr
+    assert "$100,000" in en and "$78,000" in en and "$22,000" in en

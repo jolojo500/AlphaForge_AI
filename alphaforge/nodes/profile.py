@@ -103,6 +103,8 @@ class Extraction(BaseModel):
     extra_constraints: list[str] = Field(default_factory=list)
     extra_preferences: list[str] = Field(default_factory=list)
     conflicts: list[str] = Field(default_factory=list)
+    requested_allocation: dict[str, float] | None = None
+    requested_vehicle: str | None = None
 
 
 SYSTEM = (
@@ -180,8 +182,6 @@ def _regex_extract(text: str) -> Extraction:
             ticker = "QQQ"
         elif re.search(r"\b(?:tsx\s*60|tsx)\b", lowered):
             ticker = "XIU.TO"
-        elif weight is not None and re.search(r"\bcrypto\b", lowered):
-            ticker = "BTC-USD"
     horizon = None
     m_h = re.search(r"(\d+)\s*(?:ans?|years?|yrs?)\b", lowered)
     if m_h:
@@ -198,6 +198,25 @@ def _regex_extract(text: str) -> Extraction:
     elif re.search(r"\b(?:non[- ]enregistr[ée]|taxable|imposable)\b", lowered):
         act = "non_registered"
 
+    req_vehicle = None
+    from alphaforge.tax import LISTED_CRYPTO_ETFS
+    for v in sorted(LISTED_CRYPTO_ETFS, key=len, reverse=True):
+        if re.search(rf"\b{re.escape(v.lower())}\b", lowered):
+            req_vehicle = v
+            if not ticker:
+                ticker = LISTED_CRYPTO_ETFS[v]
+            break
+
+    req_alloc = None
+    if ticker and weight is not None and 0 < weight <= 100:
+        req_alloc = {ticker: round(weight / 100.0, 4)}
+    else:
+        m_crypto = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:%|pour\s*cent)?\s*(?:en\s+|de\s+)?crypto", lowered)
+        if m_crypto:
+            w_c = float(m_crypto.group(1).replace(",", ".")) / 100.0
+            if 0 < w_c <= 1:
+                req_alloc = {"crypto": round(w_c, 4)}
+
     extra_constraints: list[str] = []
     extra_preferences: list[str] = []
     if STRICT_ESG_RE.search(lowered):
@@ -213,6 +232,8 @@ def _regex_extract(text: str) -> Extraction:
         account_type=act,
         extra_constraints=extra_constraints,
         extra_preferences=extra_preferences,
+        requested_allocation=req_alloc,
+        requested_vehicle=req_vehicle,
     )
 
 
@@ -275,6 +296,14 @@ def extract_profile(
                 res.extra_preferences.remove("esg_tilt")
         elif not STRICT_ESG_RE.search(lowered_p) and SOFT_ESG_RE.search(lowered_p) and "esg_tilt" not in res.extra_preferences:
             res.extra_preferences.append("esg_tilt")
+        if res.requested_allocation is None and res.ticker and res.weight_pct is not None and 0 < res.weight_pct <= 100:
+            res.requested_allocation = {res.ticker: round(res.weight_pct / 100.0, 4)}
+        if res.requested_vehicle is None:
+            from alphaforge.tax import LISTED_CRYPTO_ETFS
+            for v in sorted(LISTED_CRYPTO_ETFS, key=len, reverse=True):
+                if re.search(rf"\b{re.escape(v.lower())}\b", lowered_p):
+                    res.requested_vehicle = v
+                    break
         return res, False
     except llm.LLMError:
         return _regex_extract(text), True
@@ -822,18 +851,29 @@ def build_profile(
             conflicts.append(c)
     if used_fallback:
         conflicts.append(
-            "Assumption: the request was read with fallback rules; the profile relies on persona hypotheses."
+            "Assumption: the request was read with fallback rules; the profile relies on reference profile hypotheses."
             if language == "en"
             else "Hypothèse : la demande a été lue de façon simplifiée ; le profil repose sur les "
-            "hypothèses du persona."
+            "hypothèses du profil de référence."
         )
     current_holdings = None
+    holdings_unanalysed: dict[str, float] = {}
+    holdings_cash: float | None = None
     if p.get("current_holdings"):
         from alphaforge.holdings import parse_holdings
 
         current_holdings = parse_holdings(p["current_holdings"])
-        if budget is None and current_holdings and sum(current_holdings.values()) > 100:
-            budget = float(sum(current_holdings.values()))
+        holdings_unanalysed = dict(getattr(current_holdings, "unanalysed", {}))
+        holdings_cash = getattr(current_holdings, "cash", None)
+        if budget is None:
+            total_amt = getattr(current_holdings, "total_amount", None)
+            if total_amt is not None and total_amt > 0:
+                budget = float(total_amt)
+            elif current_holdings and sum(current_holdings.values()) > 100:
+                budget = float(sum(current_holdings.values()))
+
+    from alphaforge.personas import declared_limits
+    limits = declared_limits(persona_data or p)
 
     account_type = (
         (persona_data or {}).get("account_type")
@@ -854,6 +894,16 @@ def build_profile(
         for f in kyc_completeness.fields.values():
             if f.required and not f.collected and f.assumption_note:
                 conflicts.append(f"Hypothèse KYC ({f.evidence_id}) : {f.assumption_note}")
+
+    age_band_val = limits.get("age_band")
+    if account_type == "tfsa" and budget and age_band_val:
+        from alphaforge.tax import tfsa_room_check, tfsa_room_sentences
+        room_chk = tfsa_room_check(account_type, budget, age_band_val)
+        if room_chk:
+            fr_room, _ = tfsa_room_sentences(room_chk)
+            if fr_room not in conflicts:
+                conflicts.append(fr_room)
+
     return Profile(
         persona=persona_id,
         objective=p.get("objective", "balanced"),
@@ -868,6 +918,7 @@ def build_profile(
         requested_idea=idea,
         conflicts=conflicts,
         current_holdings=current_holdings,
+        not_analysed_holdings=list(holdings_unanalysed.keys()),
         has_emergency_fund=resolved.get("has_emergency_fund"),
         has_high_interest_debt=resolved.get("has_high_interest_debt"),
         debt_level=resolved.get("debt_level"),
@@ -880,6 +931,17 @@ def build_profile(
         kyc_completeness=kyc_completeness,
         hard_gate_notes=gate_notes,
         language=language,
+        requested_allocation=getattr(ext, "requested_allocation", None) or (
+            {idea["ticker"]: idea["weight"]} if idea else None
+        ),
+        requested_vehicle=getattr(ext, "requested_vehicle", None),
+        max_loss_12m=limits["max_loss_12m"],
+        crypto_target_min=limits["crypto_target_min"],
+        sector_cap=limits["sector_cap"],
+        currency_pref=limits["currency_pref"],
+        age_band=limits["age_band"],
+        holdings_unanalysed=holdings_unanalysed,
+        holdings_cash=holdings_cash,
     )
 
 
@@ -1059,6 +1121,17 @@ def profile_node(state: GraphState) -> dict:
         hard_gate_notes=hard_gate_notes,
         language=lang,
     )
+
+    if profile.account_type == "tfsa" and profile.budget_cad and profile.age_band:
+        from alphaforge.evidence import EvidenceRegistry
+        from alphaforge.tax import tfsa_room_check, tfsa_room_evidence
+
+        room_chk = tfsa_room_check(profile.account_type, profile.budget_cad, profile.age_band)
+        if room_chk:
+            reg_room = EvidenceRegistry(prefix="EK", start=len(kyc_evidence) + 1)
+            ev_kw = tfsa_room_evidence(room_chk, state.as_of_date)
+            reg_room.add(**ev_kw)
+            kyc_evidence = {**kyc_evidence, **reg_room.items()}
 
     if profile.request_type == "judge":
         summary = (

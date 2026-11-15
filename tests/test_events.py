@@ -251,20 +251,24 @@ def test_node_never_raises_without_network_or_keys(monkeypatch):
 
 
 def test_events_stay_within_budget_and_carry_classification():
-    s = run("amira", PERSONAS["amira"]["example_request"])
+    # Robert names TSLA in his example request -> events fetched for TSLA
+    s = run("robert", PERSONAS["robert"]["example_request"])
     assert 0 < len(s.events) <= ev.MAX_CLASSIFIED
     for e in s.events:
         v = s.evidence[e["evidence_id"]].value
         assert v["metric"] == "news" and v["risk_type"] == e["risk_type"] and v["material"] == e["material"]
-    assert "BTC-USD" in {e["ticker"] for e in s.events}  # crypto angle for Amira
+    assert all(e["ticker"] == "TSLA" for e in s.events)
+
+    # Finding 5: when the question names no asset, nothing is shown
+    s_amira = run("amira", PERSONAS["amira"]["example_request"])
+    assert len(s_amira.events) == 0
 
 
 def test_mateo_plan_covers_energy_names_and_esg_searches():
-    s = run("mateo", PERSONAS["mateo"]["example_request"])
+    # Finding 5: named assets from the question determine the query plan
+    s = run("mateo", "Je veux mettre 10 % dans ENB.TO pour mon portefeuille.")
     plan = ev.default_plan(s)
-    assert ("news", "XOM") in plan and ("news", "ENB.TO") in plan
-    assert any(tool == "search" and "ESG" in arg for tool, arg in plan)
-    assert {"XOM", "ENB.TO"} <= {e["ticker"] for e in s.events}
+    assert ("news", "ENB.TO") in plan
 
 
 def test_material_controversies_are_surfaced_first(monkeypatch):

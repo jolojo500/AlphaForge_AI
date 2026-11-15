@@ -73,6 +73,177 @@ FHSA_URL: str = (
     "first-home-savings-account.html"
 )
 
+# 5. Registered plans may only hold qualified investments: securities listed on a designated
+#    stock exchange qualify, a cryptoasset held directly does not. No dedicated source URL is
+#    kept here, so the rule is cited as an assumption against the CRA page of the account.
+QUALIFIED_INVESTMENTS_SOURCE: str = (
+    "Agence du revenu du Canada (placements admissibles dans les régimes enregistrés)"
+)
+REGISTERED_ACCOUNT_URLS: dict[str, str] = {"tfsa": TFSA_URL, "rrsp": RRSP_URL, "fhsa": FHSA_URL}
+REGISTERED_ACCOUNTS: frozenset[str] = frozenset({"tfsa", "rrsp", "fhsa"})
+ACCOUNT_LABEL_FR: dict[str, str] = {
+    "tfsa": "CELI",
+    "rrsp": "REER",
+    "fhsa": "CELIAPP",
+    "non_registered": "compte non enregistré",
+    "mixed": "comptes mixtes",
+}
+ACCOUNT_LABEL_EN: dict[str, str] = {
+    "tfsa": "TFSA",
+    "rrsp": "RRSP",
+    "fhsa": "FHSA",
+    "non_registered": "non-registered account",
+    "mixed": "mixed accounts",
+}
+SPOT_CRYPTO_REASON_FR: str = (
+    "cryptoactif détenu directement : non admissible dans un CELI/REER/CELIAPP ; seuls des "
+    "FNB de cryptoactifs cotés le sont, hors de l'univers analysé"
+)
+SPOT_CRYPTO_REASON_EN: str = (
+    "cryptoasset held directly: not a qualified investment in a TFSA/RRSP/FHSA; only listed "
+    "cryptoasset ETFs are, and they are outside the analysed universe"
+)
+# Canadian-listed cryptoasset ETFs a question may name. None is in the analysed universe.
+LISTED_CRYPTO_ETFS: dict[str, str] = {
+    "BTCC": "BTC-USD",
+    "BTCC.B": "BTC-USD",
+    "BTCC.U": "BTC-USD",
+    "BTCX.B": "BTC-USD",
+    "FBTC": "BTC-USD",
+    "EBIT": "BTC-USD",
+    "BTCQ": "BTC-USD",
+    "IBIT": "BTC-USD",
+    "ETHX": "ETH-USD",
+    "ETHX.B": "ETH-USD",
+    "ETHH": "ETH-USD",
+    "ETHH.B": "ETH-USD",
+    "ETHR": "ETH-USD",
+    "ETHQ": "ETH-USD",
+}
+
+# 6. TFSA annual dollar limits (CRA). Room accrues from the year a resident turns 18, 2009 at
+#    the earliest, and unused room carries forward.
+TFSA_ANNUAL_LIMITS: dict[int, int] = {
+    2009: 5000, 2010: 5000, 2011: 5000, 2012: 5000,
+    2013: 5500, 2014: 5500,
+    2015: 10000,
+    2016: 5500, 2017: 5500, 2018: 5500,
+    2019: 6000, 2020: 6000, 2021: 6000, 2022: 6000,
+    2023: 6500,
+    2024: 7000, 2025: 7000, 2026: 7000,
+}
+TFSA_ROOM_AS_OF_YEAR: int = 2026
+TFSA_ROOM_SOURCE: str = "Agence du revenu du Canada (plafonds annuels de cotisation au CELI)"
+TFSA_ROOM_URL: str = TFSA_URL
+
+
+def tfsa_room_for_age(age: int, year: int = TFSA_ROOM_AS_OF_YEAR) -> int:
+    """Maximum cumulative TFSA room at `age` in `year` (resident and eligible throughout,
+    no contribution and no withdrawal counted)."""
+    if age < 18:
+        return 0
+    first = max(min(TFSA_ANNUAL_LIMITS), year - age + 18)
+    return sum(v for y, v in TFSA_ANNUAL_LIMITS.items() if first <= y <= year)
+
+
+def _band_oldest_age(age_band: str | None) -> int | None:
+    """Oldest age of a band such as "18-29", "30 à 39", "60+" (open-ended: no upper limit)."""
+    import re
+
+    if not age_band:
+        return None
+    nums = [int(n) for n in re.findall(r"\d+", str(age_band))]
+    if not nums:
+        return None
+    if len(nums) == 1:
+        text = str(age_band).lower()
+        if "+" in text or "plus" in text or "over" in text:
+            return 120
+        if "moins" in text or "under" in text or "<" in text:
+            return max(nums[0] - 1, 0)
+        return nums[0]
+    return max(nums[:2])
+
+
+def tfsa_room_for_band(age_band: str | None, year: int = TFSA_ROOM_AS_OF_YEAR) -> int | None:
+    """Maximum cumulative TFSA room for the OLDEST age of the band, None if the band is unknown.
+
+    "18-29" in 2026: turned 18 in 2015 at the earliest, so 78 000 $.
+    """
+    oldest = _band_oldest_age(age_band)
+    return None if oldest is None else tfsa_room_for_age(oldest, year)
+
+
+def tfsa_room_check(
+    account_type: str | None, budget_cad: float | None, age_band: str | None
+) -> dict | None:
+    """{"room", "budget", "excess", "age_band"} when a TFSA budget exceeds the band's room."""
+    if (account_type or "").lower() != "tfsa" or not budget_cad:
+        return None
+    room = tfsa_room_for_band(age_band)
+    if room is None or budget_cad <= room:
+        return None
+    return {
+        "room": float(room),
+        "budget": float(budget_cad),
+        "excess": float(budget_cad - room),
+        "age_band": str(age_band),
+    }
+
+
+def fr_money(x: float) -> str:
+    """12 345 $ (French thousands separator, no cents)."""
+    return f"{x:,.0f}".replace(",", " ") + " $"
+
+
+def en_money(x: float) -> str:
+    return f"${x:,.0f}"
+
+
+def tfsa_room_sentences(check: dict) -> tuple[str, str]:
+    """(French, English) sentence for a TFSA budget above the band's maximum room."""
+    fr = (
+        f"Le montant déclaré de {fr_money(check['budget'])} dépasse les droits de cotisation "
+        f"CELI cumulés maximaux de {fr_money(check['room'])} pour la tranche d'âge "
+        f"{check['age_band']} en {TFSA_ROOM_AS_OF_YEAR} ; hypothèse retenue : l'excédent de "
+        f"{fr_money(check['excess'])} serait détenu dans un compte non enregistré."
+    )
+    en = (
+        f"The stated amount of {en_money(check['budget'])} is above the maximum cumulative "
+        f"TFSA room of {en_money(check['room'])} for the {check['age_band']} age band in "
+        f"{TFSA_ROOM_AS_OF_YEAR}; assumption used: the excess of {en_money(check['excess'])} "
+        "would be held in a non-registered account."
+    )
+    return fr, en
+
+
+def tfsa_room_evidence(check: dict, as_of: dt.date) -> dict:
+    """Assumption evidence entry (kwargs for EvidenceRegistry.add) for the TFSA room check."""
+    fr, _ = tfsa_room_sentences(check)
+    return {
+        "value": {
+            "metric": "tfsa_room",
+            "age_band": check["age_band"],
+            "room_cad": check["room"],
+            "budget_cad": check["budget"],
+            "excess_cad": check["excess"],
+            "value": fr,
+        },
+        "source": TFSA_ROOM_SOURCE,
+        "url": TFSA_ROOM_URL,
+        "date": as_of,
+        "method": (
+            "somme des plafonds annuels CELI depuis l'année des 18 ans (2009 au plus tôt) "
+            "pour l'âge le plus élevé de la tranche, sans cotisation ni retrait antérieurs"
+        ),
+        "confidence": "assumption",
+    }
+
+
+def is_spot_crypto(ticker: str, asset_class: str | None = None) -> bool:
+    """A cryptoasset held directly (not a listed fund)."""
+    return asset_class == "crypto" if asset_class is not None else ticker in ("BTC-USD", "ETH-USD")
+
 
 # --- Dividend & Income Yield Calculation ---------------------------------------------------
 
