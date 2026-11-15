@@ -1,0 +1,312 @@
+{
+ "ticker": "XIU.TO",
+ "as_of": "2026-11-12",
+ "source_url": "https://www.blackrock.com/ca/investors/en/products/239832/ishares-sptsx-60-index-etf",
+ "source_name": "BlackRock iShares Canada, XIU holdings CSV",
+ "retrieved_at": "2026-11-14",
+ "complete": true,
+ "total_holdings": 60,
+ "coverage_weight": 0.9977,
+ "holdings": [
+  {
+   "ticker": "RY.TO",
+   "name": "ROYAL BANK OF CANADA",
+   "weight": 0.0958
+  },
+  {
+   "ticker": "TD.TO",
+   "name": "TORONTO DOMINION",
+   "weight": 0.0694
+  },
+  {
+   "ticker": "SHOP.TO",
+   "name": "SHOPIFY SUBORDINATE VOTING CLASS A",
+   "weight": 0.0605
+  },
+  {
+   "ticker": "BMO.TO",
+   "name": "BANK OF MONTREAL",
+   "weight": 0.0413
+  },
+  {
+   "ticker": "BNS.TO",
+   "name": "BANK OF NOVA SCOTIA",
+   "weight": 0.0385
+  },
+  {
+   "ticker": "CM.TO",
+   "name": "CANADIAN IMPERIAL BANK OF COMMERCE",
+   "weight": 0.0361
+  },
+  {
+   "ticker": "ENB.TO",
+   "name": "ENBRIDGE",
+   "weight": 0.0359
+  },
+  {
+   "ticker": "CNQ.TO",
+   "name": "CANADIAN NATURAL RESOURCES LTD",
+   "weight": 0.0345
+  },
+  {
+   "ticker": "AEM.TO",
+   "name": "AGNICO EAGLE MINES",
+   "weight": 0.0308
+  },
+  {
+   "ticker": "BN.TO",
+   "name": "BROOKFIELD CLASS A",
+   "weight": 0.0303
+  },
+  {
+   "ticker": "CP.TO",
+   "name": "CANADIAN PACIFIC KANSAS CITY",
+   "weight": 0.0283
+  },
+  {
+   "ticker": "SU.TO",
+   "name": "SUNCOR ENERGY INC",
+   "weight": 0.0276
+  },
+  {
+   "ticker": "MFC.TO",
+   "name": "MANULIFE FINANCIAL",
+   "weight": 0.0249
+  },
+  {
+   "ticker": "CNR.TO",
+   "name": "CANADIAN NATIONAL RAILWAY",
+   "weight": 0.0239
+  },
+  {
+   "ticker": "TRP.TO",
+   "name": "TC ENERGY",
+   "weight": 0.0229
+  },
+  {
+   "ticker": "ABX.TO",
+   "name": "BARRICK MINING",
+   "weight": 0.0212
+  },
+  {
+   "ticker": "WPM.TO",
+   "name": "WHEATON PRECIOUS METALS",
+   "weight": 0.0204
+  },
+  {
+   "ticker": "NA.TO",
+   "name": "NATIONAL BANK OF CANADA",
+   "weight": 0.0199
+  },
+  {
+   "ticker": "CSU.TO",
+   "name": "CONSTELLATION SOFTWARE",
+   "weight": 0.0177
+  },
+  {
+   "ticker": "WCN.TO",
+   "name": "WASTE CONNECTIONS",
+   "weight": 0.0166
+  },
+  {
+   "ticker": "FNV.TO",
+   "name": "FRANCO NEVADA",
+   "weight": 0.0163
+  },
+  {
+   "ticker": "ATD.TO",
+   "name": "ALIMENTATION COUCHE TARD INC",
+   "weight": 0.0146
+  },
+  {
+   "ticker": "DOL.TO",
+   "name": "DOLLARAMA",
+   "weight": 0.0142
+  },
+  {
+   "ticker": "SLF.TO",
+   "name": "SUN LIFE FINANCIAL INC",
+   "weight": 0.0138
+  },
+  {
+   "ticker": "CVE.TO",
+   "name": "CENOVUS ENERGY",
+   "weight": 0.0129
+  },
+  {
+   "ticker": "FFH.TO",
+   "name": "FAIRFAX FINANCIAL HOLDINGS SUB VOT",
+   "weight": 0.0126
+  },
+  {
+   "ticker": "IFC.TO",
+   "name": "INTACT FINANCIAL CORP",
+   "weight": 0.0118
+  },
+  {
+   "ticker": "NTR.TO",
+   "name": "NUTRIEN LTD",
+   "weight": 0.0116
+  },
+  {
+   "ticker": "POW.TO",
+   "name": "POWER CORPORATION OF CANADA",
+   "weight": 0.0116
+  },
+  {
+   "ticker": "CLS.TO",
+   "name": "CELESTICA",
+   "weight": 0.0109
+  },
+  {
+   "ticker": "CCO.TO",
+   "name": "CAMECO",
+   "weight": 0.0106
+  },
+  {
+   "ticker": "FTS.TO",
+   "name": "FORTIS",
+   "weight": 0.0103
+  },
+  {
+   "ticker": "TECK.B.TO",
+   "name": "TECK RESOURCES SUBORDINATE VOTING",
+   "weight": 0.0101
+  },
+  {
+   "ticker": "PPL.TO",
+   "name": "PEMBINA PIPELINE",
+   "weight": 0.0099
+  },
+  {
+   "ticker": "L.TO",
+   "name": "LOBLAW COMPANIES LTD",
+   "weight": 0.009
+  },
+  {
+   "ticker": "QSR.TO",
+   "name": "RESTAURANTS BRANDS INTERNATIONAL",
+   "weight": 0.009
+  },
+  {
+   "ticker": "K.TO",
+   "name": "KINROSS GOLD",
+   "weight": 0.0084
+  },
+  {
+   "ticker": "BCE.TO",
+   "name": "BCE INC",
+   "weight": 0.0068
+  },
+  {
+   "ticker": "BAM.TO",
+   "name": "BROOKFIELD ASSET MANAGEMENT VOTING",
+   "weight": 0.0066
+  },
+  {
+   "ticker": "IMO.TO",
+   "name": "IMPERIAL OIL LTD",
+   "weight": 0.0065
+  },
+  {
+   "ticker": "BIP.UN.TO",
+   "name": "BROOKFIELD INFRASTRUCTURE PARTNERS",
+   "weight": 0.0061
+  },
+  {
+   "ticker": "WSP.TO",
+   "name": "WSP GLOBAL INC",
+   "weight": 0.0059
+  },
+  {
+   "ticker": "TOU.TO",
+   "name": "TOURMALINE OIL CORP",
+   "weight": 0.0058
+  },
+  {
+   "ticker": "FM.TO",
+   "name": "FIRST QUANTUM MINERALS",
+   "weight": 0.0053
+  },
+  {
+   "ticker": "MG.TO",
+   "name": "MAGNA INTERNATIONAL",
+   "weight": 0.0053
+  },
+  {
+   "ticker": "EMA.TO",
+   "name": "EMERA INC",
+   "weight": 0.0053
+  },
+  {
+   "ticker": "GIB.A.TO",
+   "name": "CGI INC CLASS A",
+   "weight": 0.0051
+  },
+  {
+   "ticker": "MRU.TO",
+   "name": "METRO",
+   "weight": 0.0049
+  },
+  {
+   "ticker": "TRI.TO",
+   "name": "THOMSON REUTERS CORP",
+   "weight": 0.0047
+  },
+  {
+   "ticker": "T.TO",
+   "name": "TELUS",
+   "weight": 0.0046
+  },
+  {
+   "ticker": "H.TO",
+   "name": "HYDRO ONE",
+   "weight": 0.0043
+  },
+  {
+   "ticker": "RCI.B.TO",
+   "name": "ROGERS COMMUNICATIONS NON-VOTING I",
+   "weight": 0.0043
+  },
+  {
+   "ticker": "WN.TO",
+   "name": "GEORGE WESTON",
+   "weight": 0.0041
+  },
+  {
+   "ticker": "CCL.B.TO",
+   "name": "CCL INDUSTRIES CLASS B",
+   "weight": 0.0034
+  },
+  {
+   "ticker": "CAE.TO",
+   "name": "CAE",
+   "weight": 0.0031
+  },
+  {
+   "ticker": "CTC.A.TO",
+   "name": "CANADIAN TIRE LTD CLASS A",
+   "weight": 0.0026
+  },
+  {
+   "ticker": "SAP.TO",
+   "name": "SAPUTO",
+   "weight": 0.0025
+  },
+  {
+   "ticker": "GIL.TO",
+   "name": "GILDAN ACTIVEWEAR",
+   "weight": 0.0022
+  },
+  {
+   "ticker": "FSV.TO",
+   "name": "FIRSTSERVICE SUBORDINATE VOTING",
+   "weight": 0.0022
+  },
+  {
+   "ticker": "OTEX.TO",
+   "name": "OPEN TEXT",
+   "weight": 0.002
+  }
+ ]
+}

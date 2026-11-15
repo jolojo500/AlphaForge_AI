@@ -18,15 +18,18 @@ from alphaforge.state import GraphState
 from alphaforge.tracing import traced
 
 # series_id -> (metric, rule, n)
-#   "bday":  published n business days after the observation date
-#   "month": published on day n of the month after the reference month
+#   "bday":         published n business days after the observation date
+#   "month":        published on day n of the month after the reference month
+#   "first_friday": published on the first Friday of the month after the reference month
 # Release days are set slightly late on purpose, so we never use a number before it existed:
-#   Statistics Canada CPI ~3rd week, BLS CPI ~mid-month, BLS jobs report first Friday.
+#   Statistics Canada CPI ~3rd week, BLS CPI ~mid-month, BLS jobs report / StatCan LFS first Friday.
 SERIES = {
     "V39079": ("policy_rate_ca", "bday", 1),
     "BD.CDN.2YR.DQ.YLD": ("yield_2y_ca", "bday", 1),
     "BD.CDN.10YR.DQ.YLD": ("yield_10y_ca", "bday", 1),
     "STATIC_TOTALCPICHANGE": ("cpi_yoy_ca", "month", 20),
+    "v2062815": ("unemployment_ca", "first_friday", 1),
+    "14-10-0287-01": ("unemployment_ca", "first_friday", 1),
     "DFF": ("policy_rate_us", "bday", 1),
     "DGS2": ("yield_2y_us", "bday", 1),
     "DGS10": ("yield_10y_us", "bday", 1),
@@ -35,7 +38,7 @@ SERIES = {
 }
 RATE_SERIES = ("V39079", "BD.CDN.2YR.DQ.YLD", "BD.CDN.10YR.DQ.YLD", "DFF", "DGS2", "DGS10")
 METRIC_ORDER = (
-    "policy_rate_ca", "yield_2y_ca", "yield_10y_ca", "curve_slope_ca", "cpi_yoy_ca",
+    "policy_rate_ca", "yield_2y_ca", "yield_10y_ca", "curve_slope_ca", "cpi_yoy_ca", "unemployment_ca",
     "policy_rate_us", "yield_2y_us", "yield_10y_us", "curve_slope_us", "cpi_yoy_us",
     "unemployment_us",
 )
@@ -45,6 +48,8 @@ def _rule_text(series_id: str) -> str:
     _, rule, n = SERIES[series_id]
     if rule == "bday":
         return f"{n} business day after the observation"
+    if rule == "first_friday":
+        return "first Friday of the month after the reference month"
     return f"day {n} of the month after the reference month"
 
 
@@ -54,6 +59,10 @@ def published_on(series_id: str, ref_dates: pd.Series) -> pd.Series:
     if rule == "bday":
         days = np.busday_offset(ref_dates.to_numpy().astype("datetime64[D]"), n, roll="backward")
         return pd.Series(pd.to_datetime(days), index=ref_dates.index)
+    if rule == "first_friday":
+        first_day = (ref_dates.dt.to_period("M") + 1).dt.to_timestamp()
+        offset = (4 - first_day.dt.day_of_week) % 7
+        return first_day + pd.to_timedelta(offset, unit="D")
     return (ref_dates.dt.to_period("M") + 1).dt.to_timestamp() + pd.Timedelta(days=n - 1)
 
 
@@ -103,7 +112,7 @@ def rates_as_of(as_of: dt.date, macro: pd.DataFrame | None = None) -> dict[str, 
 
 def inflation_as_of(as_of: dt.date, macro: pd.DataFrame | None = None) -> dict[str, dict]:
     """CPI y/y for Canada (published as a % change) and the US (computed from the index),
-    plus US unemployment. Canadian unemployment is not in the starter data."""
+    plus US and Canadian unemployment."""
     macro = get_provider().macro() if macro is None else macro
     out = {}
     ca = latest(macro, "STATIC_TOTALCPICHANGE", as_of)
@@ -119,6 +128,9 @@ def inflation_as_of(as_of: dt.date, macro: pd.DataFrame | None = None) -> dict[s
                 "value": round(yoy, 4),
                 "label": "U.S. CPI, % change y/y (computed from the SA index)",
             }
+    ca_unemployment = latest(macro, "v2062815", as_of) or latest(macro, "14-10-0287-01", as_of)
+    if ca_unemployment:
+        out["unemployment_ca"] = ca_unemployment
     unemployment = latest(macro, "UNRATE", as_of)
     if unemployment:
         out["unemployment_us"] = unemployment
@@ -153,13 +165,14 @@ def macro_node(state: GraphState) -> dict:
                 f"published {f['published']} ({f['rule']}); latest value known on {as_of}"
             ),
         )
-    reg.add(
-        "Le taux de chômage canadien ne fait pas partie des données fournies.",
-        source="macro_rates.csv",
-        date=as_of,
-        method="coverage of the starter dataset",
-        confidence="assumption",
-    )
+    if "unemployment_ca" not in facts:
+        reg.add(
+            "Le taux de chômage canadien ne fait pas partie des données fournies.",
+            source="macro_rates.csv",
+            date=as_of,
+            method="coverage of the starter dataset",
+            confidence="assumption",
+        )
     return {
         "evidence": reg.items(),
         "summary": f"Contexte macro connu au {as_of} : {len(facts)} indicateurs, délais de publication appliqués.",

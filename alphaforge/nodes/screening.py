@@ -79,13 +79,19 @@ def class_and_geo_filters(profile: Profile, universe: pd.DataFrame) -> list[Hit]
     return hits
 
 
-def load_esgv(holdings_dir: Path | None = None) -> dict | None:
+def load_esgv(
+    holdings_dir: Path | str | dt.date | None = None,
+    as_of: dt.date | str | None = None,
+) -> dict | None:
     """Cached ESGV holdings (A-4 format), or None if the file is missing or unreadable."""
-    return load_holdings("ESGV", holdings_dir or HOLDINGS_DIR)
+    return load_holdings("ESGV", holdings_dir=holdings_dir or HOLDINGS_DIR, as_of=as_of)
 
 
 def esg_exclusions(
-    profile: Profile, universe: pd.DataFrame, holdings_dir: Path | None = None
+    profile: Profile,
+    universe: pd.DataFrame,
+    holdings_dir: Path | str | dt.date | None = None,
+    as_of: dt.date | str | None = None,
 ) -> tuple[list[Hit], list[str]]:
     """Exclusions and coverage notes for `esg_only`. Notes become assumption evidence."""
     if "esg_only" not in profile.constraints:
@@ -109,7 +115,7 @@ def esg_exclusions(
         & universe["market"].isin(US_MARKETS)
         & (universe["sector"] != "Energy")
     ]
-    esgv = load_esgv(holdings_dir)
+    esgv = load_esgv(holdings_dir, as_of=as_of)
     if esgv is None:
         notes.append(
             "Composition du FNB Vanguard ESGV non disponible : le filtre ESG se limite "
@@ -156,7 +162,10 @@ def esg_exclusions(
 
 
 def apply_constraints(
-    profile: Profile, universe: pd.DataFrame, holdings_dir: Path | None = None
+    profile: Profile,
+    universe: pd.DataFrame,
+    holdings_dir: Path | str | dt.date | None = None,
+    as_of: dt.date | str | None = None,
 ) -> tuple[list[str], list[Hit], list[str]]:
     """Eligible tickers, one Hit per excluded ticker (first reason wins), coverage notes."""
     hits = [
@@ -165,7 +174,7 @@ def apply_constraints(
         if t in set(universe["ticker"])
     ]
     hits += class_and_geo_filters(profile, universe)
-    esg_hits, notes = esg_exclusions(profile, universe, holdings_dir)
+    esg_hits, notes = esg_exclusions(profile, universe, holdings_dir=holdings_dir, as_of=as_of)
     hits += esg_hits
 
     first: dict[str, Hit] = {}
@@ -190,7 +199,9 @@ def screening_node(state: GraphState) -> dict:
             "summary": "Profil absent : aucun filtre appliqué.",
         }
 
-    eligible, hits, notes = apply_constraints(profile, universe)
+    eligible, hits, notes = apply_constraints(
+        profile, universe, holdings_dir=HOLDINGS_DIR, as_of=state.as_of_date
+    )
     for note in notes:
         reg.add(
             note,

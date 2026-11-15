@@ -41,6 +41,23 @@ def test_curve_slope_present_for_ca_and_us():
         assert r[f"curve_slope_{c}"]["value"] == pytest.approx(expected)
 
 
+def test_canadian_unemployment_first_friday_lag():
+    # Feb 2024 ref date: 2024-02-01. First Friday of March is 2024-03-01.
+    # Day before release (2024-02-29): only Jan 2024 is known
+    inf_before = inflation_as_of(dt.date(2024, 2, 29))
+    assert "unemployment_ca" in inf_before
+    assert inf_before["unemployment_ca"]["ref_date"] == dt.date(2024, 1, 1)
+
+    # Release day (2024-03-01): Feb 2024 is released and known
+    inf_day = inflation_as_of(dt.date(2024, 3, 1))
+    assert inf_day["unemployment_ca"]["ref_date"] == dt.date(2024, 2, 1)
+
+    # Following week (2024-03-05): Feb 2024 is still latest known
+    inf_after = inflation_as_of(dt.date(2024, 3, 5))
+    assert inf_after["unemployment_ca"]["ref_date"] == dt.date(2024, 2, 1)
+    assert inf_after["unemployment_ca"]["published"] == dt.date(2024, 3, 1)
+
+
 def _state(as_of):
     return GraphState(as_of_date=as_of, persona="robert")
 
@@ -53,6 +70,13 @@ def test_node_writes_em_evidence():
     assert cpi.date_kind == "observation"
     assert "published" in cpi.method
     assert find_one(ev, metric="curve_slope_us") is not None
+
+    # Canadian unemployment is present as a fact evidence entry
+    unemp_ca = find_one(ev, metric="unemployment_ca")
+    assert unemp_ca is not None
+    assert unemp_ca.date == dt.date(2024, 2, 1)
+    assert unemp_ca.confidence == "fact"
+    assert not any("Le taux de chômage canadien ne fait pas partie" in str(e.value) for e in ev.values())
 
 
 def test_node_before_data_degrades_without_raising():
