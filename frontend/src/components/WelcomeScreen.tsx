@@ -2,14 +2,20 @@ import React from 'react';
 import { Logo } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Columns2, RotateCcw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowRight, Columns2, RotateCcw, LogIn, LogOut, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { DemoPersonas } from './DemoPersonas';
+import { AuthUser } from '../types';
 
 interface WelcomeScreenProps {
   onStart: () => void;
   onDemo: (personaId: string, requestText: string) => void;
   onCompare?: () => void;
   onReplay?: () => void;
+  currentUser?: AuthUser | null;
+  onOpenAuth?: () => void;
+  onOpenProfile?: () => void;
+  onLogout?: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
@@ -17,10 +23,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onDemo,
   onCompare,
   onReplay,
+  currentUser,
+  onOpenAuth,
+  onOpenProfile,
+  onLogout,
 }) => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-between px-4 py-6 transition-colors">
-      {/* Top Bar with Theme Toggle and Compare Button */}
+      {/* Top Bar with Theme Toggle, Auth, and Compare Button */}
       <div className="w-full max-w-5xl flex justify-between items-center">
         {onCompare ? (
           <Button
@@ -36,7 +46,57 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         ) : (
           <div />
         )}
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          {currentUser ? (
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenProfile}
+                className="gap-1.5 text-xs font-medium cursor-pointer h-8"
+              >
+                {currentUser.is_advisor ? (
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-primary" />
+                )}
+                <span>{currentUser.username}</span>
+                {currentUser.is_advisor && (
+                  <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[10px] px-1 py-0 h-4">
+                    Conseiller
+                  </Badge>
+                )}
+              </Button>
+              {onLogout && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  title="Déconnexion"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            onOpenAuth && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenAuth}
+                className="gap-1.5 text-xs font-medium cursor-pointer h-8"
+              >
+                <LogIn className="w-3.5 h-3.5 text-primary" />
+                <span>Connexion</span>
+              </Button>
+            )
+          )}
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* Centered Hero */}

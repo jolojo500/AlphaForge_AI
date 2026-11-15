@@ -89,6 +89,23 @@ export interface Trade {
   amount_cad?: number;
 }
 
+export interface HistoricalWindowStats {
+  worst: number;
+  median: number;
+  best: number;
+  loss_share: number;
+  windows_count: number;
+  window_years: number;
+}
+
+export interface HistoricalOutcomes {
+  '1y'?: HistoricalWindowStats;
+  '3y'?: HistoricalWindowStats;
+  horizon_years?: number;
+  horizon_covered?: boolean;
+  disclaimer: string;
+}
+
 export interface Scenario {
   name: ScenarioName;
   weights: Record<string, number>;
@@ -96,6 +113,7 @@ export interface Scenario {
   notes: string[];
   turnover?: number;
   trades?: Trade[];
+  historical_outcomes?: HistoricalOutcomes;
 }
 
 export interface TraceEntry {
@@ -334,4 +352,31 @@ export interface BackendRunPayload {
     withdrawal_plan?: string | null;
     income_stability?: string | null;
   };
+}
+
+export interface AuthUser {
+  user_id: string;
+  username: string;
+  email?: string | null;
+  groups?: string[];
+  is_advisor?: boolean;
+}
+
+export interface UserProfileData {
+  user_id: string;
+  username: string;
+  email?: string | null;
+  profile: Record<string, unknown>;
+  account_type?: string | null;
+  current_holdings?: Record<string, unknown> | null;
+  is_advisor?: boolean;
+  updated_at?: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  id_token?: string;
+  token_type: string;
+  expires_in: number;
+  user: AuthUser;
 }

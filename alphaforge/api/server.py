@@ -15,14 +15,20 @@ from collections import defaultdict, deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
+from alphaforge.auth import (
+    User,
+    authenticate_user,
+    get_current_user,
+    get_current_user_from_request_or_none,
+)
 from alphaforge.graph import (
     _cfg,
     get_graph,
@@ -34,6 +40,7 @@ from alphaforge.graph import (
 from alphaforge.personas import PERSONAS
 from alphaforge.state import GraphState
 from alphaforge.trace_store import get_trace_store
+from alphaforge.users import get_user_store
 from alphaforge.whatif import diff_scenarios, prepare_whatif_inputs
 
 DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
@@ -341,7 +348,10 @@ def _client_ip(request: Request) -> str:
 
 
 def _owner(request: Request) -> str:
-    """Opaque browser-session id (header, or query param for EventSource); IP otherwise."""
+    """Owner id: u:<username> if authenticated, c:<client_id> (browser session) or ip otherwise."""
+    user = get_current_user_from_request_or_none(request)
+    if user:
+        return f"u:{user.username}"
     cid = request.headers.get("x-client-id") or request.query_params.get("client") or ""
     cid = cid.strip()[:64]
     return f"c:{cid}" if cid else f"ip:{_client_ip(request)}"
@@ -387,9 +397,15 @@ def _authorize(run: Run | None, request: Request, *, write: bool = False) -> Run
         raise HTTPException(status_code=404, detail="Run not found")
     if _is_golden(run) and not write:
         return run
-    if run.owner is None or run.owner != _owner(request):
+    if run.owner is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    return run
+    caller = _owner(request)
+    if run.owner == caller:
+        return run
+    user = get_current_user_from_request_or_none(request)
+    if user and run.owner in (f"u:{user.username}", f"u:{user.user_id}"):
+        return run
+    raise HTTPException(status_code=404, detail="Run not found")
 
 
 @asynccontextmanager
@@ -531,16 +547,92 @@ def get_personas() -> dict[str, dict[str, Any]]:
     return {k: PERSONAS[k] for k in DEMO_PERSONAS}
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/auth/login")
+def login_endpoint(req: LoginRequest) -> dict[str, Any]:
+    """Authenticate with Cognito or local dev mode (PRD C-14, #128)."""
+    return authenticate_user(req.username, req.password)
+
+
+@app.get("/auth/me")
+def me_endpoint(user: Annotated[User, Depends(get_current_user)]) -> dict[str, Any]:
+    """Get currently authenticated user identity and profile summary."""
+    profile_data = get_user_store().get_user_profile(user.username) or {}
+    return {
+        "user": user.model_dump(),
+        "profile": profile_data.get("profile"),
+        "account_type": profile_data.get("account_type"),
+        "current_holdings": profile_data.get("current_holdings"),
+        "is_advisor": user.is_advisor,
+    }
+
+
+class ProfileUpdateRequest(BaseModel):
+    profile: dict[str, Any]
+    current_holdings: Any = None
+    account_type: str | None = None
+
+
+@app.get("/user/profile")
+def get_user_profile_endpoint(
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    """Retrieve the authenticated user's profile from the users store."""
+    data = get_user_store().get_user_profile(user.username)
+    if not data:
+        data = {
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email,
+            "profile": {},
+            "account_type": None,
+            "current_holdings": None,
+            "is_advisor": user.is_advisor,
+        }
+    return data
+
+
+@app.put("/user/profile")
+def update_user_profile_endpoint(
+    req: ProfileUpdateRequest,
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    """Update profile, current holdings, and account type in the users store."""
+    return get_user_store().save_user_profile(
+        user_id=user.username,
+        profile=req.profile,
+        current_holdings=req.current_holdings,
+        account_type=req.account_type,
+        username=user.username,
+        email=user.email,
+        is_advisor=user.is_advisor,
+    )
+
+
 @app.get("/runs")
 def list_runs(request: Request, persona: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
     """Golden demo runs plus the caller's own runs; never other people's requests (#111)."""
     limit = max(1, min(limit, 100))
-    golden = get_trace_store().list_runs(limit=limit, persona=persona, include_golden=True)
-    out = [r for r in golden if r.get("is_golden")]
     me = _owner(request)
+    golden = get_trace_store().list_runs(limit=limit, persona=persona, include_golden=True, owner=me)
+    out = [r for r in golden if r.get("is_golden")]
+    seen_ids = {r["run_id"] for r in out}
+
+    for r in golden:
+        if not r.get("is_golden") and r["run_id"] not in seen_ids:
+            seen_ids.add(r["run_id"])
+            out.append(r)
+
     for run in store.list_owned(me):
         if persona and run.persona != persona:
             continue
+        if run.run_id in seen_ids:
+            continue
+        seen_ids.add(run.run_id)
         v = run.state.verification if run.state is not None else None
         out.append(
             {
@@ -560,6 +652,7 @@ def list_runs(request: Request, persona: str | None = None, limit: int = 50) -> 
 @app.post("/runs")
 def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
     persona, persona_data = req.persona, None
+    user = get_current_user_from_request_or_none(request)
     if req.profile_data:
         # A questionnaire profile travels in the run's own state, never in a global (#113).
         p_data = dict(req.profile_data)
@@ -572,6 +665,18 @@ def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
         base = dict(PERSONAS.get(persona, {}))
         base["current_holdings"] = parse_holdings(req.current_holdings)
         persona_data = base
+    elif user and persona in ("me", "custom", user.username):
+        user_record = get_user_store().get_user_profile(user.username)
+        if user_record and user_record.get("profile"):
+            p_data = dict(user_record["profile"])
+            if user_record.get("current_holdings") and not p_data.get("current_holdings"):
+                p_data["current_holdings"] = user_record["current_holdings"]
+            persona, persona_data = "custom", _custom_persona(p_data, req.request_text)
+        elif persona not in DEMO_PERSONAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown persona '{persona}'. Allowed: {list(DEMO_PERSONAS)}",
+            )
     elif persona not in DEMO_PERSONAS:
         raise HTTPException(
             status_code=400,

@@ -2,9 +2,67 @@
  * Typed API client for AlphaForge AI backend (PRD 6).
  */
 
-import { GraphState, PersonaMeta, SavedRunSummary, SSEEvent, WhatIfDiff } from './types';
+import {
+  AuthUser,
+  GraphState,
+  LoginResponse,
+  PersonaMeta,
+  SavedRunSummary,
+  SSEEvent,
+  UserProfileData,
+  WhatIfDiff,
+} from './types';
 
 const API_BASE = '';
+
+const TOKEN_KEY = 'alphaforge_auth_token';
+const USER_KEY = 'alphaforge_auth_user';
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token: string | null): void {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function getStoredUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user: AuthUser | null): void {
+  try {
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function clearAuth(): void {
+  setAuthToken(null);
+  setStoredUser(null);
+}
 
 /** Random per-browser session id: the server only shows a run to the session that started it. */
 function clientId(): string {
@@ -23,7 +81,70 @@ function clientId(): string {
 function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('X-Client-Id', clientId());
+  const token = getAuthToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
   return fetch(url, { ...init, headers });
+}
+
+export async function login(username: string, password: string): Promise<LoginResponse> {
+  const res = await apiFetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Nom d’utilisateur ou mot de passe incorrect.');
+  }
+  const data = (await res.json()) as LoginResponse;
+  setAuthToken(data.access_token || data.id_token || '');
+  setStoredUser(data.user);
+  return data;
+}
+
+export function logout(): void {
+  clearAuth();
+}
+
+export async function fetchCurrentUser(): Promise<{ user: AuthUser; profile?: Record<string, unknown> }> {
+  const res = await apiFetch(`${API_BASE}/auth/me`);
+  if (!res.ok) {
+    clearAuth();
+    throw new Error('Non authentifié');
+  }
+  const data = await res.json();
+  if (data.user) {
+    setStoredUser(data.user);
+  }
+  return data;
+}
+
+export async function fetchUserProfile(): Promise<UserProfileData> {
+  const res = await apiFetch(`${API_BASE}/user/profile`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Impossible de récupérer le profil.');
+  }
+  return res.json();
+}
+
+export async function updateUserProfile(payload: {
+  profile: Record<string, unknown>;
+  account_type?: string | null;
+  current_holdings?: Record<string, unknown> | null;
+}): Promise<UserProfileData> {
+  const res = await apiFetch(`${API_BASE}/user/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Impossible de mettre à jour le profil.');
+  }
+  return res.json();
 }
 
 export async function fetchHealth(): Promise<{ status: string }> {
@@ -138,7 +259,11 @@ export function subscribeRunEvents(
   onEvent: (event: SSEEvent) => void,
   onError?: (error: unknown) => void
 ): () => void {
-  const source = new EventSource(`${API_BASE}/runs/${runId}/events?client=${encodeURIComponent(clientId())}`);
+  const token = getAuthToken();
+  const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+  const source = new EventSource(
+    `${API_BASE}/runs/${runId}/events?client=${encodeURIComponent(clientId())}${tokenParam}`
+  );
 
   source.onmessage = (event) => {
     try {

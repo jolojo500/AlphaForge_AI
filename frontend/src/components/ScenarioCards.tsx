@@ -265,6 +265,78 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
                       )}
                     </div>
                   )}
+
+                  {/* Historical outcomes over horizon (#122) */}
+                  {sc.historical_outcomes && (
+                    <div className="border-t border-border/60 pt-4 mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                          Rendements glissants
+                        </h4>
+                        <span className="text-[10px] text-muted-foreground italic">
+                          historique, pas une prévision
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {sc.historical_outcomes['1y'] && (
+                          <div className="p-2 rounded-lg bg-muted/40 border border-border/50 text-[11px] space-y-1">
+                            <div className="flex justify-between items-center font-medium text-foreground">
+                              <span>Fenêtres de 1 an ({sc.historical_outcomes['1y'].windows_count} obs.)</span>
+                              <span className="text-muted-foreground font-mono text-[10px]">
+                                Perte : {(sc.historical_outcomes['1y'].loss_share * 100).toFixed(0)} %
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 text-[10px] font-mono">
+                              <div className="bg-rose-500/10 text-rose-700 dark:text-rose-300 p-1 rounded text-center">
+                                <span className="block text-[9px] text-muted-foreground">Pire</span>
+                                {(sc.historical_outcomes['1y'].worst * 100).toFixed(1)} %
+                              </div>
+                              <div className="bg-blue-500/10 text-blue-700 dark:text-blue-300 p-1 rounded text-center">
+                                <span className="block text-[9px] text-muted-foreground">Médiane</span>
+                                {(sc.historical_outcomes['1y'].median * 100).toFixed(1)} %
+                              </div>
+                              <div className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-1 rounded text-center">
+                                <span className="block text-[9px] text-muted-foreground">Meilleur</span>
+                                +{(sc.historical_outcomes['1y'].best * 100).toFixed(1)} %
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {sc.historical_outcomes['3y'] && (
+                          <div className="p-2 rounded-lg bg-muted/40 border border-border/50 text-[11px] space-y-1">
+                            <div className="flex justify-between items-center font-medium text-foreground">
+                              <span>Fenêtres de 3 ans ({sc.historical_outcomes['3y'].windows_count} obs.)</span>
+                              <span className="text-muted-foreground font-mono text-[10px]">
+                                Perte : {(sc.historical_outcomes['3y'].loss_share * 100).toFixed(0)} %
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 text-[10px] font-mono">
+                              <div className="bg-rose-500/10 text-rose-700 dark:text-rose-300 p-1 rounded text-center">
+                                <span className="block text-[9px] text-muted-foreground">Pire</span>
+                                {(sc.historical_outcomes['3y'].worst * 100).toFixed(1)} %
+                              </div>
+                              <div className="bg-blue-500/10 text-blue-700 dark:text-blue-300 p-1 rounded text-center">
+                                <span className="block text-[9px] text-muted-foreground">Médiane</span>
+                                {(sc.historical_outcomes['3y'].median * 100).toFixed(1)} %
+                              </div>
+                              <div className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-1 rounded text-center">
+                                <span className="block text-[9px] text-muted-foreground">Meilleur</span>
+                                +{(sc.historical_outcomes['3y'].best * 100).toFixed(1)} %
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {sc.historical_outcomes.horizon_covered === false && sc.historical_outcomes.horizon_years && (
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight pt-0.5">
+                            * Horizon déclaré ({sc.historical_outcomes.horizon_years} ans) : non couvert au-delà de 3 ans par l'historique disponible (5 ans).
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

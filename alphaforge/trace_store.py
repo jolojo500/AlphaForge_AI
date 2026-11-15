@@ -44,6 +44,7 @@ class TraceStore(abc.ABC):
         limit: int = 50,
         persona: str | None = None,
         include_golden: bool = False,
+        owner: str | None = None,
     ) -> list[dict[str, Any]]:
         """List recently saved runs."""
         pass
@@ -72,6 +73,7 @@ def _prepare_item(
     return {
         "run_id": run_id,
         "persona": state_dict.get("persona", "unknown"),
+        "owner": state_dict.get("owner"),
         "as_of_date": str(state_dict.get("as_of_date", "")),
         "request_text": state_dict.get("request_text", ""),
         "created_at": created_at,
@@ -151,6 +153,7 @@ class LocalJsonTraceStore(TraceStore):
         limit: int = 50,
         persona: str | None = None,
         include_golden: bool = False,
+        owner: str | None = None,
     ) -> list[dict[str, Any]]:
         runs = []
         seen = set()
@@ -165,6 +168,11 @@ class LocalJsonTraceStore(TraceStore):
                 p = data.get("persona", "")
                 if persona and p != persona:
                     continue
+                is_gold = bool(data.get("is_golden", str(rid).startswith("golden_")))
+                if owner and not is_gold:
+                    run_owner = data.get("owner") or (data.get("final_state") or {}).get("owner")
+                    if run_owner != owner:
+                        continue
                 if rid and rid not in seen:
                     seen.add(rid)
                     v = data.get("verification") or {}
@@ -281,6 +289,8 @@ class DynamoDBTraceStore(TraceStore):
             "verification_json": json.dumps(item["verification"], ensure_ascii=False),
             "verification_passed": (item.get("verification") or {}).get("passed", False),
         }
+        if item.get("owner"):
+            db_item["owner"] = item["owner"]
 
         # To prevent exceeding DynamoDB 400 KB item limit with large states (evidence, quant metrics),
         # offload full state to S3 when bucket is configured.
@@ -355,18 +365,32 @@ class DynamoDBTraceStore(TraceStore):
         limit: int = 50,
         persona: str | None = None,
         include_golden: bool = False,
+        owner: str | None = None,
     ) -> list[dict[str, Any]]:
         items = []
         seen = set()
         try:
             scan_kwargs: dict[str, Any] = {"Limit": limit}
+            filters = []
+            expr_vals = {}
             if persona:
-                scan_kwargs["FilterExpression"] = "persona = :p"
-                scan_kwargs["ExpressionAttributeValues"] = {":p": persona}
+                filters.append("persona = :p")
+                expr_vals[":p"] = persona
+            if owner:
+                filters.append("(#o = :o OR attribute_not_exists(#o))")
+                scan_kwargs["ExpressionAttributeNames"] = {"#o": "owner"}
+                expr_vals[":o"] = owner
+            if filters:
+                scan_kwargs["FilterExpression"] = " AND ".join(filters)
+                scan_kwargs["ExpressionAttributeValues"] = expr_vals
             resp = self._table.scan(**scan_kwargs)
             for raw in resp.get("Items", []):
                 try:
                     rid = raw["run_id"]
+                    is_gold = rid.startswith("golden_") or bool(raw.get("is_golden"))
+                    if owner and not is_gold:
+                        if raw.get("owner") != owner:
+                            continue
                     seen.add(rid)
                     items.append(
                         {

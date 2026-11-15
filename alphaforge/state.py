@@ -120,6 +120,7 @@ class Scenario(BaseModel):
     notes: list[str] = Field(default_factory=list)
     turnover: float | None = None
     trades: list[dict] | None = None
+    historical_outcomes: dict[str, Any] | None = None
 
 
 def _merge(left: dict, right: dict) -> dict:
