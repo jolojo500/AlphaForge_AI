@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/context/LanguageContext';
 import { DEMO_PERSONAS } from '../lib/demoProfiles';
 import { AppHeader } from './AppHeader';
-import { ArrowUpRight, Columns3, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, RotateCcw } from 'lucide-react';
 
 interface QueryScreenProps {
   profile: UserOnboardingProfile;
@@ -23,7 +23,6 @@ interface QueryScreenProps {
   onOpenProfile?: () => void;
   onLogout?: () => void;
   initialQuery?: string;
-  onCompare?: () => void;
 }
 
 export const QueryScreen: React.FC<QueryScreenProps> = ({
@@ -40,7 +39,6 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   onOpenProfile,
   onLogout,
   initialQuery = '',
-  onCompare,
 }) => {
   const [query, setQuery] = useState<string>(initialQuery);
   const [preparedPayload, setPreparedPayload] = useState<BackendRunPayload | null>(null);
@@ -95,20 +93,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
         onOpenProfile={onOpenProfile}
         onLogout={onLogout}
         rightActions={
-          <>
-            {onCompare && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onCompare}
-                className="h-8 gap-1 text-xs text-muted-foreground cursor-pointer"
-                title={isEn ? 'Same question, three profiles side by side' : 'Même question, trois profils côte à côte'}
-              >
-                <Columns3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isEn ? 'Compare profiles' : 'Comparer les profils'}</span>
-              </Button>
-            )}
-            {onResetProfile && (
+          onResetProfile && (
             <Button
               variant="ghost"
               size="sm"
@@ -119,8 +104,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{isEn ? 'Reset' : 'Réinitialiser'}</span>
             </Button>
-          )}
-          </>
+          )
         }
       />
 

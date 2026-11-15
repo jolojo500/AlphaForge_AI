@@ -130,3 +130,39 @@ def test_register_existing_cognito_user_is_a_conflict_not_a_session(monkeypatch)
     with pytest.raises(HTTPException) as exc:
         auth.register_user("advisor", "Longenough1!")
     assert exc.value.status_code == 409
+
+
+def test_register_confirms_the_account_then_logs_in(monkeypatch):
+    import alphaforge.auth as auth
+
+    calls = []
+
+    class E(Exception):
+        pass
+
+    class FakeClient:
+        class exceptions:  # noqa: N801
+            UsernameExistsException = E
+            InvalidPasswordException = E
+            InvalidParameterException = E
+
+        def sign_up(self, **kw):
+            calls.append("sign_up")
+            return {"UserConfirmed": False}
+
+        def admin_confirm_sign_up(self, **kw):
+            calls.append(("confirm", kw["Username"]))
+
+    class FakeSession:
+        def __init__(self, **kw):
+            pass
+
+        def client(self, *a, **kw):
+            return FakeClient()
+
+    monkeypatch.setenv("AF_AUTH", "on")
+    monkeypatch.delenv("AWS_PROFILE", raising=False)
+    monkeypatch.setattr(auth.boto3, "Session", FakeSession)
+    monkeypatch.setattr(auth, "authenticate_user", lambda u, p: {"user": {"username": u}})
+    assert auth.register_user("newbie", "Longenough1!") == {"user": {"username": "newbie"}}
+    assert calls == ["sign_up", ("confirm", "newbie")]

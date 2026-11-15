@@ -302,6 +302,17 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
                     )
                 except Exception:
                     logging.exception("Failed to persist trace for run %s", run.run_id)
+
+                # Dossier recording for authenticated users (PRD C-16)
+                owner = run.owner or (getattr(run.state, "owner", None) if run.state else None)
+                if owner and owner.startswith("u:"):
+                    username = owner[2:]
+                    try:
+                        from alphaforge.user_dossier import append_decision
+
+                        append_decision(username, run.state, run_id=run.run_id)
+                    except Exception:
+                        logging.exception("Failed to append decision to dossier for %s", username)
             elif t == "interrupt":
                 run.status = "interrupted"
                 run.question = item.get("question")
@@ -590,7 +601,14 @@ def login_endpoint(req: LoginRequest) -> dict[str, Any]:
 def register_endpoint(req: RegisterRequest, request: Request) -> dict[str, Any]:
     """Create an account. An existing user's saved profile is never touched."""
     _register_rate_limit(request)
-    return register_user(req.username, req.password, req.email)
+    bundle = register_user(req.username, req.password, req.email)
+    try:
+        from alphaforge.user_dossier import create_dossier
+
+        create_dossier(username=req.username, email=req.email, profile={})
+    except Exception:
+        logging.exception("Failed to create dossier for %s", req.username)
+    return bundle
 
 
 @app.get("/auth/me")
@@ -637,7 +655,7 @@ def update_user_profile_endpoint(
     user: Annotated[User, Depends(get_current_user)],
 ) -> dict[str, Any]:
     """Update profile, current holdings, and account type in the users store."""
-    return get_user_store().save_user_profile(
+    res = get_user_store().save_user_profile(
         user_id=user.username,
         profile=req.profile,
         current_holdings=req.current_holdings,
@@ -645,6 +663,43 @@ def update_user_profile_endpoint(
         username=user.username,
         email=user.email,
         is_advisor=user.is_advisor,
+    )
+    try:
+        from alphaforge.user_dossier import append_profile_update
+
+        full_profile = dict(req.profile)
+        if req.account_type is not None:
+            full_profile["account_type"] = req.account_type
+        if req.current_holdings is not None:
+            full_profile["current_holdings"] = req.current_holdings
+        append_profile_update(user.username, full_profile)
+    except Exception:
+        logging.exception("Failed to append profile update to dossier for %s", user.username)
+    return res
+
+
+@app.get("/users/me/dossier")
+def get_user_dossier_endpoint(
+    user: Annotated[User, Depends(get_current_user)],
+) -> Response:
+    """Download own user dossier in Markdown format (PRD C-16)."""
+    try:
+        from alphaforge.user_dossier import read_dossier, sanitize_username
+
+        content = read_dossier(user.username)
+    except Exception as exc:
+        logging.exception("Failed to read dossier for user %s: %s", user.username, exc)
+        raise HTTPException(status_code=500, detail="Erreur lors de la lecture du dossier.") from exc
+
+    if not content:
+        raise HTTPException(status_code=404, detail="Dossier introuvable pour cet utilisateur.")
+
+    return Response(
+        content=content,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="dossier_{sanitize_username(user.username)}.md"',
+        },
     )
 
 
@@ -845,20 +900,6 @@ def get_run_diff(run_id: str, request: Request) -> dict[str, Any]:
     return diff
 
 
-@app.get("/runs/compare")
-def compare_runs(run_a: str, run_b: str, request: Request) -> dict[str, Any]:
-    """Compare two completed runs using diff_scenarios (PRD 7, C-9)."""
-    r_a = _authorize(store.get(run_a) or _rehydrate_run_from_trace_store(run_a), request)
-    r_b = _authorize(store.get(run_b) or _rehydrate_run_from_trace_store(run_b), request)
-    s_a, s_b = _final_state(r_a), _final_state(r_b)
-    if s_a is None or s_b is None:
-        raise HTTPException(status_code=400, detail="Both runs must be completed to compare")
-    diff = diff_scenarios(s_a, s_b)
-    diff["run_a_id"] = r_a.run_id
-    diff["run_b_id"] = r_b.run_id
-    return diff
-
-
 @app.post("/runs/{run_id}/answer")
 def answer_run(run_id: str, req: AnswerRequest, request: Request) -> dict[str, str]:
     run = _authorize(
@@ -1024,6 +1065,17 @@ def review_run(
         )
     except Exception:
         pass
+
+    # Append advisor review / decision to dossier (PRD C-16)
+    owner = run.owner or getattr(state, "owner", None)
+    if owner and owner.startswith("u:"):
+        username = owner[2:]
+        try:
+            from alphaforge.user_dossier import append_decision
+
+            append_decision(username, state, run_id=run.run_id)
+        except Exception:
+            logging.exception("Failed to append advisor review to dossier for %s", username)
 
     return {
         "status": "reviewed",
