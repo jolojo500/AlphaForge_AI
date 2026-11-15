@@ -5,20 +5,28 @@ from __future__ import annotations
 import abc
 import asyncio
 import datetime as dt
+import hmac
 import json
 import logging
 import os
+import re
+import secrets
 import threading
+import time
 import uuid
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import quote
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
+from starlette.datastructures import Headers, MutableHeaders
+from starlette.requests import cookie_parser
 
 from alphaforge.graph import (
     _cfg,
@@ -35,6 +43,193 @@ from alphaforge.whatif import diff_scenarios, prepare_whatif_inputs
 
 DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
+SESSION_MAX_AGE = 7 * 24 * 3600
+_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9._~-]{1,128}$")
+
+# In-memory, per-process abuse protection. The run store is per-process too, so this
+# matches the existing deployment model without adding a new AWS dependency.
+_limit_lock = threading.Lock()
+_rate_windows: dict[str, deque[float]] = {}
+_daily_date: dt.date | None = None
+_daily_count = 0
+
+
+def _session_cookie_name() -> str:
+    return os.getenv("AF_SESSION_COOKIE", "af_session")
+
+
+def _valid_session_id(value: str | None) -> str | None:
+    if value and _SESSION_ID_RE.fullmatch(value):
+        return value
+    return None
+
+
+def _session_from_request(headers: Headers) -> str | None:
+    """Read a caller-supplied session id from the cookie or an API header."""
+    cookies = cookie_parser(headers.get("cookie", ""))
+    session_id = _valid_session_id(
+        cookies.get(_session_cookie_name()) or cookies.get("session_id")
+    )
+    if session_id:
+        return session_id
+    return _valid_session_id(headers.get("x-session-id"))
+
+
+class SessionMiddleware:
+    """Issue a demo session cookie and expose it as request.state.session_id."""
+
+    def __init__(self, app: Any):
+        self.app = app
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = Headers(scope=scope)
+        session_id = _session_from_request(headers)
+        needs_cookie = session_id is None
+        if session_id is None:
+            session_id = secrets.token_urlsafe(32)
+
+        scope.setdefault("state", {})["session_id"] = session_id
+
+        if not needs_cookie and headers.get("x-session-id") is None:
+            await self.app(scope, receive, send)
+            return
+
+        cookie = (
+            f"{_session_cookie_name()}={quote(session_id, safe='')}; "
+            f"Path=/; Max-Age={SESSION_MAX_AGE}; HttpOnly; SameSite=Lax"
+        )
+        if os.getenv("AF_SESSION_SECURE", "").lower() in ("1", "true", "yes"):
+            cookie += "; Secure"
+
+        async def send_with_cookie(message: dict[str, Any]) -> None:
+            if message["type"] == "http.response.start":
+                MutableHeaders(scope=message).append("set-cookie", cookie)
+            await send(message)
+
+        await self.app(scope, receive, send_with_cookie)
+
+
+def _request_session_id(request: Request) -> str:
+    return request.state.session_id
+
+
+def _configured_demo_token() -> str | None:
+    for name in ("AF_DEMO_TOKEN", "AF_API_TOKEN"):
+        value = os.getenv(name)
+        if value:
+            return value
+    return None
+
+
+def _supplied_demo_token(request: Request) -> str | None:
+    token = request.headers.get("x-demo-token") or request.headers.get("x-api-token")
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    if not token:
+        token = cookie_parser(request.headers.get("cookie", "")).get("af_demo_token")
+    return token or None
+
+
+def _require_write_access(request: Request) -> None:
+    """Optional shared demo token, enabled by AF_DEMO_TOKEN in deployments."""
+    expected = _configured_demo_token()
+    if not expected:
+        return
+    supplied = _supplied_demo_token(request)
+    if supplied is None or not hmac.compare_digest(supplied, expected):
+        raise HTTPException(
+            status_code=401,
+            detail="Missing or invalid demo token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def _env_int(names: tuple[str, ...], default: int) -> int:
+    for name in names:
+        value = os.getenv(name)
+        if value is None or not value.strip():
+            continue
+        try:
+            return int(value)
+        except ValueError:
+            logging.warning("Ignoring invalid %s=%r", name, value)
+    return default
+
+
+def _rate_limit_per_minute() -> int:
+    return _env_int(
+        ("AF_RATE_LIMIT_PER_MINUTE", "AF_RATE_LIMIT", "AF_RUNS_PER_MINUTE"), 5
+    )
+
+
+def _daily_run_cap() -> int:
+    return _env_int(
+        ("AF_DAILY_RUN_CAP", "AF_DAILY_RUN_LIMIT", "AF_MAX_RUNS_PER_DAY"), 50
+    )
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _check_rate_limit(request: Request) -> None:
+    limit = _rate_limit_per_minute()
+    if limit <= 0:
+        return
+
+    ip = _client_ip(request)
+    now = time.monotonic()
+    with _limit_lock:
+        window = _rate_windows.setdefault(ip, deque())
+        while window and now - window[0] >= 60:
+            window.popleft()
+        if len(window) >= limit:
+            retry_after = max(1, int(60 - (now - window[0])))
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded: max {limit} run requests per minute per IP",
+                headers={"Retry-After": str(retry_after)},
+            )
+        window.append(now)
+
+
+def _consume_daily_run_cap() -> None:
+    global _daily_count, _daily_date
+
+    cap = _daily_run_cap()
+    if cap <= 0:
+        return
+
+    today = dt.datetime.now(dt.UTC).date()
+    with _limit_lock:
+        if _daily_date != today:
+            _daily_date = today
+            _daily_count = 0
+        if _daily_count >= cap:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily run cap reached: max {cap} runs per day",
+            )
+        _daily_count += 1
+
+
+def reset_limits() -> None:
+    """Reset per-process rate/daily counters (used by tests and manual demos)."""
+    global _daily_count, _daily_date
+
+    with _limit_lock:
+        _rate_windows.clear()
+        _daily_date = dt.datetime.now(dt.UTC).date()
+        _daily_count = 0
+
 
 class Run:
     """Represents an execution run and its state/subscribers."""
@@ -46,11 +241,13 @@ class Run:
         request_text: str,
         as_of_date: dt.date | None = None,
         created_at: dt.datetime | None = None,
+        session_id: str | None = None,
     ):
         self.run_id = run_id
         self.persona = persona
         self.request_text = request_text
         self.as_of_date = as_of_date
+        self.session_id = session_id
         self.created_at = created_at or dt.datetime.now(dt.UTC)
         self.status: Literal["running", "interrupted", "completed", "error"] = "running"
         self.events: list[dict[str, Any]] = []
@@ -97,7 +294,11 @@ class Run:
 class BaseRunStore(abc.ABC):
     @abc.abstractmethod
     def create(
-        self, persona: str, request_text: str, as_of_date: dt.date | None = None
+        self,
+        persona: str,
+        request_text: str,
+        as_of_date: dt.date | None = None,
+        session_id: str | None = None,
     ) -> Run:
         pass
 
@@ -109,6 +310,10 @@ class BaseRunStore(abc.ABC):
     def save(self, run: Run) -> None:
         pass
 
+    def list(self) -> list[Run]:
+        """Return runs currently held in memory (optional for persistent stores)."""
+        return []
+
 
 class InMemoryRunStore(BaseRunStore):
     def __init__(self) -> None:
@@ -116,7 +321,11 @@ class InMemoryRunStore(BaseRunStore):
         self._lock = threading.Lock()
 
     def create(
-        self, persona: str, request_text: str, as_of_date: dt.date | None = None
+        self,
+        persona: str,
+        request_text: str,
+        as_of_date: dt.date | None = None,
+        session_id: str | None = None,
     ) -> Run:
         run_id = uuid.uuid4().hex
         run = Run(
@@ -124,6 +333,7 @@ class InMemoryRunStore(BaseRunStore):
             persona=persona,
             request_text=request_text,
             as_of_date=as_of_date,
+            session_id=session_id,
         )
         with self._lock:
             self._runs[run_id] = run
@@ -137,6 +347,10 @@ class InMemoryRunStore(BaseRunStore):
         with self._lock:
             self._runs[run.run_id] = run
 
+    def list(self) -> list[Run]:
+        with self._lock:
+            return list(self._runs.values())
+
 
 store: BaseRunStore = InMemoryRunStore()
 
@@ -148,6 +362,16 @@ def get_store() -> BaseRunStore:
 def set_store(new_store: BaseRunStore) -> None:
     global store
     store = new_store
+
+
+def _visible_run(run_id: str, session_id: str) -> Run:
+    """Return a run owned by this session (or a public/golden run), else 404."""
+    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.session_id is not None and run.session_id != session_id:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
 
 
 def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
@@ -179,6 +403,7 @@ def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
                 persona=run_data.get("persona", ""),
                 request_text=run_data.get("request_text", ""),
                 as_of_date=as_of_date,
+                session_id=run_data.get("session_id"),
             )
             run.status = run_data.get("status", "completed")
             run.state = graph_state
@@ -254,6 +479,7 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
                         verification=run.state.verification
                         if hasattr(run.state, "verification")
                         else None,
+                        session_id=run.session_id,
                     )
                 except Exception:
                     logging.exception("Failed to persist trace for run %s", run.run_id)
@@ -292,8 +518,16 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="AlphaForge AI API", lifespan=lifespan)
+_PROD = os.getenv("AF_ENV", "dev").strip().lower() in ("prod", "production")
+app = FastAPI(
+    title="AlphaForge AI API",
+    lifespan=lifespan,
+    docs_url=None if _PROD else "/docs",
+    redoc_url=None if _PROD else "/redoc",
+    openapi_url=None if _PROD else "/openapi.json",
+)
 
+app.add_middleware(SessionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -369,14 +603,52 @@ def get_personas() -> dict[str, dict[str, Any]]:
     return {k: PERSONAS[k] for k in DEMO_PERSONAS}
 
 
+def _in_memory_run_summary(run: Run) -> dict[str, Any]:
+    verification = run.state.verification if run.state is not None else None
+    return {
+        "run_id": run.run_id,
+        "persona": run.persona,
+        "as_of_date": str(run.as_of_date or ""),
+        "request_text": run.request_text,
+        "created_at": run.created_at.isoformat(),
+        "status": run.status,
+        "verification_passed": bool(verification and verification.get("passed", False)),
+        "is_golden": False,
+    }
+
+
 @app.get("/runs")
-def list_runs(persona: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+def list_runs(
+    request: Request, persona: str | None = None, limit: int = 50
+) -> list[dict[str, Any]]:
+    session_id = _request_session_id(request)
     ts = get_trace_store()
-    return ts.list_runs(limit=limit, persona=persona, include_golden=True)
+    persisted = ts.list_runs(
+        limit=limit,
+        persona=persona,
+        include_golden=True,
+        session_id=session_id,
+    )
+
+    owned = [
+        _in_memory_run_summary(run)
+        for run in store.list()
+        if run.session_id == session_id and (not persona or run.persona == persona)
+    ]
+    seen = {run["run_id"] for run in owned}
+    runs = owned + [run for run in persisted if run["run_id"] not in seen]
+
+    golden = [run for run in runs if run.get("is_golden")]
+    others = [run for run in runs if not run.get("is_golden")]
+    runs = golden + others[: max(0, limit - len(golden))]
+    return [{k: v for k, v in run.items() if k != "session_id"} for run in runs]
 
 
 @app.post("/runs")
-def create_run(req: RunCreateRequest) -> dict[str, str]:
+def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
+    _require_write_access(request)
+    _check_rate_limit(request)
+    session_id = _request_session_id(request)
     persona = req.persona
     if req.profile_data:
         # A questionnaire profile is registered under its own key for this run only,
@@ -388,10 +660,12 @@ def create_run(req: RunCreateRequest) -> dict[str, str]:
             status_code=400,
             detail=f"Unknown persona '{persona}'. Allowed: {list(DEMO_PERSONAS)}",
         )
+    _consume_daily_run_cap()
     run = store.create(
         persona=persona,
         request_text=req.request_text,
         as_of_date=req.as_of_date,
+        session_id=session_id,
     )
     start_run_thread(
         run,
@@ -403,10 +677,8 @@ def create_run(req: RunCreateRequest) -> dict[str, str]:
 
 
 @app.get("/runs/{run_id}/events")
-async def stream_run_events(run_id: str) -> EventSourceResponse:
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+async def stream_run_events(run_id: str, request: Request) -> EventSourceResponse:
+    run = _visible_run(run_id, _request_session_id(request))
 
     loop = asyncio.get_running_loop()
 
@@ -431,10 +703,11 @@ class WhatIfRequest(BaseModel):
 
 
 @app.post("/runs/{run_id}/whatif")
-def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
-    parent = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if parent is None:
-        raise HTTPException(status_code=404, detail="Parent run not found")
+def whatif_run(run_id: str, req: WhatIfRequest, request: Request) -> dict[str, str]:
+    _require_write_access(request)
+    _check_rate_limit(request)
+    session_id = _request_session_id(request)
+    parent = _visible_run(run_id, session_id)
 
     parent_state = parent.state
     if parent_state is None:
@@ -455,10 +728,12 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
+    _consume_daily_run_cap()
     child_run = store.create(
         persona=inputs["persona"],
         request_text=inputs["request_text"],
         as_of_date=inputs["as_of_date"],
+        session_id=session_id,
     )
     child_run.parent_run_id = parent.run_id
     child_run.change = {"field": req.field, "value": req.value}
@@ -474,14 +749,13 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
 
 
 @app.get("/runs/{run_id}/diff")
-def get_run_diff(run_id: str) -> dict[str, Any]:
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None or run.parent_run_id is None:
+def get_run_diff(run_id: str, request: Request) -> dict[str, Any]:
+    session_id = _request_session_id(request)
+    run = _visible_run(run_id, session_id)
+    if run.parent_run_id is None:
         raise HTTPException(status_code=404, detail="What-if run with parent not found")
 
-    parent = store.get(run.parent_run_id) or _rehydrate_run_from_trace_store(run.parent_run_id)
-    if parent is None:
-        raise HTTPException(status_code=404, detail="Parent run not found")
+    parent = _visible_run(run.parent_run_id, session_id)
 
     if run.state is None or parent.state is None:
         raise HTTPException(status_code=400, detail="Both runs must be completed to diff")
@@ -494,12 +768,11 @@ def get_run_diff(run_id: str) -> dict[str, Any]:
 
 
 @app.get("/runs/compare")
-def compare_runs(run_a: str, run_b: str) -> dict[str, Any]:
+def compare_runs(run_a: str, run_b: str, request: Request) -> dict[str, Any]:
     """Compare two completed runs using diff_scenarios (PRD 7, C-9)."""
-    r_a = store.get(run_a)
-    r_b = store.get(run_b)
-    if r_a is None or r_b is None:
-        raise HTTPException(status_code=404, detail="One or both runs not found")
+    session_id = _request_session_id(request)
+    r_a = _visible_run(run_a, session_id)
+    r_b = _visible_run(run_b, session_id)
     if r_a.state is None or r_b.state is None:
         raise HTTPException(status_code=400, detail="Both runs must be completed to compare")
     diff = diff_scenarios(r_a.state, r_b.state)
@@ -509,10 +782,9 @@ def compare_runs(run_a: str, run_b: str) -> dict[str, Any]:
 
 
 @app.post("/runs/{run_id}/answer")
-def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+def answer_run(run_id: str, req: AnswerRequest, request: Request) -> dict[str, str]:
+    _require_write_access(request)
+    run = _visible_run(run_id, _request_session_id(request))
 
     with run._lock:
         if run.status != "interrupted":
@@ -532,10 +804,8 @@ def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
 
 
 @app.get("/runs/{run_id}")
-def get_run_state(run_id: str):
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+def get_run_state(run_id: str, request: Request):
+    run = _visible_run(run_id, _request_session_id(request))
 
     if run.state is not None:
         data = run.state.model_dump(mode="json")

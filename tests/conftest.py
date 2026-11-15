@@ -26,6 +26,16 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(autouse=True)
+def _reset_api_limits():
+    """Keep per-process rate/daily counters isolated between tests."""
+    from alphaforge.api.server import reset_limits
+
+    reset_limits()
+    yield
+    reset_limits()
+
+
+@pytest.fixture(autouse=True)
 def _offline_llm(request, monkeypatch):
     """Unit tests never call Bedrock; LLM nodes fall back to their deterministic path."""
     from alphaforge import llm

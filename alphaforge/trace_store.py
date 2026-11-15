@@ -29,6 +29,7 @@ class TraceStore(abc.ABC):
         state: GraphState | dict[str, Any],
         trace: list[dict[str, Any]] | None = None,
         verification: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
         """Save a finished run with trace, verification, and final state."""
         pass
@@ -44,6 +45,7 @@ class TraceStore(abc.ABC):
         limit: int = 50,
         persona: str | None = None,
         include_golden: bool = False,
+        session_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """List recently saved runs."""
         pass
@@ -54,6 +56,7 @@ def _prepare_item(
     state: GraphState | dict[str, Any],
     trace: list[dict[str, Any]] | None = None,
     verification: dict[str, Any] | None = None,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     if isinstance(state, GraphState):
         state_dict = state.model_dump(mode="json")
@@ -73,6 +76,7 @@ def _prepare_item(
         "request_text": state_dict.get("request_text", ""),
         "created_at": created_at,
         "status": "completed",
+        "session_id": session_id,
         "verification": run_verification,
         "trace": run_trace,
         "final_state": state_dict,
@@ -118,8 +122,9 @@ class LocalJsonTraceStore(TraceStore):
         state: GraphState | dict[str, Any],
         trace: list[dict[str, Any]] | None = None,
         verification: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
-        item = _prepare_item(run_id, state, trace, verification)
+        item = _prepare_item(run_id, state, trace, verification, session_id)
         target = self.storage_dir / f"{run_id}.json"
         target.write_text(json.dumps(item, indent=2, ensure_ascii=False), encoding="utf-8")
         return item
@@ -135,6 +140,7 @@ class LocalJsonTraceStore(TraceStore):
         limit: int = 50,
         persona: str | None = None,
         include_golden: bool = False,
+        session_id: str | None = None,
     ) -> list[dict[str, Any]]:
         runs = []
         seen = set()
@@ -149,6 +155,8 @@ class LocalJsonTraceStore(TraceStore):
                 p = data.get("persona", "")
                 if persona and p != persona:
                     continue
+                if session_id is not None and data.get("session_id") != session_id:
+                    continue
                 if rid and rid not in seen:
                     seen.add(rid)
                     v = data.get("verification") or {}
@@ -162,6 +170,7 @@ class LocalJsonTraceStore(TraceStore):
                             "status": data.get("status", "completed"),
                             "verification_passed": v.get("passed", False) if isinstance(v, dict) else bool(v),
                             "is_golden": bool(data.get("is_golden", rid.startswith("golden_"))),
+                            "session_id": data.get("session_id"),
                         }
                     )
             except Exception:  # noqa: BLE001
@@ -186,6 +195,7 @@ class LocalJsonTraceStore(TraceStore):
                             "status": golden.get("status", "completed"),
                             "verification_passed": v.get("passed", False) if isinstance(v, dict) else bool(v),
                             "is_golden": True,
+                            "session_id": None,
                         }
                     )
 
@@ -250,8 +260,9 @@ class DynamoDBTraceStore(TraceStore):
         state: GraphState | dict[str, Any],
         trace: list[dict[str, Any]] | None = None,
         verification: dict[str, Any] | None = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
-        item = _prepare_item(run_id, state, trace, verification)
+        item = _prepare_item(run_id, state, trace, verification, session_id)
 
         db_item = {
             "run_id": item["run_id"],
@@ -264,6 +275,8 @@ class DynamoDBTraceStore(TraceStore):
             "verification_json": json.dumps(item["verification"], ensure_ascii=False),
             "verification_passed": (item.get("verification") or {}).get("passed", False),
         }
+        if item.get("session_id"):
+            db_item["session_id"] = item["session_id"]
 
         # To prevent exceeding DynamoDB 400 KB item limit with large states (evidence, quant metrics),
         # offload full state to S3 when bucket is configured.
@@ -319,6 +332,7 @@ class DynamoDBTraceStore(TraceStore):
             "verification": verification,
             "trace": trace,
             "final_state": final_state,
+            "session_id": raw.get("session_id"),
         }
 
     def list_runs(
@@ -326,6 +340,7 @@ class DynamoDBTraceStore(TraceStore):
         limit: int = 50,
         persona: str | None = None,
         include_golden: bool = False,
+        session_id: str | None = None,
     ) -> list[dict[str, Any]]:
         items = []
         seen = set()
@@ -337,6 +352,8 @@ class DynamoDBTraceStore(TraceStore):
             resp = self._table.scan(**scan_kwargs)
             for raw in resp.get("Items", []):
                 try:
+                    if session_id is not None and raw.get("session_id") != session_id:
+                        continue
                     rid = raw["run_id"]
                     seen.add(rid)
                     items.append(
@@ -349,6 +366,7 @@ class DynamoDBTraceStore(TraceStore):
                             "status": raw.get("status", "completed"),
                             "verification_passed": raw.get("verification_passed", False),
                             "is_golden": raw.get("run_id", "").startswith("golden_"),
+                            "session_id": raw.get("session_id"),
                         }
                     )
                 except Exception:  # noqa: BLE001
@@ -375,6 +393,7 @@ class DynamoDBTraceStore(TraceStore):
                             "status": golden.get("status", "completed"),
                             "verification_passed": v.get("passed", False) if isinstance(v, dict) else bool(v),
                             "is_golden": True,
+                            "session_id": None,
                         }
                     )
         return _golden_first(items, limit)
