@@ -1,0 +1,137 @@
+{
+ "ticker": "QQQ",
+ "as_of": "2026-11-13",
+ "source_url": "https://stockanalysis.com/etf/qqq/holdings/",
+ "source_name": "stockanalysis.com, QQQ top holdings (top 25 of 104)",
+ "retrieved_at": "2026-11-14",
+ "complete": false,
+ "total_holdings": 104,
+ "coverage_weight": 0.713,
+ "holdings": [
+  {
+   "ticker": "AAPL",
+   "name": "Apple Inc.",
+   "weight": 0.0843
+  },
+  {
+   "ticker": "NVDA",
+   "name": "NVIDIA Corporation",
+   "weight": 0.0652
+  },
+  {
+   "ticker": "MSFT",
+   "name": "Microsoft Corporation",
+   "weight": 0.0632
+  },
+  {
+   "ticker": "AMZN",
+   "name": "Amazon.com, Inc.",
+   "weight": 0.047
+  },
+  {
+   "ticker": "AMD",
+   "name": "Advanced Micro Devices, Inc.",
+   "weight": 0.0429
+  },
+  {
+   "ticker": "MU",
+   "name": "Micron Technology, Inc.",
+   "weight": 0.0405
+  },
+  {
+   "ticker": "TSLA",
+   "name": "Tesla, Inc.",
+   "weight": 0.034
+  },
+  {
+   "ticker": "META",
+   "name": "Meta Platforms, Inc.",
+   "weight": 0.0302
+  },
+  {
+   "ticker": "GOOGL",
+   "name": "Alphabet Inc.",
+   "weight": 0.0285
+  },
+  {
+   "ticker": "AVGO",
+   "name": "Broadcom Inc.",
+   "weight": 0.0282
+  },
+  {
+   "ticker": "WMT",
+   "name": "Walmart Inc.",
+   "weight": 0.0276
+  },
+  {
+   "ticker": "SPCX",
+   "name": "Space Exploration Technologies Corp.",
+   "weight": 0.027
+  },
+  {
+   "ticker": "GOOG",
+   "name": "Alphabet Inc.",
+   "weight": 0.0266
+  },
+  {
+   "ticker": "COST",
+   "name": "Costco Wholesale Corporation",
+   "weight": 0.0218
+  },
+  {
+   "ticker": "CSCO",
+   "name": "Cisco Systems, Inc.",
+   "weight": 0.0181
+  },
+  {
+   "ticker": "PLTR",
+   "name": "Palantir Technologies Inc.",
+   "weight": 0.0177
+  },
+  {
+   "ticker": "INTC",
+   "name": "Intel Corporation",
+   "weight": 0.0145
+  },
+  {
+   "ticker": "AMAT",
+   "name": "Applied Materials, Inc.",
+   "weight": 0.0136
+  },
+  {
+   "ticker": "LRCX",
+   "name": "Lam Research Corporation",
+   "weight": 0.0131
+  },
+  {
+   "ticker": "TXN",
+   "name": "Texas Instruments Incorporated",
+   "weight": 0.0128
+  },
+  {
+   "ticker": "PANW",
+   "name": "Palo Alto Networks, Inc.",
+   "weight": 0.0118
+  },
+  {
+   "ticker": "NFLX",
+   "name": "Netflix, Inc.",
+   "weight": 0.0117
+  },
+  {
+   "ticker": "AMGN",
+   "name": "Amgen Inc.",
+   "weight": 0.0113
+  },
+  {
+   "ticker": "LIN",
+   "name": "Linde plc",
+   "weight": 0.0108
+  },
+  {
+   "ticker": "CRWD",
+   "name": "CrowdStrike Holdings, Inc.",
+   "weight": 0.0106
+  }
+ ]
+}

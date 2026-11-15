@@ -81,6 +81,26 @@ def test_mateo_with_esgv_holdings(esgv_dir, monkeypatch):
     assert [e["ticker"] for e in out["exclusions"]].count("XOM") == 1  # one reason per ticker
 
 
+def test_partial_esgv_list_does_not_exclude_absent_names(tmp_path, monkeypatch):
+    data = {
+        "ticker": "ESGV", "as_of": "2026-09-30", "source_url": "https://example.test/esgv",
+        "complete": False, "total_holdings": 1220,
+        "holdings": [{"ticker": t, "name": t, "weight": 0.01} for t in ("AAPL", "MSFT")],
+    }
+    (tmp_path / "ESGV.json").write_text(json.dumps(data), encoding="utf-8")
+    out = _run(_profile("mateo"), tmp_path, monkeypatch)
+    assert {"JNJ", "PG", "AAPL"} <= set(out["eligible_universe"])  # unknown, not excluded
+    assert "XOM" not in out["eligible_universe"]  # still excluded by the energy rule
+    notes = [str(e.value) for e in out["evidence"].values() if e.confidence == "assumption"]
+    assert any("JNJ" in n and "principales positions" in n for n in notes)
+
+
+def test_mateo_with_committed_holdings():
+    out = screening_node(GraphState(as_of_date=AS_OF, persona="mateo", profile=_profile("mateo")))
+    assert {"AAPL", "JNJ", "PG"} <= set(out["eligible_universe"])
+    assert not {"XOM", "ENB.TO", "CNQ.TO", "BTC-USD", "ETH-USD"} & set(out["eligible_universe"])
+
+
 def test_whatif_excluded_ticker(no_holdings, monkeypatch):
     out = _run(_profile("amira", excluded_tickers=["XIU.TO"]), no_holdings, monkeypatch)
     assert "XIU.TO" not in out["eligible_universe"]

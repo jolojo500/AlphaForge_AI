@@ -7,13 +7,13 @@ Every exclusion carries a French reason and an ES evidence id.
 from __future__ import annotations
 
 import datetime as dt
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 
 from alphaforge import config
+from alphaforge.data.holdings import load_holdings
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState, Profile
@@ -81,13 +81,7 @@ def class_and_geo_filters(profile: Profile, universe: pd.DataFrame) -> list[Hit]
 
 def load_esgv(holdings_dir: Path | None = None) -> dict | None:
     """Cached ESGV holdings (A-4 format), or None if the file is missing or unreadable."""
-    path = (holdings_dir or HOLDINGS_DIR) / "ESGV.json"
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+    return load_holdings("ESGV", holdings_dir or HOLDINGS_DIR)
 
 
 def esg_exclusions(
@@ -123,12 +117,21 @@ def esg_exclusions(
         )
     else:
         held = {h.get("ticker") for h in esgv.get("holdings", [])}
+        complete = esgv.get("complete", True)
         try:
             as_of = dt.date.fromisoformat(esgv.get("as_of", ""))
         except ValueError:
             as_of = None
+        unknown = [t for t in us_stocks["ticker"] if t not in held and not complete]
+        if unknown:
+            notes.append(
+                f"Seules les principales positions d'ESGV sont publiées ({len(held)} sur "
+                f"{esgv.get('total_holdings', '?')}, au {esgv.get('as_of', '?')}) : "
+                f"{', '.join(unknown)} n'y figurent pas, sans que leur absence du fonds soit "
+                "établie. Ils ne sont donc pas exclus pour ce motif."
+            )
         for t in us_stocks["ticker"]:
-            if t not in held:
+            if t not in held and complete:
                 hits.append(
                     Hit(
                         t,

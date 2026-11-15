@@ -1,0 +1,137 @@
+{
+ "ticker": "ESGV",
+ "as_of": "2026-09-30",
+ "source_url": "https://stockanalysis.com/etf/esgv/holdings/",
+ "source_name": "stockanalysis.com, ESGV top holdings (top 25 of 1220)",
+ "retrieved_at": "2026-11-14",
+ "complete": false,
+ "total_holdings": 1220,
+ "coverage_weight": 0.5586,
+ "holdings": [
+  {
+   "ticker": "NVDA",
+   "name": "NVIDIA Corporation",
+   "weight": 0.0892
+  },
+  {
+   "ticker": "AAPL",
+   "name": "Apple Inc.",
+   "weight": 0.0806
+  },
+  {
+   "ticker": "MSFT",
+   "name": "Microsoft Corporation",
+   "weight": 0.0638
+  },
+  {
+   "ticker": "AMZN",
+   "name": "Amazon.com, Inc.",
+   "weight": 0.0405
+  },
+  {
+   "ticker": "GOOGL",
+   "name": "Alphabet Inc.",
+   "weight": 0.0335
+  },
+  {
+   "ticker": "AVGO",
+   "name": "Broadcom Inc.",
+   "weight": 0.0273
+  },
+  {
+   "ticker": "GOOG",
+   "name": "Alphabet Inc.",
+   "weight": 0.0271
+  },
+  {
+   "ticker": "META",
+   "name": "Meta Platforms, Inc.",
+   "weight": 0.0267
+  },
+  {
+   "ticker": "MU",
+   "name": "Micron Technology, Inc.",
+   "weight": 0.0201
+  },
+  {
+   "ticker": "TSLA",
+   "name": "Tesla, Inc.",
+   "weight": 0.0173
+  },
+  {
+   "ticker": "AMD",
+   "name": "Advanced Micro Devices, Inc.",
+   "weight": 0.0167
+  },
+  {
+   "ticker": "LLY",
+   "name": "Eli Lilly and Company",
+   "weight": 0.0155
+  },
+  {
+   "ticker": "JPM",
+   "name": "JPMorgan Chase & Co.",
+   "weight": 0.0148
+  },
+  {
+   "ticker": "V",
+   "name": "Visa Inc.",
+   "weight": 0.0102
+  },
+  {
+   "ticker": "INTC",
+   "name": "Intel Corporation",
+   "weight": 0.0092
+  },
+  {
+   "ticker": "ABBV",
+   "name": "AbbVie Inc.",
+   "weight": 0.0078
+  },
+  {
+   "ticker": "MA",
+   "name": "Mastercard Incorporated",
+   "weight": 0.0075
+  },
+  {
+   "ticker": "CSCO",
+   "name": "Cisco Systems, Inc.",
+   "weight": 0.0071
+  },
+  {
+   "ticker": "LRCX",
+   "name": "Lam Research Corporation",
+   "weight": 0.0069
+  },
+  {
+   "ticker": "AMAT",
+   "name": "Applied Materials, Inc.",
+   "weight": 0.0068
+  },
+  {
+   "ticker": "COST",
+   "name": "Costco Wholesale Corporation",
+   "weight": 0.0068
+  },
+  {
+   "ticker": "MRK",
+   "name": "Merck & Co., Inc.",
+   "weight": 0.006
+  },
+  {
+   "ticker": "BAC",
+   "name": "Bank of America Corporation",
+   "weight": 0.0059
+  },
+  {
+   "ticker": "PG",
+   "name": "The Procter & Gamble Company",
+   "weight": 0.0057
+  },
+  {
+   "ticker": "KO",
+   "name": "The Coca-Cola Company",
+   "weight": 0.0056
+  }
+ ]
+}
