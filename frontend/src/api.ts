@@ -2,7 +2,7 @@
  * Typed API client for AlphaForge AI backend (PRD 6).
  */
 
-import { GraphState, PersonaMeta, SSEEvent } from './types';
+import { GraphState, PersonaMeta, SSEEvent, WhatIfDiff } from './types';
 
 const API_BASE = '';
 
@@ -57,6 +57,32 @@ export async function fetchRunState(runId: string): Promise<GraphState> {
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Failed to fetch run state: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function createWhatIf(
+  parentId: string,
+  field: string,
+  value: unknown
+): Promise<{ run_id: string; parent_run_id: string }> {
+  const res = await fetch(`${API_BASE}/runs/${parentId}/whatif`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ field, value }),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Failed to create what-if run: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchRunDiff(childRunId: string): Promise<WhatIfDiff> {
+  const res = await fetch(`${API_BASE}/runs/${childRunId}/diff`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Failed to fetch what-if diff: ${res.statusText}`);
   }
   return res.json();
 }

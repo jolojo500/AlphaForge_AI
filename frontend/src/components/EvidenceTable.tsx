@@ -25,6 +25,7 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
 }) => {
   const [filterPrefix, setFilterPrefix] = useState<PrefixFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(15);
 
   const evidenceList = useMemo(() => Object.values(evidence), [evidence]);
 
@@ -112,7 +113,7 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredEvidence.map((ev) => {
+            {filteredEvidence.slice(0, displayLimit).map((ev) => {
               let displayVal = String(ev.value);
               if (typeof ev.value === 'object' && ev.value !== null) {
                 if ('value' in ev.value) {
@@ -168,6 +169,21 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {filteredEvidence.length > displayLimit && (
+        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>
+            Affichage de {Math.min(displayLimit, filteredEvidence.length)} sur {filteredEvidence.length} preuves
+          </span>
+          <button
+            type="button"
+            onClick={() => setDisplayLimit((prev) => prev + 20)}
+            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            Voir plus de preuves (+20)
+          </button>
+        </div>
+      )}
     </section>
   );
 };

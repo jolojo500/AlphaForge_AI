@@ -137,3 +137,39 @@ export type SSEEvent =
   | { type: 'interrupt'; question: string }
   | { type: 'final'; run_id: string }
   | { type: 'error'; error: string; message?: string };
+
+export interface WhatIfChange {
+  field: string;
+  value: unknown;
+}
+
+export interface WeightDelta {
+  old: number;
+  new: number;
+  delta: number;
+}
+
+export interface MetricDelta {
+  old: number | null;
+  new: number | null;
+  delta: number | null;
+  old_eid?: string;
+  new_eid?: string;
+}
+
+export interface ScenarioDiff {
+  weights: Record<string, WeightDelta>;
+  metrics: Record<string, MetricDelta>;
+  notes: {
+    old: string[];
+    new: string[];
+  };
+}
+
+export interface WhatIfDiff {
+  scenarios: Record<ScenarioName, ScenarioDiff>;
+  summary: string[];
+  change?: WhatIfChange;
+  parent_run_id?: string;
+  child_run_id?: string;
+}

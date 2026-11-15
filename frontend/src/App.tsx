@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { GraphState, PersonaMeta, TraceEntry } from './types';
+import { GraphState, PersonaMeta, TraceEntry, WhatIfDiff } from './types';
 import {
   fetchPersonas,
   createRun,
   subscribeRunEvents,
   answerRun,
   fetchRunState,
+  createWhatIf,
+  fetchRunDiff,
 } from './api';
 import { SimulationBanner } from './components/SimulationBanner';
 import { PersonaPicker } from './components/PersonaPicker';
@@ -17,6 +19,8 @@ import { ExplanationSection } from './components/ExplanationSection';
 import { ExclusionsCard } from './components/ExclusionsCard';
 import { EvidenceTable } from './components/EvidenceTable';
 import { EvidenceModal } from './components/EvidenceModal';
+import { WhatIfControls } from './components/WhatIfControls';
+import { WhatIfDiffView } from './components/WhatIfDiffView';
 import { Compass, AlertTriangle } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -31,6 +35,8 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const [selectedEvidenceId, setSelectedEvidenceId] = useState<string | null>(null);
+  const [whatIfDiff, setWhatIfDiff] = useState<WhatIfDiff | null>(null);
+  const [isWhatIfRunning, setIsWhatIfRunning] = useState<boolean>(false);
 
   const unsubRef = useRef<(() => void) | null>(null);
 
@@ -72,6 +78,7 @@ export const App: React.FC = () => {
     setInterruptQuestion(null);
     setRunState(null);
     setSelectedEvidenceId(null);
+    setWhatIfDiff(null);
     setIsRunning(true);
 
     if (unsubRef.current) {
@@ -138,6 +145,49 @@ export const App: React.FC = () => {
       setError(`Échec de la réponse : ${msg}`);
     }
   }, [runId]);
+
+  const handleRunWhatIf = useCallback(
+    async (field: string, value: unknown) => {
+      if (!runId || !runState) return;
+      setIsWhatIfRunning(true);
+      setError(null);
+
+      try {
+        const { run_id: childId } = await createWhatIf(runId, field, value);
+
+        subscribeRunEvents(
+          childId,
+          (ev) => {
+            if (ev.type === 'trace') {
+              setTrace((prev) => [...prev, ev.entry]);
+            } else if (ev.type === 'final') {
+              fetchRunDiff(childId)
+                .then((diffData) => {
+                  setWhatIfDiff(diffData);
+                  setIsWhatIfRunning(false);
+                })
+                .catch((err) => {
+                  setError(`Échec du calcul des écarts What-If: ${err.message}`);
+                  setIsWhatIfRunning(false);
+                });
+            } else if (ev.type === 'error') {
+              setIsWhatIfRunning(false);
+              setError(ev.error || 'Erreur pendant la simulation What-If');
+            }
+          },
+          (err) => {
+            console.error('SSE What-If error:', err);
+            setIsWhatIfRunning(false);
+          }
+        );
+      } catch (err: unknown) {
+        setIsWhatIfRunning(false);
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Échec du lancement What-If : ${msg}`);
+      }
+    },
+    [runId, runState]
+  );
 
   const activeEvidence = selectedEvidenceId && runState?.evidence
     ? runState.evidence[selectedEvidenceId] || null
@@ -208,6 +258,21 @@ export const App: React.FC = () => {
 
         {runState && (
           <>
+            {whatIfDiff && (
+              <WhatIfDiffView
+                diff={whatIfDiff}
+                onClose={() => setWhatIfDiff(null)}
+              />
+            )}
+
+            <WhatIfControls
+              currentProfile={runState.profile}
+              asOfDate={runState.as_of_date}
+              eligibleTickers={runState.eligible_universe}
+              onRunWhatIf={handleRunWhatIf}
+              isRunning={isWhatIfRunning}
+            />
+
             <ScenarioCards
               scenarios={runState.scenarios}
               evidence={runState.evidence}
