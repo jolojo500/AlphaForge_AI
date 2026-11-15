@@ -89,6 +89,22 @@ class Profile(BaseModel):
     current_holdings: dict[str, float] | None = None
     not_analysed_holdings: list[str] = Field(default_factory=list)
     language: Literal["fr", "en"] = "fr"
+    # --- contract for the final-report fixes (orchestrator-owned) ---------------------
+    # What the question asks for, as weights: keys are universe tickers or the asset-class
+    # codes "crypto", "equity", "bond", "gold". None when the question names no allocation.
+    requested_allocation: dict[str, float] | None = None
+    # A vehicle named in the question that is outside the universe (e.g. "BTCC.B").
+    requested_vehicle: str | None = None
+    # Declared limits from the questionnaire, as ratios (0.25 = 25 %). None = not declared.
+    max_loss_12m: float | None = None
+    crypto_target_min: float | None = None
+    sector_cap: float | None = None
+    currency_pref: str | None = None  # "cad" | "usd" | "mixed"
+    age_band: str | None = None  # e.g. "18-29"
+    # Declared holdings that are outside the universe, at their declared weight, and the
+    # undeclared remainder treated as cash. Never rescaled into the analysed holdings.
+    holdings_unanalysed: dict[str, float] = Field(default_factory=dict)
+    holdings_cash: float | None = None
 
     # Extra KYC fields (#117, relation to #128)
     has_emergency_fund: bool | None = None
@@ -145,6 +161,8 @@ class GraphState(BaseModel):
     events: Annotated[list[dict], operator.add] = Field(default_factory=list)
     scenarios: list[Scenario] = Field(default_factory=list)
     objections: list[dict] = Field(default_factory=list)
+    # One entry per declared limit and scenario, produced by alphaforge.guardrails.
+    guardrails: list[dict] = Field(default_factory=list)
     explanation: dict | None = None
     verification: dict | None = None
     retries: Annotated[dict[str, int], _merge] = Field(default_factory=dict)
