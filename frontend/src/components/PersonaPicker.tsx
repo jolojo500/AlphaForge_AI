@@ -19,6 +19,12 @@ const TOLERANCE_LABELS: Record<string, string> = {
   high: 'Élevée',
 };
 
+const OBJECTIVE_LABELS: Record<string, string> = {
+  growth: 'Croissance du capital',
+  balanced: 'Équilibré & responsable',
+  capital_preservation: 'Préservation du capital',
+};
+
 export const PersonaPicker: React.FC<PersonaPickerProps> = ({
   personas,
   selectedPersona,
@@ -63,7 +69,9 @@ export const PersonaPicker: React.FC<PersonaPickerProps> = ({
                   {id}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 line-clamp-2">{meta.objective}</p>
+              <p className="text-xs text-slate-500 line-clamp-2">
+                {OBJECTIVE_LABELS[meta.objective] || meta.objective}
+              </p>
             </button>
           );
         })}
