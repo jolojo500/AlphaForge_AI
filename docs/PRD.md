@@ -92,9 +92,9 @@ Reference material for prompts and wording: the BNCD workshop deck "Comprendre l
 |---|---|
 | Agents 1, 3, 4 | `global.anthropic.claude-sonnet-5-5` (`AF_MODEL_MAIN`) |
 | Agent 2 classification (only items the rules cannot classify with confidence), scenario notes (since #89) | `global.anthropic.claude-haiku-5-5` (`AF_MODEL_FAST`) |
-| Not used yet; available in the account for judgment-heavy escalation (#96) | `global.anthropic.claude-opus-5-5` |
+| Escalation sur profils contradictoires (Agent 1 second pass) et arbitrage critique Agent 3 si `AF_RED_TEAM_RECHECK=on` (#96) | `global.anthropic.claude-opus-5-5` (`AF_MODEL_REVIEW`) |
 
-Both inference profiles were confirmed present in the workshop account (us-east-1) on 2026-11-14. Sonnet 5.5 rejects forced `tool_choice`: ask for JSON in the prompt and validate with Pydantic rather than relying on `with_structured_output`.
+All three inference profiles were confirmed present in the workshop account (us-east-1) on 2026-11-14. Sonnet 5.5 rejects forced `tool_choice`: ask for JSON in the prompt and validate with Pydantic rather than relying on `with_structured_output`.
 
 | Service | Why |
 |---|---|

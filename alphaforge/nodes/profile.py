@@ -97,6 +97,10 @@ def _resolve_ticker(raw: str | None) -> str | None:
     for t in universe:
         if key in (t.upper(), t.upper().split(".")[0]):
             return t
+    if key in ("CRYPTO", "BITCOIN", "BTC"):
+        return "BTC-USD"
+    if key in ("ETHER", "ETHEREUM", "ETH"):
+        return "ETH-USD"
     return None
 
 
@@ -122,12 +126,27 @@ def _regex_extract(text: str) -> Extraction:
         ):
             ticker = t
             break
+    if not ticker and weight is not None and re.search(r"\bcrypto\b", lowered):
+        ticker = "BTC-USD"
+    horizon = None
+    m_h = re.search(r"(\d+)\s*ans?\b", lowered)
+    if m_h:
+        horizon = int(m_h.group(1))
     return Extraction(
-        request_type="judge" if ticker else "build", ticker=ticker, weight_pct=weight
+        request_type="judge" if ticker else "build",
+        ticker=ticker,
+        weight_pct=weight,
+        horizon_years=horizon,
     )
 
 
-def extract_profile(state_persona: str, text: str, llm_client=None) -> tuple[Extraction, bool]:
+def extract_profile(
+    state_persona: str,
+    text: str,
+    *,
+    kind: llm.ModelKind = "main",
+    llm_client=None,
+) -> tuple[Extraction, bool]:
     """Read the request. Returns (extraction, used_fallback)."""
     if not text.strip():
         return Extraction(), False
@@ -140,7 +159,7 @@ def extract_profile(state_persona: str, text: str, llm_client=None) -> tuple[Ext
         f'Request (French): """{text}"""'
     )
     try:
-        return llm.call_json(prompt, Extraction, kind="main", system=SYSTEM, llm=llm_client), False
+        return llm.call_json(prompt, Extraction, kind=kind, system=SYSTEM, llm=llm_client), False
     except llm.LLMError:
         return _regex_extract(text), True
 
@@ -260,6 +279,23 @@ def build_profile(persona_id: str, ext: Extraction, used_fallback: bool) -> Prof
     )
 
 
+def is_contradictory_profile(
+    conflicts: list[str],
+    idea: dict | None,
+    horizon_years: int,
+    constraints: list[str],
+) -> bool:
+    """True when a profile has an irreconcilable conflict (e.g. crypto on short horizon) needing clarification."""
+    if not idea:
+        return bool(conflicts and any("exclu" in c or "volatil" in c for c in conflicts))
+    ticker = idea.get("ticker", "")
+    asset = _universe().get(ticker, {})
+    if asset.get("asset_class") == "crypto":
+        if "no_crypto" in constraints or horizon_years < CRYPTO_MIN_HORIZON_YEARS:
+            return True
+    return False
+
+
 @traced("profile")
 def profile_node(state: GraphState) -> dict:
     text = state.request_text.strip()
@@ -268,10 +304,58 @@ def profile_node(state: GraphState) -> dict:
     # deterministic (regex reading, no model call) for interrupt() to be reached again.
     question = needs_clarification(text, _regex_extract(text))
     if question and not state.retries.get("clarify"):
-        answer = str(interrupt({"question": question})).strip()
-        text = f"{text} {answer}".strip()
-        update = {"request_text": text, "retries": {"clarify": 1}}
-    ext, fallback = extract_profile(state.persona, text)
+        try:
+            answer = str(interrupt({"question": question})).strip()
+            text = f"{text} {answer}".strip()
+            update = {"request_text": text, "retries": {"clarify": 1}}
+        except RuntimeError:
+            pass
+
+    ext, fallback = extract_profile(state.persona, text, kind="main")
+
+    p = PERSONAS[state.persona]
+    ticker = _resolve_ticker(ext.ticker)
+    idea = (
+        {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
+        if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
+        else None
+    )
+    horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p["horizon_years"]
+    constraints = list(p["constraints"])
+    for c in _clean_tags(ext.extra_constraints):
+        if c in KNOWN_CONSTRAINTS and c not in constraints:
+            constraints.append(c)
+    conflicts = detect_conflict(
+        tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea
+    )
+
+    if is_contradictory_profile(conflicts, idea, horizon, constraints):
+        # Contradictory free-text profile: second pass on Opus 5.5 before asking the clarifying question
+        ext, fallback = extract_profile(state.persona, text, kind="review")
+        ticker = _resolve_ticker(ext.ticker)
+        idea = (
+            {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
+            if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
+            else None
+        )
+        horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p["horizon_years"]
+        conflicts = detect_conflict(
+            tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea
+        )
+        if is_contradictory_profile(conflicts, idea, horizon, constraints) and not state.retries.get("clarify"):
+            target_asset = idea["ticker"] if idea else "cryptoactifs"
+            clarif_q = (
+                f"Votre horizon de {horizon} ans contredit un investissement dans {target_asset}. "
+                "Souhaitez-vous privilégier la sécurité pour votre retraite ou ajuster votre horizon ?"
+            )
+            try:
+                answer = str(interrupt({"question": clarif_q})).strip()
+                text = f"{text} {answer}".strip()
+                update = {"request_text": text, "retries": {"clarify": 1}}
+                ext, fallback = extract_profile(state.persona, text, kind="review")
+            except RuntimeError:
+                pass
+
     profile = build_profile(state.persona, ext, fallback)
     if profile.request_type == "judge":
         summary = f"Profil compris : évaluation de {profile.requested_idea['ticker']}."
