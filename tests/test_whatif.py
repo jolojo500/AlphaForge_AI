@@ -60,13 +60,15 @@ def test_whatif_robert_tolerance_rerun():
     assert "screening" in {t["node"] for t in new_state.trace}
 
 
-def test_whatif_robert_tolerance_loosens_caps():
+def test_whatif_robert_tolerance_cannot_loosen_below_capacity():
     initial_state = run("robert", PERSONAS["robert"]["example_request"])
     new_state = rerun(initial_state, {"field": "risk_tolerance", "value": "high"})
 
-    # When real scenario builder lands in A-6, TSLA cap increases to 10%
+    # Tolerance rises but Robert's capacity stays low, so the effective limit is unchanged.
+    capped_old = next(s for s in initial_state.scenarios if s.name == "capped")
     capped_new = next(s for s in new_state.scenarios if s.name == "capped")
-    assert capped_new.weights["TSLA"] == pytest.approx(0.10)
+    assert capped_old.weights["TSLA"] == pytest.approx(0.03)
+    assert capped_new.weights["TSLA"] == pytest.approx(0.03)
 
 
 def test_whatif_exclude_ticker_disappears_from_universe():

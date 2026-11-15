@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from alphaforge import llm
 from alphaforge.evidence import numeric
 from alphaforge.nodes.profile import TOLERANCE_FR
+from alphaforge.risk import binding_risk, effective_risk, risk_gap
 from alphaforge.state import Evidence, GraphState, Scenario
 from alphaforge.tracing import traced
 
@@ -165,8 +166,10 @@ def build_prompt(state: GraphState) -> str:
         f"Demande : {state.request_text!r}",
         (
             f"Profil : persona={p.persona}, objectif={p.objective}, horizon={p.horizon_years} ans, "
-            f"tolérance={p.risk_tolerance}, capacité={p.risk_capacity}, contraintes={p.constraints}, "
-            f"préférences={p.preferences}, type={p.request_type}, idée={p.requested_idea}"
+            f"tolérance={p.risk_tolerance}, capacité={p.risk_capacity}, "
+            f"risque effectif={effective_risk(p.risk_tolerance, p.risk_capacity)}, "
+            f"contraintes={p.constraints}, préférences={p.preferences}, "
+            f"type={p.request_type}, idée={p.requested_idea}"
         ),
         f"Tensions détectées : {p.conflicts or 'aucune'}",
         "",
@@ -222,17 +225,29 @@ def template_explanation(state: GraphState) -> dict:
             )
     bm = _metric_value(state, best, "max_drawdown")
     if bm is not None:
-        tol_str = (
-            TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
-            if state.profile
-            else ""
-        )
+        profile = state.profile
+        if profile:
+            tol_str = TOLERANCE_FR.get(profile.risk_tolerance, profile.risk_tolerance)
+            effective = effective_risk(profile.risk_tolerance, profile.risk_capacity)
+            effective_str = TOLERANCE_FR.get(effective, effective)
+            binding = binding_risk(profile.risk_tolerance, profile.risk_capacity)
+            if binding == "capacity":
+                niveau = (
+                    f"la capacité de risque « {effective_str} », plus prudente que la "
+                    f"tolérance déclarée « {tol_str} »"
+                )
+            elif binding == "tolerance":
+                niveau = f"la tolérance au risque « {effective_str} »"
+            else:
+                niveau = f"la tolérance et la capacité au risque « {effective_str} »"
+        else:
+            niveau = "le profil déclaré"
         pourquoi.append(
             {
                 "claim": (
                     f"Le scénario {best.name} présente la plus faible perte maximale historique "
-                    f"({_fr(abs(bm) * 100, 1)} %) parmi les trois, ce qui est le plus cohérent avec une "
-                    f"tolérance au risque « {tol_str} »."
+                    f"({_fr(abs(bm) * 100, 1)} %) parmi les trois, ce qui est le plus cohérent avec "
+                    f"{niveau}."
                 ),
                 "evidence": [best.metrics["max_drawdown"]],
             }
@@ -248,6 +263,16 @@ def template_explanation(state: GraphState) -> dict:
     if state.profile and state.profile.conflicts:
         limites.append(
             {"claim": "Le profil comporte des tensions avec la demande formulée.", "evidence": []}
+        )
+    if state.profile and risk_gap(state.profile.risk_tolerance, state.profile.risk_capacity) > 1:
+        limites.append(
+            {
+                "claim": (
+                    "La tolérance et la capacité au risque diffèrent de plus d'un niveau ; "
+                    "les plafonds suivent la plus prudente des deux."
+                ),
+                "evidence": [],
+            }
         )
     return {
         "resume": "Comparaison de trois scénarios fictifs avec leurs indicateurs de risque historiques.",

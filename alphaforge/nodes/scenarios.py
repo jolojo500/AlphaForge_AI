@@ -18,6 +18,7 @@ from scipy.optimize import minimize
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import concentration, max_drawdown, stress_2022, volatility
+from alphaforge.risk import binding_risk, effective_risk
 from alphaforge.state import SCENARIO_METRICS, SCENARIO_NAMES, GraphState, Profile, Scenario
 from alphaforge.tracing import traced
 
@@ -26,7 +27,7 @@ try:  # Track B supplies LLM-drafted notes in B-6; templated notes until then
 except ImportError:
     draft_notes = None
 
-# Caps per risk tolerance (PRD 5.7), cited as an assumption. equity_min keeps a growth profile
+# Caps per effective risk level (PRD 5.7), cited as an assumption. equity_min keeps a growth profile
 # from collapsing into short bonds, which a pure minimum-variance optimiser would do.
 CAPS = {
     "high": {"single_stock": 0.10, "etf": 0.25, "crypto_total": 0.10, "equity_max": 1.00, "equity_min": 0.80},
@@ -56,7 +57,9 @@ METHODS = {
 
 
 def caps_for(profile: Profile, rounds: int = 0) -> dict[str, float]:
-    caps = dict(CAPS.get(profile.risk_tolerance, CAPS["moderate"]))
+    # Suitability follows the more conservative of what the client accepts and can absorb.
+    level = effective_risk(profile.risk_tolerance, profile.risk_capacity)
+    caps = dict(CAPS.get(level, CAPS["moderate"]))
     if rounds:
         f = TIGHTEN**rounds
         for k in ("single_stock", "etf", "crypto_total", "equity_max"):
@@ -333,11 +336,25 @@ def scenarios_node(state: GraphState) -> dict:
     weights, caps = build_scenarios(profile, eligible, prices, info, rounds=rounds, drop=drop)
 
     as_of = state.as_of_date
+    effective = effective_risk(profile.risk_tolerance, profile.risk_capacity)
+    binding = binding_risk(profile.risk_tolerance, profile.risk_capacity)
+    binding_text = {
+        "capacity": "capacity sets the limit",
+        "tolerance": "tolerance sets the limit",
+        "both": "tolerance and capacity agree",
+    }[binding]
     caps_eid = reg.add(
-        {"metric": "caps", "tolerance": profile.risk_tolerance, "value": _caps_text(caps)},
+        {
+            "metric": "caps",
+            "tolerance": profile.risk_tolerance,
+            "capacity": profile.risk_capacity,
+            "effective_risk": effective,
+            "binding": binding,
+            "value": _caps_text(caps),
+        },
         source="PRD 5.7 caps table",
         date=as_of,
-        method=f"caps for risk tolerance {profile.risk_tolerance}"
+        method=f"caps for effective risk {effective} = min(tolerance, capacity); {binding_text}"
         + (f", tightened x{TIGHTEN**rounds:.2f} after objections" if rounds else ""),
         confidence="assumption",
     )

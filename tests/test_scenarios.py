@@ -5,8 +5,8 @@ import datetime as dt
 import pytest
 
 from alphaforge.data.provider import get_provider
-from alphaforge.evidence import numeric
-from alphaforge.nodes.scenarios import scenarios_node
+from alphaforge.evidence import find, numeric
+from alphaforge.nodes.scenarios import CAPS, caps_for, scenarios_node
 from alphaforge.personas import PERSONAS
 from alphaforge.state import SCENARIO_METRICS, SCENARIO_NAMES, Evidence, GraphState, Profile
 
@@ -63,8 +63,40 @@ def test_robert_tsla_drawdown_order():
 def test_robert_tsla_weights():
     sc = _by_name(_run(ROBERT_TSLA))
     assert sc["as_requested"].weights["TSLA"] == pytest.approx(0.25, abs=TOL)
-    assert sc["capped"].weights["TSLA"] == pytest.approx(0.05, abs=TOL)
-    assert "TSLA" not in sc["profile_baseline"].weights or sc["profile_baseline"].weights["TSLA"] <= 0.05 + TOL
+    assert sc["capped"].weights["TSLA"] == pytest.approx(0.03, abs=TOL)
+    assert "TSLA" not in sc["profile_baseline"].weights or sc["profile_baseline"].weights["TSLA"] <= 0.03 + TOL
+
+
+def test_robert_caps_follow_his_lower_capacity():
+    profile = ROBERT_TSLA
+    assert caps_for(profile) == CAPS["low"]
+    out = _run(profile)
+    sc = _by_name(out)
+    assert _share(sc["profile_baseline"].weights, {"equity", "etf_equity"}) <= 0.25 + TOL
+    caps_ev = find(out["evidence"], metric="caps")[0]
+    assert caps_ev.confidence == "assumption"
+    assert caps_ev.value["effective_risk"] == "low"
+    assert caps_ev.value["binding"] == "capacity"
+    assert "capacity sets the limit" in caps_ev.method
+
+
+def test_questionnaire_high_tolerance_low_capacity_gets_low_caps():
+    profile = Profile(
+        persona="custom_user",
+        objective="growth",
+        horizon_years=10,
+        risk_tolerance="high",
+        risk_capacity="low",
+    )
+    assert caps_for(profile) == CAPS["low"]
+    out = _run(profile)
+    sc = _by_name(out)
+    for name in ("capped", "profile_baseline"):
+        assert _share(sc[name].weights, {"crypto"}) == 0
+        assert _share(sc[name].weights, {"equity", "etf_equity"}) <= 0.25 + TOL
+    caps_ev = find(out["evidence"], metric="caps")[0]
+    assert caps_ev.value["effective_risk"] == "low"
+    assert caps_ev.value["binding"] == "capacity"
 
 
 @pytest.mark.parametrize("persona", sorted(PERSONAS))

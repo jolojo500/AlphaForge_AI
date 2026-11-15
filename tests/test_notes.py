@@ -30,8 +30,8 @@ def test_one_call_for_three_scenarios_and_valid_notes_replace_templates(base):
     def fake(messages, kind):
         calls.append(kind)
         return reply(
-            as_requested=[{"claim": "Perte maximale historique de 23,2 %, la plus forte des trois.", "evidence": [m["as_requested"]["max_drawdown"]]}],
-            capped=[{"claim": "Le plafond réduit la perte historique à 6,1 %.", "evidence": [m["capped"]["max_drawdown"]]}],
+            as_requested=[{"claim": "Perte maximale historique de 23,1 %, la plus forte des trois.", "evidence": [m["as_requested"]["max_drawdown"]]}],
+            capped=[{"claim": "Le plafond réduit la perte historique à 5,7 %.", "evidence": [m["capped"]["max_drawdown"]]}],
             profile_baseline=[{"claim": "La volatilité historique la plus basse du comparatif.", "evidence": [m["profile_baseline"]["volatility_ann"]]}],
         )
 
@@ -39,7 +39,7 @@ def test_one_call_for_three_scenarios_and_valid_notes_replace_templates(base):
     out = draft_notes(scenarios, ev, p)
     assert calls == ["fast"]
     assert [sc.name for sc in out] == [sc.name for sc in scenarios]
-    assert out[0].notes == [f"Perte maximale historique de 23,2 %, la plus forte des trois. [{m['as_requested']['max_drawdown']}]"]
+    assert out[0].notes == [f"Perte maximale historique de 23,1 %, la plus forte des trois. [{m['as_requested']['max_drawdown']}]"]
     assert all(sc.notes != orig.notes for sc, orig in zip(out, scenarios, strict=True))
     assert out[0].weights == scenarios[0].weights and out[0].metrics == scenarios[0].metrics
 

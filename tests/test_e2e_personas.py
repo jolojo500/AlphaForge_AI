@@ -110,8 +110,11 @@ def test_whatif_changes_the_answer_coherently(runs):
     base = runs["robert"]
     looser = rerun(base, ("risk_tolerance", "high"))
     assert "profile" not in {t["node"] for t in looser.trace}
-    assert _weight(looser, "capped", {"TSLA"}) > _weight(base, "capped", {"TSLA"})
-    assert _weight(looser, "capped", {"TSLA"}) <= 0.10 + 1e-6
+    # Robert's capacity stays low, so raising tolerance alone cannot loosen the cap.
+    assert _weight(looser, "capped", {"TSLA"}) == pytest.approx(
+        _weight(base, "capped", {"TSLA"})
+    )
+    assert _weight(looser, "capped", {"TSLA"}) <= 0.03 + 1e-6
 
     without = rerun(base, ("exclude_ticker", "AGG"))
     assert "AGG" not in without.eligible_universe

@@ -10,6 +10,7 @@ from alphaforge.graph import initial_state, resume_run, stream_run
 from alphaforge.nodes import profile as prof
 from alphaforge.nodes.profile import profile_node
 from alphaforge.personas import PERSONAS
+from alphaforge.risk import effective_risk
 from alphaforge.state import GraphState
 
 FIXTURES = Path(__file__).parent / "fixtures" / "llm"
@@ -139,6 +140,55 @@ def test_detect_conflict_rules():
     assert any("15 %" in c and "élevée" in c for c in c15)
     c25 = prof.detect_conflict(tolerance="moderate", horizon_years=10, constraints=[], idea=None, max_loss_pct=25)
     assert c25 == []
+
+
+def test_effective_risk_is_the_more_conservative_level():
+    assert effective_risk("high", "low") == "low"
+    assert effective_risk("low_moderate", "low") == "low"
+    assert effective_risk("moderate", "high") == "moderate"
+    assert effective_risk("high", "high") == "high"
+
+
+def test_detect_conflict_uses_capacity_for_the_single_stock_cap():
+    kw = dict(tolerance="low_moderate", capacity="low", horizon_years=4, constraints=["no_crypto"])
+    # 5 % is allowed by the stated tolerance but not by the lower capacity (3 %).
+    conflicts = prof.detect_conflict(**kw, idea={"ticker": "TSLA", "weight": 0.05})
+    assert conflicts and "3%" in conflicts[0] and "capacité" in conflicts[0]
+    assert prof.detect_conflict(**kw, idea={"ticker": "TSLA", "weight": 0.03}) == []
+
+
+def test_wide_tolerance_capacity_gap_adds_a_conflict():
+    high_low = prof.detect_conflict(
+        tolerance="high", capacity="low", horizon_years=10, constraints=[], idea=None
+    )
+    assert len(high_low) == 1
+    assert "plus d'un niveau" in high_low[0] and "capacité" in high_low[0]
+    # One level apart is reported by the caps evidence, not as a profile conflict.
+    assert prof.detect_conflict(
+        tolerance="high", capacity="moderate", horizon_years=10, constraints=[], idea=None
+    ) == []
+    assert prof.detect_conflict(
+        tolerance="low_moderate", capacity="low", horizon_years=4, constraints=[], idea=None
+    ) == []
+
+
+def test_questionnaire_high_tolerance_low_capacity_profile_reports_the_gap(monkeypatch):
+    monkeypatch.setitem(
+        PERSONAS,
+        "questionnaire",
+        {
+            "objective": "growth",
+            "horizon_years": 10,
+            "risk_tolerance": "high",
+            "risk_capacity": "low",
+            "constraints": [],
+            "preferences": [],
+            "budget_cad": None,
+        },
+    )
+    p = prof.build_profile("questionnaire", prof.Extraction(), False)
+    assert p.risk_tolerance == "high" and p.risk_capacity == "low"
+    assert any("plus d'un niveau" in c for c in p.conflicts)
 
 
 def test_regex_extract_ignores_appended_investor_context():
