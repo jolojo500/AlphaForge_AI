@@ -187,3 +187,27 @@ def test_node_fails_and_counts_retry(evidence):
 def test_node_without_explanation_fails(evidence):
     out = v.verifier_node(_state(evidence, None))
     assert out["verification"]["passed"] is False
+
+
+# ---- acceptance case from issue #54
+@pytest.fixture
+def ev042():
+    reg = EvidenceRegistry("EP")
+    reg.add({"metric": "max_drawdown", "scenario": "capped", "value": 0.42}, "p.csv", D, "m")
+    return reg.items()
+
+
+@pytest.mark.parametrize("text", ["42%", "42 %", "0,42", "42,0 %", "0.42", "42.0%"])
+def test_issue_42_formats_pass(ev042, text):
+    e = mutate(quelles_donnees=[{"claim": f"Perte maximale de {text}.", "evidence": ["EP1"]}])
+    assert v.check_numbers(e, ev042) == []
+
+
+def test_issue_35_against_042_fails(ev042):
+    e = mutate(quelles_donnees=[{"claim": "Perte maximale de 35 %.", "evidence": ["EP1"]}])
+    assert len(v.check_numbers(e, ev042)) == 1
+
+
+def test_years_and_scenario_counts_are_ignored(ev042):
+    e = mutate(quelles_donnees=[{"claim": "Les 3 scénarios, sur 2022 et 2026, citent EP1.", "evidence": ["EP1"]}])
+    assert v.check_numbers(e, ev042) == []
