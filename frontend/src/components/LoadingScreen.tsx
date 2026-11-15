@@ -1,38 +1,40 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/context/LanguageContext';
-import { TraceEntry } from '../types';
 import { AppHeader } from './AppHeader';
-import { NodeTrace } from './NodeTrace';
 
 interface LoadingScreenProps {
   onCancel: () => void;
-  trace?: TraceEntry[];
+  trace?: unknown;
 }
 
-export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onCancel, trace = [] }) => {
+export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onCancel }) => {
   const { language } = useLanguage();
   const isEn = language === 'en';
   return (
     <div className="min-h-screen bg-background flex flex-col justify-between px-4 py-5 sm:py-8 font-sans transition-colors">
       <AppHeader />
 
-      <div className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center my-auto space-y-5 py-8">
-        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <h1 className="text-sm sm:text-base font-medium text-foreground text-center tracking-tight">
-          {isEn ? 'The agents are working on your request...' : 'Analyse en cours auprès des agents...'}
-        </h1>
+      <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto space-y-6 py-12 text-center">
+        <div className="w-9 h-9 rounded-full border-2 border-primary border-t-transparent animate-spin" />
 
-        {/* Live agent trace: each node appears as it finishes */}
-        <div className="w-full text-left">
-          <NodeTrace trace={trace} isRunning />
+        <div className="space-y-1.5">
+          <h1 className="text-sm sm:text-base font-medium text-foreground tracking-tight">
+            {isEn ? 'Analysis in progress...' : 'Analyse en cours...'}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {isEn
+              ? 'Evaluating risk parameters and running portfolio simulations.'
+              : 'Évaluation des contraintes et simulation des scénarios de risque.'}
+          </p>
         </div>
 
         <Button
           type="button"
           variant="outline"
+          size="sm"
           onClick={onCancel}
-          className="h-9 px-6 rounded-lg text-xs font-medium cursor-pointer shadow-2xs"
+          className="h-8 px-5 text-xs font-normal cursor-pointer"
         >
           {isEn ? 'Cancel' : 'Annuler'}
         </Button>

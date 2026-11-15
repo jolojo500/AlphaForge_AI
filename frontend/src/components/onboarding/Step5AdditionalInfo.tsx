@@ -153,31 +153,34 @@ export const Step5AdditionalInfo: React.FC<Step5Props> = ({
               Ajoutez les titres que vous détenez déjà pour éviter la surconcentration involontaire.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleAddPosition}
-            className="h-7 text-xs gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Ajouter une position</span>
-          </Button>
+          {positions.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddPosition}
+              className="h-7 text-xs gap-1 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Ajouter une position</span>
+            </Button>
+          )}
         </div>
 
         {positions.length === 0 ? (
-          <div className="py-4 text-center border border-dashed border-border/70 rounded-lg bg-muted/20">
+          <div className="py-6 text-center border border-dashed border-border/70 rounded-lg bg-muted/20 flex flex-col items-center justify-center gap-2.5">
             <p className="text-xs text-muted-foreground">
               Aucune position actuelle renseignée.
             </p>
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleAddPosition}
-              className="mt-1 h-7 text-xs text-primary hover:text-primary/90 cursor-pointer"
+              className="h-8 text-xs gap-1.5 cursor-pointer"
             >
-              + Ajouter une première position
+              <Plus className="w-3.5 h-3.5" />
+              <span>Ajouter une position</span>
             </Button>
           </div>
         ) : (
