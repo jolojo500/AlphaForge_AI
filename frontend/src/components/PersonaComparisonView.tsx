@@ -93,9 +93,31 @@ const PRESET_REQUESTS = [
 ];
 
 const SCENARIO_TITLES: Record<ScenarioName, string> = {
-  capped: 'Scénario Capped (Plafonné & Recommandé)',
-  as_requested: 'Scénario As Requested (Demande brute)',
-  profile_baseline: 'Scénario Profile Baseline (Base de référence)',
+  capped: 'Scénario plafonné',
+  as_requested: 'Scénario demandé',
+  profile_baseline: 'Scénario de référence du profil',
+};
+
+const TOLERANCE_FR: Record<string, string> = {
+  low: 'Faible',
+  low_moderate: 'Faible à modérée',
+  moderate: 'Modérée',
+  high: 'Élevée',
+};
+
+const OBJECTIVE_FR: Record<string, string> = {
+  growth: 'Croissance',
+  balanced: 'Équilibre',
+  capital_preservation: 'Préservation du capital',
+};
+
+const fr = (map: Record<string, string>, v?: string | null) => (v ? map[v] ?? v : '');
+
+/** Evidence values are either a number or a dict {metric, value, unit}. */
+const evidenceNumber = (value: unknown): number | null => {
+  const raw = value !== null && typeof value === 'object' ? (value as { value?: unknown }).value : value;
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(n) ? n : null;
 };
 
 export const PersonaComparisonView: React.FC<PersonaComparisonViewProps> = ({
@@ -130,7 +152,7 @@ export const PersonaComparisonView: React.FC<PersonaComparisonViewProps> = ({
         const list: PersonaChoice[] = Object.entries(personasMeta).map(([id, meta]) => ({
           id,
           label: meta.label || id,
-          description: `${meta.horizon_years} ans · ${meta.risk_tolerance} · ${meta.objective}`,
+          description: `${meta.horizon_years} ans · ${fr(TOLERANCE_FR, meta.risk_tolerance)} · ${fr(OBJECTIVE_FR, meta.objective)}`,
           horizon: meta.horizon_years,
           tolerance: meta.risk_tolerance,
           capacity: meta.risk_capacity,
@@ -506,11 +528,11 @@ export const PersonaComparisonView: React.FC<PersonaComparisonViewProps> = ({
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Shield className="w-3 h-3 text-amber-500 shrink-0" />
-                      <span className="truncate">{stateA.profile?.risk_tolerance || choiceA?.tolerance}</span>
+                      <span className="truncate">{fr(TOLERANCE_FR, stateA.profile?.risk_tolerance || choiceA?.tolerance)}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Target className="w-3 h-3 text-emerald-500 shrink-0" />
-                      <span className="truncate">{stateA.profile?.objective || 'Objectif'}</span>
+                      <span className="truncate">{fr(OBJECTIVE_FR, stateA.profile?.objective) || 'Objectif'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -601,7 +623,7 @@ export const PersonaComparisonView: React.FC<PersonaComparisonViewProps> = ({
                       {Object.entries(SCENARIO_METRIC_LABELS).map(([mKey, mLabel]) => {
                         const eidA = scA?.metrics?.[mKey];
                         const evA = eidA && stateA.evidence ? stateA.evidence[eidA] : null;
-                        const valA = evA?.value != null ? Number(evA.value) : null;
+                        const valA = evA ? evidenceNumber(evA.value) : null;
 
                         return (
                           <div key={mKey} className="p-2 rounded-md bg-muted/30 border border-border/40">
@@ -712,11 +734,11 @@ export const PersonaComparisonView: React.FC<PersonaComparisonViewProps> = ({
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Shield className="w-3 h-3 text-amber-500 shrink-0" />
-                      <span className="truncate">{stateB.profile?.risk_tolerance || choiceB?.tolerance}</span>
+                      <span className="truncate">{fr(TOLERANCE_FR, stateB.profile?.risk_tolerance || choiceB?.tolerance)}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Target className="w-3 h-3 text-emerald-500 shrink-0" />
-                      <span className="truncate">{stateB.profile?.objective || 'Objectif'}</span>
+                      <span className="truncate">{fr(OBJECTIVE_FR, stateB.profile?.objective) || 'Objectif'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -807,7 +829,7 @@ export const PersonaComparisonView: React.FC<PersonaComparisonViewProps> = ({
                       {Object.entries(SCENARIO_METRIC_LABELS).map(([mKey, mLabel]) => {
                         const eidB = scB?.metrics?.[mKey];
                         const evB = eidB && stateB.evidence ? stateB.evidence[eidB] : null;
-                        const valB = evB?.value != null ? Number(evB.value) : null;
+                        const valB = evB ? evidenceNumber(evB.value) : null;
 
                         return (
                           <div key={mKey} className="p-2 rounded-md bg-muted/30 border border-border/40">
