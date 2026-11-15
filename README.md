@@ -77,18 +77,18 @@ Le moteur est modélisé sous la forme d'un graphe d'état typé avec **LangGrap
 
 ```mermaid
 flowchart TD
-    IN([Profil persona + Requête]) --> A1[Agent 1 : Profil · LLM Claude 3.5 Sonnet]
+    IN([Profil persona + Requête]) --> A1[Agent 1 : Profil · LLM Claude Sonnet 5.5]
     A1 -->|Information manquante| ASK[Interruption : Clarification] --> A1
     A1 --> SCR[Screening · Python déterministe]
     SCR --> QA[Quant · Python déterministe]
     SCR --> MA[Macro · Python déterministe]
-    SCR --> EV[Agent 2 : Actualités et Dépôts · LLM Haiku + Outils]
+    SCR --> EV[Agent 2 : Actualités et Dépôts · LLM Claude Haiku 5.5 + Outils]
     QA --> SB[Générateur de scénarios · Python + Notes LLM]
     MA --> SB
     EV --> SB
-    SB --> A3[Agent 3 : Red Team · LLM Claude 3.5 Sonnet]
+    SB --> A3[Agent 3 : Red Team · En cours d'intégration]
     A3 -->|Objection bloquante, max 2x| SB
-    A3 --> A4[Agent 4 : Explicabilité · LLM Claude 3.5 Sonnet]
+    A3 --> A4[Agent 4 : Explicabilité · LLM Claude Sonnet 5.5]
     A4 --> VER[Vérificateur déterministe · Python]
     VER -->|Échec de vérification, max 1x| A4
     VER --> OUT([3 scénarios, explication, preuves, trace])
@@ -105,7 +105,7 @@ L'application propose trois profils types représentatifs issus des cas d'usage 
 | Persona | Caractéristiques & Hypothèses | Requête type recommandée | Comportement attendu du système |
 |---|---|---|---|
 | **Amira** (26 ans) | Horizon 15+ ans, tolérance élevée, capacité élevée. Préfère les technos et cryptos, mais recherche la diversification. | *« J'ai 100 000 $ CAD, un horizon de 15 ans et plus. J'aime la techno et la crypto mais je veux rester diversifiée. »* | Les 31 actifs sont admissibles. L'exposition crypto est plafonnée à 10 %. Le chevauchement QQQ / SPY est mis en évidence. Le scénario `capped` réduit la perte maximale historique de -47,5 % à -38,4 %. |
-| **Mateo** (41 ans) | Horizon 10 ans, tolérance modérée, capacité modérée. Portefeuille équilibré, critères ESG stricts, évitement des controverses. | *« Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées. »* | Exclusion stricte des cryptoactifs (`no_crypto`) et du secteur énergétique fossile (ENB.TO, CNQ.TO, XOM). Validation du filtre ESG par les détentions de Vanguard ESGV. Scénario de référence équilibré (volatilité de 12,2 %). |
+| **Mateo** (41 ans) | Horizon 10 ans, tolérance modérée, capacité modérée. Portefeuille équilibré, critères ESG stricts, évitement des controverses. | *« Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées. »* | Exclusion stricte des cryptoactifs (`no_crypto`) et du secteur énergétique fossile (ENB.TO, CNQ.TO, XOM). Validation du filtre ESG par les détentions de Vanguard ESGV. Scénario plafonné modéré (`capped`, volatilité de 12,2 %) et scénario de référence équilibré (`profile_baseline`, volatilité de 5,5 %). |
 | **Robert** (59 ans) | Horizon 4 ans, tolérance faible à modérée, capacité faible. Objectif de préservation du capital, attiré par un titre volatil. | *« Je veux mettre 25 % de mon portefeuille dans TSLA. »* | L'Agent 1 relève le conflit : 25 % dans TSLA excède le plafond de tolérance de 5 % pour un horizon court de 4 ans. Comparaison du choc de 2022 : -21,2 % pour la demande brute contre -4,9 % pour le scénario plafonné. Langage de cohérence sans aucun refus brutal. |
 
 ### Ce qu'il faut tester (Démonstration interactive)
@@ -121,7 +121,7 @@ L'infrastructure cloud d'AlphaForge AI est hébergée sur **Amazon Web Services*
 
 | Service AWS | Rôle dans l'application | Justification technique |
 |---|---|---|
-| **Amazon Bedrock** | Inférence des modèles de fondation | Utilisation de Claude 3.5 Sonnet (`global.anthropic.claude-sonnet-5-5`) pour les agents d'extraction de profil, de rédaction d'explication et de synthèse, et de Claude 3.5 Haiku (`global.anthropic.claude-haiku-5-5`) pour la classification rapide d'actualités. |
+| **Amazon Bedrock** | Inférence des modèles de fondation | Utilisation de Claude Sonnet 5.5 (`global.anthropic.claude-sonnet-5-5`) pour les agents d'extraction de profil (Agent 1) et de rédaction d'explication et de synthèse (Agent 4), et de Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`) pour la classification rapide d'actualités (Agent 2). L'Agent 3 (Red Team) est en cours d'intégration. |
 | **Amazon S3** (`alphaforge-data-908027403910`) | Stockage objet centralisé | Hébergement versionné des jeux de données d'origine (`starter/`), des caches JSON de détentions FNB et dépôts SEC (`cache/`), et délestage automatique des états complets de graphe (`runs/<run_id>.json`) dépassant le seuil de 400 Ko de DynamoDB. |
 | **Amazon DynamoDB** (`alphaforge-traces`) | Journal d'audit et persistance | Table NoSQL à la demande (*pay-per-request*) enregistrant les métadonnées de chaque exécution, les traces d'étapes horodatées et les statuts de validation pour une auditabilité totale. |
 | **Amazon EC2 & ECR** | Hébergement du conteneur applicatif | Instance `t3.medium` (`AlphaForge-Server`, ID `i-0ec3c5dff3ac51dc4`) exécutant l'image Docker multi-stage (FastAPI servant l'API REST, les flux SSE et les fichiers statiques de l'application React). Les images sont stockées sur Amazon ECR. |

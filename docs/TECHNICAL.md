@@ -7,24 +7,24 @@ Ce document détaille l'architecture du système, la formalisation mathématique
 
 ## 1. Architecture du Graphe LangGraph
 
-AlphaForge AI est articulé autour d'un pipeline d'orchestration multi-agents modélisé sous la forme d'un graphe d'état typé avec **LangGraph** ([alphaforge/graph.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/graph.py)).
+AlphaForge AI est articulé autour d'un pipeline d'orchestration multi-agents modélisé sous la forme d'un graphe d'état typé avec **LangGraph** ([alphaforge/graph.py](../alphaforge/graph.py)).
 
 Le graphe repose sur une exécution déterministe avec une branche d'analyse parallèle, une interruption possible pour clarification humaine (`interrupt()`), et deux boucles de reprise bornées.
 
 ```mermaid
 flowchart TD
-    IN([Profil persona + Requête utilisateur]) --> A1[Agent 1 : Profil · LLM Claude 3.5 Sonnet]
+    IN([Profil persona + Requête utilisateur]) --> A1[Agent 1 : Profil · LLM Claude Sonnet 5.5]
     A1 -->|Information manquante ou ambiguïté majeure| ASK[Interruption : Question unique] --> A1
     A1 --> SCR[Screening · Python déterministe]
     SCR --> QA[Quant · Python déterministe]
     SCR --> MA[Macro · Python déterministe]
-    SCR --> EV[Agent 2 : Actualités et Dépôts · ReAct LLM + Outils]
+    SCR --> EV[Agent 2 : Actualités et Dépôts · ReAct Claude Haiku 5.5 + Outils]
     QA --> SB[Générateur de scénarios · Python + Notes LLM]
     MA --> SB
     EV --> SB
-    SB --> A3[Agent 3 : Red Team · LLM Claude 3.5 Sonnet]
+    SB --> A3[Agent 3 : Red Team · En cours d'intégration]
     A3 -->|Objection bloquante, max 2 boucles| SB
-    A3 --> A4[Agent 4 : Explicabilité · LLM Claude 3.5 Sonnet]
+    A3 --> A4[Agent 4 : Explicabilité · LLM Claude Sonnet 5.5]
     A4 --> VER[Vérificateur déterministe · Python]
     VER -->|Échec de vérification, max 1 reprise| A4
     VER --> OUT([3 scénarios, explication, preuves, trace d'audit])
@@ -36,16 +36,16 @@ flowchart TD
 
 | Nœud | Nature | Fichier source | Entrées principales | Sorties d'état | Rôle et spécifications |
 |---|---|---|---|---|---|
-| **Agent 1 : Profile** | LLM (`claude-sonnet-5-5`) | [alphaforge/nodes/profile.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/profile.py) | `persona`, `request_text`, `as_of_date` | `profile` (`Profile`) | Extrait l'intention (`build` vs `judge`), le budget, l'horizon temporel et les préférences. Détecte les contradictions (ex. allocation supérieure au plafond de tolérance). Si une information essentielle manque, déclenche un `interrupt()` pour poser une question unique. Si le modèle échoue, repli déterministe sur les tables du persona. |
-| **Screening** | Code déterministe Python | [alphaforge/nodes/screening.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/screening.py) | `profile`, univers (31 actifs) | `eligible_universe`, `exclusions` (`ES...`) | Applique sans dérogation les règles d'exclusion matérielles : classes d'actifs (crypto, obligations), géographie (Canada, US), et critères ESG (exclusion systématique des titres pétroliers et énergétiques pour Mateo via le secteur et recoupement avec les détentions Vanguard ESGV). Chaque exclusion génère une preuve `ES`. |
-| **Quant** | Code déterministe Python | [alphaforge/nodes/quant.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/quant.py) | `eligible_universe`, `as_of_date` | `evidence` (`EQ...`) | Calcule rigoureusement sur les prix historiques en CAD (`adj_close`) : rentabilités quotidiennes, volatilité annualisée, perte maximale historique (*max drawdown*), corrélations par paires, concentration sectorielle (HHI), exposition géographique et test de résistance historique 2022. |
-| **Macro** | Code déterministe Python | [alphaforge/nodes/macro.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/macro.py) | `as_of_date` | `evidence` (`EM...`) | Extrait les indicateurs macroéconomiques connus à la date d'analyse : taux directeurs (BoC, Fed), rendements obligataires 2 ans et 10 ans, IPC canadien et américain, et taux de chômage américain. Applique les délais réels de publication pour exclure tout biais de prévoyance. |
-| **Agent 2 : Events** | LLM ReAct (`claude-haiku-5-5` & Sonnet) + Outils | [alphaforge/nodes/events.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/events.py) | `eligible_universe`, `profile.requested_idea`, `as_of_date` | `events`, `evidence` (`EN...`) | Recherche les dépôts réglementaires officiels SEC EDGAR (Form 8-K, 10-Q, 10-K, proxy statements) et les actualités. Budget strict : maximum 6 appels d'outils et 12 éléments retenus. Chaque événement est filtré à la date de publication et classifié (pertinence, fait/opinion, type de risque, matérialité). |
-| **Scenario Builder** | Code déterministe Python + Notes LLM | [alphaforge/nodes/scenarios.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/scenarios.py) | `profile`, `eligible_universe`, `evidence`, `objections` | `scenarios`, `evidence` (`EP...`) | Construit trois portefeuilles comparables (`as_requested`, `capped`, `profile_baseline`) par optimisation sous contraintes (variance minimale bornée avec plancher d'actions et moindres carrés). Calcule les métriques de portefeuille pour chaque scénario. Rédige les notes explicatives sourcées. |
-| **Agent 3 : Red Team** | LLM (`claude-sonnet-5-5`) | [alphaforge/nodes/red_team.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/red_team.py) | `scenarios`, `profile`, `evidence` | `objections`, `retries["red_team"]` | Relecture contradictoire des scénarios pour détecter les risques cachés (ex. concentration sectorielle indirecte). En cas d'objection bloquante, renvoie au générateur de scénarios (maximum 2 itérations) qui resserre les plafonds de 20 % ($0{,}8\times$). (Composant P2 déployé sous forme de stub sécurisé). |
-| **Agent 4 : Explain** | LLM (`claude-sonnet-5-5`) | [alphaforge/nodes/explain.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/explain.py) | `scenarios`, `objections`, `evidence`, `profile`, `exclusions` | `explanation` (schéma JSON) | Rédige la synthèse comparative en français structurée selon les quatre questions de l'atelier BNCD. Chaque affirmation cite obligatoirement des identifiants de preuve. Utilise exclusivement un langage de cohérence avec le profil, sans aucun conseil ni prévision. |
-| **Verifier** | Code déterministe Python | [alphaforge/nodes/verifier.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/verifier.py) | `explanation`, `evidence` | `verification` (`passed`, `errors`) | Valide l'explication générée par 4 vérifications formelles : existence des preuves citées, concordance numérique stricte (tolérance 1 %), absence de formulations de conseil/promesse (regex FR/EN), et présence intégrale des sections requises. Autorise 1 régénération en cas d'erreur. |
-| **What-If** | Code Python | [alphaforge/whatif.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/whatif.py) | `profile`, modification de paramètre | `run_id`, comparaison différentielle | Permet à l'utilisateur de modifier une variable (horizon, budget, tolérance au risque, exclusion d'un actif) et relance instantanément le pipeline depuis le screening en sautant l'Agent 1. |
+| **Agent 1 : Profile** | LLM (`claude-sonnet-5-5`) | [alphaforge/nodes/profile.py](../alphaforge/nodes/profile.py) | `persona`, `request_text`, `as_of_date` | `profile` (`Profile`) | Extrait l'intention (`build` vs `judge`), le budget, l'horizon temporel et les préférences. Détecte les contradictions (ex. allocation supérieure au plafond de tolérance). Si une information essentielle manque, déclenche un `interrupt()` pour poser une question unique. Si le modèle échoue, repli déterministe sur les tables du persona. |
+| **Screening** | Code déterministe Python | [alphaforge/nodes/screening.py](../alphaforge/nodes/screening.py) | `profile`, univers (31 actifs) | `eligible_universe`, `exclusions` (`ES...`) | Applique sans dérogation les règles d'exclusion matérielles : classes d'actifs (crypto, obligations), géographie (Canada, US), et critères ESG (exclusion systématique des titres pétroliers et énergétiques pour Mateo via le secteur et recoupement avec les détentions Vanguard ESGV). Chaque exclusion génère une preuve `ES`. |
+| **Quant** | Code déterministe Python | [alphaforge/nodes/quant.py](../alphaforge/nodes/quant.py) | `eligible_universe`, `as_of_date` | `evidence` (`EQ...`) | Calcule rigoureusement sur les prix historiques en CAD (`adj_close`) : rentabilités quotidiennes, volatilité annualisée, perte maximale historique (*max drawdown*), corrélations par paires, concentration sectorielle (HHI), exposition géographique et test de résistance historique 2022. |
+| **Macro** | Code déterministe Python | [alphaforge/nodes/macro.py](../alphaforge/nodes/macro.py) | `as_of_date` | `evidence` (`EM...`) | Extrait les indicateurs macroéconomiques connus à la date d'analyse : taux directeurs (BoC, Fed), rendements obligataires 2 ans et 10 ans, IPC canadien et américain, et taux de chômage américain. Applique les délais réels de publication pour exclure tout biais de prévoyance. |
+| **Agent 2 : Events** | LLM ReAct (`claude-haiku-5-5`) + Outils | [alphaforge/nodes/events.py](../alphaforge/nodes/events.py) | `eligible_universe`, `profile.requested_idea`, `as_of_date` | `events`, `evidence` (`EN...`) | Recherche les dépôts réglementaires officiels SEC EDGAR (Form 8-K, 10-Q, 10-K, proxy statements) et les actualités. Budget strict : maximum 6 appels d'outils et 12 éléments retenus. Chaque événement est filtré à la date de publication et classifié avec Claude Haiku 5.5 (pertinence, fait/opinion, type de risque, matérialité). |
+| **Scenario Builder** | Code déterministe Python + Notes LLM | [alphaforge/nodes/scenarios.py](../alphaforge/nodes/scenarios.py) | `profile`, `eligible_universe`, `evidence`, `objections` | `scenarios`, `evidence` (`EP...`) | Construit trois portefeuilles comparables (`as_requested`, `capped`, `profile_baseline`) par optimisation sous contraintes (variance minimale bornée avec plancher d'actions et moindres carrés). Calcule les métriques de portefeuille pour chaque scénario. Rédige les notes explicatives sourcées. |
+| **Agent 3 : Red Team** | LLM (`claude-sonnet-5-5`) | [alphaforge/nodes/red_team.py](../alphaforge/nodes/red_team.py) | `scenarios`, `profile`, `evidence` | `objections`, `retries["red_team"]` | Relecture contradictoire des scénarios pour détecter les risques cachés. En cours d'intégration (issue #58, B-7) ; actuellement déployé sous forme de stub de transition sécurisé. |
+| **Agent 4 : Explain** | LLM (`claude-sonnet-5-5`) | [alphaforge/nodes/explain.py](../alphaforge/nodes/explain.py) | `scenarios`, `objections`, `evidence`, `profile`, `exclusions` | `explanation` (schéma JSON) | Rédige la synthèse comparative en français structurée selon les quatre questions de l'atelier BNCD. Chaque affirmation cite obligatoirement des identifiants de preuve. Utilise exclusivement un langage de cohérence avec le profil, sans aucun conseil ni prévision. |
+| **Verifier** | Code déterministe Python | [alphaforge/nodes/verifier.py](../alphaforge/nodes/verifier.py) | `explanation`, `evidence` | `verification` (`passed`, `errors`) | Valide l'explication générée par 4 vérifications formelles : existence des preuves citées, concordance numérique stricte (tolérance 1 %), absence de formulations de conseil/promesse (regex FR/EN), et présence intégrale des sections requises. Autorise 1 régénération en cas d'erreur. |
+| **What-If** | Code Python | [alphaforge/whatif.py](../alphaforge/whatif.py) | `profile`, modification de paramètre | `run_id`, comparaison différentielle | Permet à l'utilisateur de modifier une variable (horizon, budget, tolérance au risque, exclusion d'un actif) et relance instantanément le pipeline depuis le screening en sautant l'Agent 1. |
 
 ---
 
@@ -67,7 +67,7 @@ Afin d'éviter tout conflit de concurrence entre nœuds s'exécutant en parallè
 |---|---|---|---|
 | `ES` | Screening | Exclusions d'actifs et hypothèses d'univers | `ES1` : Exclusion de BTC-USD pour profil interdisant les cryptoactifs. |
 | `EQ` | Quant | Risques individuels, corrélations, métriques historiques | `EQ98` : Volatilité annualisée de TSLA (58,5 %). |
-| `EM` | Macro | Indicateurs économiques, taux et inflation | `EM1` : Taux directeur de la Banque du Canada connu au 2026-11-12 (3,75 %). |
+| `EM` | Macro | Indicateurs économiques, taux et inflation | `EM1` : Taux directeur de la Banque du Canada connu au 2026-11-12 (2,5 %). |
 | `EN` | News & Events | Dépôts réglementaires, classification d'événements | `EN1` : Dépôt Form 8-K de Tesla auprès de la SEC le 2026-10-21. |
 | `EP` | Scenarios | Métriques consolidées des portefeuilles simulés | `EP3` : Perte maximale historique du scénario demandé (-23,2 %). |
 
@@ -85,7 +85,7 @@ Chaque preuve émise dans le système est catégorisée sous l'un des trois nive
 
 ## 3. Règles Déterministes du Vérificateur (*Verifier*)
 
-Le vérificateur ([alphaforge/nodes/verifier.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/verifier.py)) constitue le garde-fou algorithmique du système. Alors que le modèle de langage élabore le raisonnement explicatif, le vérificateur contrôle formellement le texte généré sans recourir à un LLM.
+Le vérificateur ([alphaforge/nodes/verifier.py](../alphaforge/nodes/verifier.py)) constitue le garde-fou algorithmique du système. Alors que le modèle de langage élabore le raisonnement explicatif, le vérificateur contrôle formellement le texte généré sans recourir à un LLM.
 
 Il exécute quatre séries de tests :
 
@@ -127,7 +127,7 @@ En cas d'échec d'une règle, le graphe réinjecte le descriptif précis des err
 
 ## 4. Rigueur Méthodologique et Traitement des Données
 
-La qualité des analyses repose sur des traitements rigoureux appliqués par le fournisseur de données ([alphaforge/data/provider.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/data/provider.py)) et le module quantitatif :
+La qualité des analyses repose sur des traitements rigoureux appliqués par le fournisseur de données ([alphaforge/data/provider.py](../alphaforge/data/provider.py)) et le module quantitatif :
 
 ### 4.1 Calendrier de négociation commun (*Trading Calendar*)
 - Les actions canadiennes se négocient sur la TSX en CAD, tandis que les actions et FNB américains se négocient à New York (NYSE, NASDAQ). Les jours fériés diffèrent entre le Canada et les États-Unis.
@@ -135,7 +135,7 @@ La qualité des analyses repose sur des traitements rigoureux appliqués par le 
 - **Règle retenue** : Le calendrier de calcul est défini par l'intersection stricte des jours ouvrés communs TSX $\cap$ bourses américaines. Les lignes de fin de semaine des cryptoactifs sont exclues pour aligner parfaitement les fenêtres temporelles. Les rentabilités consécutives représentent ainsi de véritables variations interbancaires sans rendements nuls artificiels.
 
 ### 4.2 Conversion de devises en CAD et remplissage (*FX Handling*)
-- Tous les actifs libellés en USD (actions américaines, FNB cotés aux États-Unis, cryptoactifs) sont convertis en dollars canadiens (CAD) au moyen des taux de change officiels de la Banque du Canada ([fx_usdcad_daily.csv](file:///home/wilson-lab/Datathon-Poly/wt-docs/Datathon2026/alphaforge_starter/fx_usdcad_daily.csv)).
+- Tous les actifs libellés en USD (actions américaines, FNB cotés aux États-Unis, cryptoactifs) sont convertis en dollars canadiens (CAD) au moyen des taux de change officiels de la Banque du Canada ([fx_usdcad_daily.csv](../Datathon2026/alphaforge_starter/fx_usdcad_daily.csv)).
 - Lors des jours fériés canadiens où les marchés américains demeurent ouverts, le taux de change de la Banque du Canada n'est pas publié. AlphaForge AI applique un report de cours vers l'avant (*forward-fill*) strict depuis le dernier cours publié, sans jamais anticiper un taux futur.
 
 ### 4.3 Cours ajustés et opérations sur titres (*Corporate Actions*)
@@ -145,7 +145,7 @@ La qualité des analyses repose sur des traitements rigoureux appliqués par le 
 
 ### 4.4 Délais de publication vs Dates d'observation (*Publication Lag*)
 Les séries macroéconomiques mensuelles sont horodatées selon leur période de référence et non leur jour de parution. Utiliser l'inflation de février début mars constituerait un biais de prévoyance (*lookahead bias*).
-Le module macro ([alphaforge/nodes/macro.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/macro.py)) applique une table des délais minimaux de publication :
+Le module macro ([alphaforge/nodes/macro.py](../alphaforge/nodes/macro.py)) applique une table des délais minimaux de publication :
 - **Taux directeurs et rendements obligataires journaliers** (`V39079`, `DFF`, `BD.CDN...`, `DGS...`) : délai d'un jour ouvré (`bday = 1`).
 - **Indice des prix à la consommation canadien** (`STATIC_TOTALCPICHANGE`) : réputé connu le 20 du mois suivant le mois de référence (Statistique Canada publie généralement vers la 3ᵉ semaine).
 - **Indice des prix à la consommation américain** (`CPIAUCSL`) : réputé connu le 15 du mois suivant (Bureau of Labor Statistics vers la mi-mois).
@@ -163,7 +163,7 @@ L'univers de 31 actifs a été établi en 2026 parmi des titres en activité et 
 
 ### 5.1 Table des plafonds par profil de tolérance au risque
 
-La table des plafonds est issue des règles de gestion de portefeuille formalisées dans [alphaforge/nodes/scenarios.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/nodes/scenarios.py) :
+La table des plafonds est issue des règles de gestion de portefeuille formalisées dans [alphaforge/nodes/scenarios.py](../alphaforge/nodes/scenarios.py) :
 
 | Profil de tolérance | Action individuelle max (`single_stock`) | FNB max (`etf`) | Total Cryptoactifs max (`crypto_total`) | Actions totales max (`equity_max`) | Plancher Actions (`equity_min`) |
 |---|---|---|---|---|---|
@@ -193,22 +193,22 @@ La table des plafonds est issue des règles de gestion de portefeuille formalis�
 
 L'Agent 2 classe les actualités et déclarations selon quatre dimensions : pertinence (`relevant`), nature factuelle ou subjective (`kind`), catégorie de risque (`risk_type` : marché, crédit, liquidité, taux/inflation, devise, concentration, controverse), et matérialité financière (`material`).
 
-Conformément à l'évaluation menée sur le jeu de 50 éléments annotés manuellement ([tests/fixtures/news_labels.json](file:///home/wilson-lab/Datathon-Poly/wt-docs/tests/fixtures/news_labels.json)) et intégrée lors de la pull request **#86**, les taux de précision obtenus sont les suivants :
+Conformément à l'évaluation menée sur le jeu de 50 éléments annotés manuellement ([tests/fixtures/news_labels.json](../tests/fixtures/news_labels.json)) et intégrée lors de la pull request **#86**, les taux de précision obtenus sont les suivants :
 
-| Critère de classification | Classificateur Déterministe (Règles & Regex) | Classificateur LLM Bedrock (Claude 3.5 Haiku) | Seuil minimal requis | Statut de validation |
+| Critère de classification | Classificateur Déterministe (Règles & Regex) | Classificateur LLM Bedrock (Claude Haiku 5.5) | Seuil minimal requis | Statut de validation |
 |---|---|---|---|---|
 | **Pertinence (`relevant`)** | **100 %** | **100 %** | $\ge 80\,\%$ | Validé |
 | **Nature (`kind` : fait vs opinion)** | **98 %** | **100 %** | $\ge 80\,\%$ | Validé |
 | **Catégorie de risque (`risk_type`)** | **96 %** | **96 %** | $\ge 80\,\%$ | Validé |
 | **Matérialité (`material`)** | **84 %** | **82 %** | $\ge 80\,\%$ | Validé |
 
-L'ensemble des indicateurs satisfait et dépasse le seuil cible de 80 %. En production, le pipeline privilégie la classification rapide par règles avec repli sécurisé sur le modèle Bedrock Claude 3.5 Haiku.
+L'ensemble des indicateurs satisfait et dépasse le seuil cible de 80 %. En production, le pipeline privilégie la classification rapide par règles avec repli sécurisé sur le modèle Bedrock Claude Haiku 5.5.
 
 ---
 
 ## 7. Moteur d'Analyse d'Hypothèses (*What-If*)
 
-Le moteur What-If ([alphaforge/whatif.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/whatif.py)) rend opérationnelle la 4ᵉ question de l'atelier BNCD (« Qu'est-ce qui changerait la réponse ? »).
+Le moteur What-If ([alphaforge/whatif.py](../alphaforge/whatif.py)) rend opérationnelle la 4ᵉ question de l'atelier BNCD (« Qu'est-ce qui changerait la réponse ? »).
 
 ### 7.1 Fonctionnement
 L'utilisateur peut faire varier un paramètre unique depuis l'interface ou l'API REST (`POST /runs/{id}/whatif`) :
@@ -223,7 +223,7 @@ Le système génère un nouvel identifiant d'exécution lié au run parent, clon
 
 ## 8. Résultats Réels sur les Personas
 
-Les métriques ci-dessous proviennent de l'exécution complète du graphe ([alphaforge/graph.py](file:///home/wilson-lab/Datathon-Poly/wt-docs/alphaforge/graph.py)) sur la période du 12 novembre 2021 au 12 novembre 2026.
+Les métriques ci-dessous proviennent de l'exécution complète du graphe ([alphaforge/graph.py](../alphaforge/graph.py)) sur la période du 12 novembre 2021 au 12 novembre 2026.
 
 ### 8.1 Robert (59 ans) — Évaluation d'une idée (`judge` : 25 % dans TSLA)
 - **Profil** : Préservation du capital, horizon 4 ans, tolérance faible à modérée (`low_moderate`), capacité faible, exclusion des cryptoactifs.
@@ -298,13 +298,13 @@ Les métriques ci-dessous proviennent de l'exécution complète du graphe ([alph
 - `capped` : ZST.TO 6,0 %, TLT 6,0 %, XBB.TO 6,0 %, AGG 6,0 %, GLD 6,0 %, et 21 actions/FNB éligibles à 3,33 % chacun.
 - `profile_baseline` : ZST.TO 25,0 %, AGG 22,46 %, XIU.TO 18,73 %, FTS.TO 7,0 %, JNJ 7,0 %, RY.TO 5,63 %, TD.TO 4,86 %, PG 4,73 %, XBB.TO 2,54 %, MSFT 1,34 %, ATD.TO 0,62 %.
 
-*Conclusion de l'Agent 4* : Le scénario `capped` répond aux exigences d'équilibre et de responsabilité environnementale en filtrant rigoureusement les énergies fossiles et en maintenant une volatilité modérée de 12,2 %.
+*Conclusion de l'Agent 4* : Le scénario `capped` répond aux exigences d'équilibre et de responsabilité environnementale en filtrant rigoureusement les énergies fossiles et en maintenant une volatilité modérée de 12,2 % (contre 5,5 % pour le scénario de référence `profile_baseline`).
 
 ---
 
 ## 9. Infrastructure AWS et Déploiement
 
-L'infrastructure d'AlphaForge AI est hébergée sur **Amazon Web Services (AWS)** dans la région `us-east-1` ([infra/README.md](file:///home/wilson-lab/Datathon-Poly/wt-docs/infra/README.md)).
+L'infrastructure d'AlphaForge AI est hébergée sur **Amazon Web Services (AWS)** dans la région `us-east-1` ([infra/README.md](../infra/README.md)).
 
 ```mermaid
 flowchart TD
@@ -314,7 +314,7 @@ flowchart TD
 
     subgraph AWS["AWS Cloud (us-east-1)"]
         EC2["EC2 Instance (t3.medium) : 18.206.125.42<br/>Docker Container (FastAPI + React dist)"]
-        BEDROCK["Amazon Bedrock<br/>Claude 3.5 Sonnet & Haiku"]
+        BEDROCK["Amazon Bedrock<br/>Claude Sonnet 5.5 & Claude Haiku 5.5"]
         S3["Amazon S3 Bucket<br/>alphaforge-data-908027403910"]
         DDB["Amazon DynamoDB<br/>Table alphaforge-traces"]
         CW["Amazon CloudWatch<br/>Logs /alphaforge/app"]
@@ -328,7 +328,7 @@ flowchart TD
 ```
 
 ### 9.1 Ressources créées et justification technique
-- **Amazon Bedrock** : Fourniture des modèles de fondation `global.anthropic.claude-sonnet-5-5` (raisonnement central et explicabilité) et `global.anthropic.claude-haiku-5-5` (classification rapide d'événements).
+- **Amazon Bedrock** : Fourniture des modèles de fondation `global.anthropic.claude-sonnet-5-5` (Claude Sonnet 5.5 pour le raisonnement central, le profil et l'explicabilité) et `global.anthropic.claude-haiku-5-5` (Claude Haiku 5.5 pour la classification rapide d'événements). L'Agent 3 (Red Team) est en cours d'intégration.
 - **Amazon EC2 & ECR** : Instance `t3.medium` (`AlphaForge-Server`, ID `i-0ec3c5dff3ac51dc4`) exécutant l'image Docker multi-stage hébergée sur Amazon ECR (`908027403910.dkr.ecr.us-east-1.amazonaws.com/alphaforge`).
 - **Amazon S3** (`alphaforge-data-908027403910`) : Stockage objet versionné contenant les données sources (`starter/`), les caches (`cache/`), et les états d'exécution complets dépassant la limite de taille DynamoDB (`runs/<run_id>.json`).
 - **Amazon DynamoDB** (`alphaforge-traces`) : Table sans serveur en mode capacité à la demande (*pay-per-request*) garantissant la persistance de l'historique des exécutions, des traces temporelles et des statuts de validation.
@@ -344,12 +344,12 @@ flowchart TD
 ## 10. Stratégie de Test et Validation
 
 La fiabilité logicielle est validée par une suite de tests automatisés exhaustive exécutée avec `pytest` et `ruff` :
-- **Absence totale de dépendance réseau en intégration continue** : Les 221 tests unitaires et fonctionnels s'exécutent entièrement hors ligne grâce à des simulateurs et des instantanés mis en cache (`tests/fixtures/` et `data/cache/`).
+- **Absence totale de dépendance réseau en intégration continue** : Les 237 tests unitaires et fonctionnels s'exécutent entièrement hors ligne grâce à des simulateurs et des instantanés mis en cache (`tests/fixtures/` et `data/cache/`).
 - **Tests en direct balisés** : Les tests nécessitant un accès réel aux API Bedrock ou AWS portent le marqueur `@pytest.mark.live` et sont ignorés par défaut lors des validations locales de routine.
 - **Validation bout en bout des Personas** : Vérifie la complétude des exécutions pour Amira, Mateo et Robert, la non-régression du schéma d'explication, et le passage sans erreur du vérificateur.
 - **Résultats de validation** :
   - `uv run ruff check .` : **0 erreur**.
-  - `uv run pytest -q` : **221 tests passés avec succès**, 10 tests marqués `live` ignorés.
+  - `uv run pytest -q` : **237 tests passés avec succès**, 14 tests marqués `live` ignorés.
 
 ---
 
