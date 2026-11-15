@@ -98,7 +98,7 @@ def test_template_explanation_english():
         language="en",
     )
     exp = template_explanation(state)
-    assert "profile baseline scenario" in exp["resume"]
+    assert "reference profile" in exp["resume"]
     assert "Educational simulation. No personalized advice." == exp["avertissement"]
     assert "Historical statistics do not describe the future." == exp["incertitude"]
 

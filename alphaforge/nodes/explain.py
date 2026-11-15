@@ -51,9 +51,9 @@ Les risques se nomment parmi : marché, crédit, liquidité, taux et inflation, 
 
 Règles strictes :
 - Réponds avec les clés exactes du schéma : resume, quelles_donnees, pourquoi_ce_choix, limites, ce_qui_changerait_la_reponse, incertitude, scenario_le_plus_coherent, avertissement.
-- Le champ resume est la réponse principale, directe et brève (2 paragraphes) : dis clairement si l'idée est cohérente, partiellement cohérente ou peu cohérente avec la tolérance ET la capacité, l'objectif et l'horizon. Si elle est peu cohérente, dis-le sans ambiguïté et explique le risque déterminant, sans dramatiser. Ne dis jamais que tu connais le portefeuille si ses positions n'ont pas été fournies. Dans ce cas, précise que le poids demandé est évalué sur un portefeuille hypothétique et que son impact réel dépend des avoirs actuels, inconnus.
+- Le champ resume est la réponse principale, directe et brève (2 paragraphes) : ouvre directement par « Oui », « En partie » ou « Non » en une phrase selon que l'idée est cohérente, partiellement cohérente ou peu cohérente avec la tolérance ET la capacité, l'objectif et l'horizon. Si elle est peu cohérente, dis-le sans ambiguïté et explique le risque déterminant, sans dramatiser. Ne dis jamais que tu connais le portefeuille si ses positions n'ont pas été fournies. Dans ce cas, précise que le poids demandé est évalué sur un portefeuille hypothétique et que son impact réel dépend des avoirs actuels, inconnus.
 - Style du résumé (lu par un non-spécialiste) : le premier paragraphe donne le constat en une phrase simple, avec un seul chiffre au plus. Le second paragraphe explique en langage courant, avec deux chiffres au plus, chacun introduit en toutes lettres par ce qu'il mesure (« la baisse maximale historique », « la volatilité annuelle »). Pas d'énumération de chiffres ni de parenthèses de chiffres : le détail chiffré va dans les sections.
-- Nomme toujours les scénarios « le scénario demandé », « le scénario plafonné » et « le profil de référence ». N'écris JAMAIS d'identifiant interne ni de nom de champ (as_requested, capped, profile_baseline, policy_rate_ca, esg_tilt, etc.) : décris la chose en français courant.
+- Nomme toujours les scénarios « votre demande telle quelle », « la version ajustée à vos limites » et « le profil de référence ». N'écris JAMAIS d'identifiant interne ni de nom de champ (as_requested, capped, profile_baseline, persona, policy_rate_ca, esg_tilt, etc.) : décris la chose en français courant.
 - Sois concis : le résumé tient en 1 à 2 phrases directes réparties sur deux courts paragraphes; limite chaque autre section à 1 ou 2 affirmations brèves.
 - Adapte l'analyse à l'actif demandé : action (risque d'entreprise et concentration), FNB/indice (expositions sous-jacentes et chevauchements disponibles), cryptoactif (volatilité et risque de marché), or (matière première, devise et taux), autres actifs selon les données disponibles. Ne transpose pas un raisonnement propre à une classe d'actifs à une autre.
 - Justifie le constat par les preuves spécifiques à l'actif (historique, risque, liquidité si disponible), les actualités et les indicateurs macro effectivement fournis. N'invente ni cycle de marché, ni valorisation, ni capitalisation boursière, ni volume. Indique clairement dans les limites les facteurs importants absents des données; ne présente pas le contexte macro comme une conclusion sur l'actif si le lien n'est pas étayé.
@@ -77,9 +77,9 @@ Named risk types are: market, credit, liquidity, interest rate and inflation, cu
 
 Strict rules:
 - Respond using the exact schema keys: resume, quelles_donnees, pourquoi_ce_choix, limites, ce_qui_changerait_la_reponse, incertitude, scenario_le_plus_coherent, avertissement.
-- The resume is the direct, concise primary answer (2 paragraphs): clearly state whether the idea is consistent, partly consistent, or poorly consistent with risk tolerance AND capacity, objective, and horizon. If poorly consistent, say so plainly and explain the key risk without alarmism. Never imply knowledge of a portfolio whose holdings were not provided. In that case, state that the requested weight is evaluated against a hypothetical portfolio and its real impact depends on unknown current holdings.
+- The resume is the direct, concise primary answer (2 paragraphs): open directly with 'Yes', 'Partly', or 'No' in one sentence according to whether the idea is consistent, partly consistent, or poorly consistent with risk tolerance AND capacity, objective, and horizon. If poorly consistent, say so plainly and explain the key risk without alarmism. Never imply knowledge of a portfolio whose holdings were not provided. In that case, state that the requested weight is evaluated against a hypothetical portfolio and its real impact depends on unknown current holdings.
 - Summary style (read by a non-specialist): the first paragraph states the finding in one plain sentence, with at most one figure. The second paragraph explains in everyday language, with at most two figures, each introduced in words by what it measures ('the historical maximum drawdown', 'the annual volatility'). No lists of figures and no figures in parentheses: numeric detail belongs in the sections.
-- Always name the scenarios 'the requested scenario', 'the capped scenario' and 'the reference profile'. NEVER write an internal identifier or field name (as_requested, capped, profile_baseline, policy_rate_ca, esg_tilt, etc.): describe the thing in plain English.
+- Always name the scenarios 'your request as is', 'the version adjusted to your limits' and 'the reference profile'. NEVER write an internal identifier or field name (as_requested, capped, profile_baseline, persona, policy_rate_ca, esg_tilt, etc.): describe the thing in plain English.
 - Be concise: keep the resume to 1 or 2 direct sentences across two short paragraphs, and limit every other section to 1 or 2 brief claims.
 - Adapt the analysis to the requested asset (stock: company and concentration risk; ETF/index: underlying exposures and available overlaps; crypto: volatility and market risk; gold: commodity, currency and rates; others based on available data). Do not apply one asset class's reasoning to another.
 - Ground the assessment in asset-specific evidence (history, risk, available liquidity), actual news, and macro indicators actually provided. Never invent market cycles, valuation, market capitalization, or volume. State important missing data in the limitations; do not imply macro conditions have a proven asset-specific effect unless evidence supports it.
@@ -408,107 +408,504 @@ def _requested_assessment(state: GraphState) -> tuple[str | None, float | None, 
     return ticker, weight_pct, incompatible
 
 
-_MACRO_LABELS = {
-    "policy_rate_ca": ("taux directeur au Canada", "policy rate in Canada"),
-    "policy_rate_us": ("taux directeur aux États-Unis", "policy rate in the United States"),
-    "cpi_yoy_ca": ("inflation sur un an au Canada", "year-over-year inflation in Canada"),
-    "cpi_yoy_us": ("inflation sur un an aux États-Unis", "year-over-year inflation in the United States"),
-}
+# ----------------------------------------------------------------------- plain-language resume
+# Names shown to the user. The verifier maps these words back to the scenario.
 _SCENARIO_FR = {
-    "as_requested": "le scénario demandé",
-    "capped": "le scénario plafonné",
+    "as_requested": "votre demande telle quelle",
+    "capped": "la version ajustée à vos limites",
     "profile_baseline": "le profil de référence",
-    "current": "le portefeuille actuel",
+    "current": "votre portefeuille actuel",
 }
+_SCENARIO_EN = {
+    "as_requested": "your request as is",
+    "capped": "the version adjusted to your limits",
+    "profile_baseline": "the reference profile",
+    "current": "your current portfolio",
+}
+POINTER_FR = "La répartition détaillée et la vérification de vos limites sont dans Voir les détails."
+POINTER_EN = "The detailed allocation and the check of your limits are under Show details."
+MAX_BREACH_SENTENCES = 5
+
+_COUNT_FR = ("zéro", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
+             "dix", "onze", "douze")
+_COUNT_EN = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+             "ten", "eleven", "twelve")
+
+# Share of the portfolio in words (lower bound, French, English). No digit: these words are
+# not figures, so they need no evidence id.
+_FRACTIONS = (
+    (0.90, "la quasi-totalité", "almost all"),
+    (0.80, "la grande majorité", "the large majority"),
+    (0.70, "environ les trois quarts", "about three quarters"),
+    (0.58, "environ les deux tiers", "about two thirds"),
+    (0.45, "environ la moitié", "about half"),
+    (0.37, "un peu plus du tiers", "a little over a third"),
+    (0.29, "environ un tiers", "about a third"),
+    (0.22, "environ un quart", "about a quarter"),
+    (0.17, "environ un cinquième", "about a fifth"),
+    (0.13, "environ un sixième", "about a sixth"),
+    (0.08, "environ un dixième", "about a tenth"),
+    (0.0, "une petite part", "a small share"),
+)
+
+# Group -> (French singular with article, French plural, English singular, English plural).
+_GROUPS = {
+    "tech": ("une grande entreprise technologique", "grandes entreprises technologiques",
+             "one large technology company", "large technology companies"),
+    "equity_other": ("une action d'un autre secteur", "actions d'autres secteurs",
+                     "one stock from another sector", "stocks from other sectors"),
+    "etf_us": ("un FNB d'actions américaines", "FNB d'actions américaines",
+               "one U.S. equity ETF", "U.S. equity ETFs"),
+    "etf_ca": ("un FNB d'actions canadiennes", "FNB d'actions canadiennes",
+               "one Canadian equity ETF", "Canadian equity ETFs"),
+    "bond": ("un FNB d'obligations", "FNB d'obligations", "one bond ETF", "bond ETFs"),
+    "gold": ("un FNB adossé à l'or", "FNB adossés à l'or", "one gold ETF", "gold ETFs"),
+    "crypto": ("un cryptoactif", "cryptoactifs", "one crypto asset", "crypto assets"),
+    "other": ("un autre actif", "autres actifs", "one other asset", "other assets"),
+}
+_TECH_SECTORS = {"Information Technology", "Communication Services"}
+_MIN_GROUP_SHARE = 0.08
+_MAX_GROUPS = 3
+
+
+def scenario_label(name: str, language: str = "fr") -> str:
+    """Plain-language name of a scenario, as written in the answer."""
+    table = _SCENARIO_EN if language == "en" else _SCENARIO_FR
+    return table.get(name, name)
 
 
 def _scenario_fr(name: str) -> str:
-    """Display name of a scenario; the verifier recognises these words as the scenario."""
-    return _SCENARIO_FR.get(name, name)
+    return scenario_label(name, "fr")
 
 
-def _market_summary(state: GraphState, ticker: str | None, language: str) -> str:
-    if not ticker:
-        return (
-            "The available evidence compares simulated portfolio risk; no specific asset was "
-            "requested."
-            if language == "en"
-            else "Les preuves disponibles comparent le risque des portefeuilles simulés; aucun actif précis n'a été demandé."
-        )
+def _cap(text: str) -> str:
+    return text[:1].upper() + text[1:]
 
-    metrics = {}
-    for ev in state.evidence.values():
-        value = ev.value
-        if isinstance(value, dict) and value.get("ticker") == ticker:
-            metrics[value.get("metric")] = ev
-    details = []
-    for metric, label in (
-        ("volatility_ann", "volatilité annualisée historique" if language == "fr" else "historical annualized volatility"),
-        ("max_drawdown", "perte maximale historique" if language == "fr" else "historical maximum loss"),
-        ("stress_2022", "rendement pendant le choc de marché de 2022" if language == "fr" else "return during the 2022 market stress"),
-        ("avg_daily_traded_value_20d_cad", "valeur quotidienne moyenne échangée en CAD" if language == "fr" else "average daily traded value in CAD"),
-    ):
-        ev = metrics.get(metric)
-        if ev:
-            details.append(f"{label} : {printable(ev)} [{ev.id}]")
 
-    events = [event for event in state.events if event.get("ticker") == ticker]
-    if events:
-        details.append(
-            ("Actualités : " if language == "fr" else "News: ")
-            + (
-                "des éléments datés relatifs à cet actif ont été retenus "
-                if language == "fr"
-                else "dated items related to this asset were retained "
+def _count_word(n: int, language: str) -> str:
+    words = _COUNT_EN if language == "en" else _COUNT_FR
+    if 0 <= n < len(words):
+        return words[n]
+    return "several" if language == "en" else "plusieurs"
+
+
+def _fraction_word(share: float, language: str) -> str:
+    for floor, fr, en in _FRACTIONS:
+        if share >= floor:
+            return en if language == "en" else fr
+    return _FRACTIONS[-1][2 if language == "en" else 1]
+
+
+def _asset_group(ticker: str, info) -> str:
+    if ticker not in info.index:
+        return "other"
+    asset_class = str(info.at[ticker, "asset_class"])
+    if asset_class == "equity":
+        return "tech" if str(info.at[ticker, "sector"]) in _TECH_SECTORS else "equity_other"
+    if asset_class == "etf_equity":
+        return "etf_ca" if str(info.at[ticker, "currency"]) == "CAD" else "etf_us"
+    if asset_class == "etf_bond":
+        return "bond"
+    if asset_class == "etf_commodity":
+        return "gold"
+    if asset_class == "crypto":
+        return "crypto"
+    return "other"
+
+
+def describe_allocation(sc: Scenario, language: str = "fr") -> str:
+    """The scenario's weights in words, without a table and without a digit.
+
+    Example: "Environ la moitié dans six grandes entreprises technologiques, environ un tiers
+    dans deux FNB d'actions américaines, et le reste en petites positions."
+    """
+    en = language == "en"
+    info = get_provider().asset_info()
+    shares: dict[str, float] = {}
+    counts: dict[str, int] = {}
+    for ticker, weight in sc.weights.items():
+        if weight <= 0:
+            continue
+        group = _asset_group(ticker, info)
+        shares[group] = shares.get(group, 0.0) + float(weight)
+        counts[group] = counts.get(group, 0) + 1
+    if not shares:
+        return ""
+    ordered = sorted(shares, key=lambda g: (-shares[g], g))
+    shown = [g for g in ordered if shares[g] >= _MIN_GROUP_SHARE][:_MAX_GROUPS] or ordered[:1]
+    parts = []
+    for group in shown:
+        fr_one, fr_many, en_one, en_many = _GROUPS[group]
+        n = counts[group]
+        if n == 1:
+            what = en_one if en else fr_one
+        else:
+            what = f"{_count_word(n, language)} {en_many if en else fr_many}"
+        parts.append(f"{_fraction_word(shares[group], language)} {'in' if en else 'dans'} {what}")
+    rest = 1.0 - sum(shares[g] for g in shown)
+    if rest > 0.03:
+        if rest <= 0.20:
+            tail = "the rest in small positions" if en else "le reste en petites positions"
+        else:
+            tail = (
+                "the rest spread across other kinds of assets"
+                if en
+                else "le reste réparti entre d'autres catégories d'actifs"
             )
-            + " ".join(f"[{event['evidence_id']}]" for event in events)
-        )
-    macro = [
-        ev for ev in state.evidence.values()
-        if isinstance(ev.value, dict)
-        and ev.value.get("metric") in {
-            "policy_rate_ca", "policy_rate_us", "cpi_yoy_ca", "cpi_yoy_us"
-        }
+        text = ", ".join(parts) + (", and " if en else ", et ") + tail
+    elif len(parts) > 1:
+        text = ", ".join(parts[:-1]) + (" and " if en else " et ") + parts[-1]
+    else:
+        text = parts[0]
+    return _cap(text) + "."
+
+
+def scenario_breaches(state: GraphState, name: str) -> list[dict]:
+    """Guardrail entries with status "breach" for the scenario `name`."""
+    return [
+        g for g in state.guardrails or []
+        if isinstance(g, dict) and g.get("status") == "breach" and g.get("scenario") == name
     ]
-    if macro:
-        details.append(
-            (
-                "Contexte macro (taux directeurs et inflation) : "
-                if language == "fr"
-                else "Macro context (policy rates and inflation): "
+
+
+def _breach_context(state: GraphState) -> list[float]:
+    """The user's own numbers (declared limits), which a breach sentence may restate."""
+    out: list[float] = []
+    p = state.profile
+    if p:
+        for limit in (p.max_loss_12m, p.crypto_target_min, p.sector_cap):
+            if isinstance(limit, (int, float)):
+                out.append(float(limit))
+    for g in state.guardrails or []:
+        declared = g.get("declared") if isinstance(g, dict) else None
+        if isinstance(declared, (int, float)) and not isinstance(declared, bool):
+            out.append(float(declared))
+    return out
+
+
+def breach_sentence(state: GraphState, entry: dict, language: str = "fr") -> str:
+    """One sentence for a crossed limit: its figure, then its evidence ids in brackets.
+
+    The guardrail's own message is used when every figure in it is backed by the cited
+    evidence or by a declared limit; otherwise the sentence names the limit without a figure,
+    so the number rules always hold.
+    """
+    from alphaforge.evidence import EID_RE
+    from alphaforge.nodes.verifier import check_numbers
+
+    en = language == "en"
+    ids = [e for e in entry.get("evidence") or [] if e in state.evidence]
+    message = str(entry.get("message_en" if en else "message_fr") or "").strip()
+    label = str(entry.get("label_en" if en else "label_fr") or "").strip().rstrip(".")
+    candidates = []
+    if message:
+        candidates.append(message)
+    if label:
+        candidates.append(
+            f"A limit you declared is crossed: {label}."
+            if en
+            else f"Une limite que vous avez déclarée est dépassée : {label}."
+        )
+    candidates.append(
+        "A limit you declared is crossed."
+        if en
+        else "Une limite que vous avez déclarée est dépassée."
+    )
+    context = _breach_context(state)
+    for text in candidates:
+        missing = [e for e in ids if e not in EID_RE.findall(text)]
+        if missing:
+            body = text.rstrip()
+            end = body[-1] if body[-1:] in ".!?" else ""
+            body = body[: len(body) - len(end)].rstrip()
+            text = f"{body} [{', '.join(missing)}]{end or '.'}"
+        elif text[-1:] not in ".!?":
+            text += "."
+        if not check_numbers({"resume": text}, state.evidence, context):
+            return text
+    return candidates[-1]
+
+
+def _real_conflicts(profile) -> list[str]:
+    """Profile conflicts, without the entries that only record a reading assumption."""
+    return [
+        c for c in (profile.conflicts if profile else [])
+        if not str(c).lstrip().lower().startswith(("hypothèse", "assumption"))
+    ]
+
+
+def _profile_words(state: GraphState, language: str) -> str:
+    p = state.profile
+    if p is None:
+        return "declared profile" if language == "en" else "profil déclaré"
+    capacity = p.risk_capacity
+    if language == "en":
+        tol = TOLERANCE_EN.get(p.risk_tolerance, p.risk_tolerance)
+        cap = {"low": "low", "moderate": "moderate", "high": "high"}.get(capacity, capacity)
+        return f"{tol} risk tolerance, {cap} capacity, {p.horizon_years}-year horizon"
+    tol = TOLERANCE_FR.get(p.risk_tolerance, p.risk_tolerance)
+    cap = {"low": "faible", "moderate": "modérée", "high": "élevée"}.get(capacity, capacity)
+    return f"tolérance au risque {tol}, capacité {cap}, horizon de {p.horizon_years} ans"
+
+
+def _comparison_paragraph(state: GraphState, best: Scenario, language: str) -> str:
+    """Compares the request as is with the selected version; every direction word comes from
+    the sign of the metric delta."""
+    en = language == "en"
+    request = next((sc for sc in state.scenarios if sc.name == "as_requested"), None)
+    sentences = []
+    if request is not None and request.name != best.name:
+        r_mdd = _metric_value(state, request, "max_drawdown")
+        b_mdd = _metric_value(state, best, "max_drawdown")
+        if r_mdd is not None and b_mdd is not None:
+            r_txt, b_txt = _fr(abs(r_mdd) * 100, 1), _fr(abs(b_mdd) * 100, 1)
+            r_id, b_id = request.metrics["max_drawdown"], best.metrics["max_drawdown"]
+            if r_txt == b_txt:
+                direction = "a comparable loss" if en else "une baisse comparable"
+            elif abs(b_mdd) < abs(r_mdd):
+                direction = "a smaller loss" if en else "une baisse plus faible"
+            else:
+                direction = "a larger loss" if en else "une baisse plus forte"
+            if en:
+                sentences.append(
+                    f"Over the available history, the historical maximum loss is {r_txt} % "
+                    f"[{r_id}] with {scenario_label(request.name, 'en')} and {b_txt} % [{b_id}] "
+                    f"with {scenario_label(best.name, 'en')}, that is {direction}."
+                )
+            else:
+                sentences.append(
+                    f"Sur l'historique disponible, la baisse maximale historique est de {r_txt} % "
+                    f"[{r_id}] avec {scenario_label(request.name, 'fr')} et de {b_txt} % [{b_id}] "
+                    f"avec {scenario_label(best.name, 'fr')}, soit {direction}."
+                )
+        r_top = _metric_value(state, request, "top_weight")
+        b_top = _metric_value(state, best, "top_weight")
+        if r_top is not None and b_top is not None and abs(r_top - b_top) >= 0.005:
+            if b_top < r_top:
+                sentences.append(
+                    "Its largest position is also smaller."
+                    if en
+                    else "Sa plus grosse position y est aussi plus petite."
+                )
+            else:
+                sentences.append(
+                    "Its largest position, however, is larger."
+                    if en
+                    else "Sa plus grosse position y est en revanche plus grande."
+                )
+    if not sentences:
+        sentences.append(
+            "The figures that compare the versions are in the details."
+            if en
+            else "Les chiffres qui comparent les versions sont dans les détails."
+        )
+    if state.profile and not state.profile.current_holdings:
+        sentences.append(
+            "Your holdings were not provided: the rest of the simulated portfolio is "
+            "hypothetical and does not describe your portfolio."
+            if en
+            else "Vos avoirs ne sont pas fournis : le reste du portefeuille simulé est "
+            "hypothétique et ne décrit pas votre portefeuille."
+        )
+    return " ".join(sentences)
+
+
+def template_resume(state: GraphState, best: Scenario, language: str = "fr") -> str:
+    """The plain-language answer: verdict, comparison, crossed limits, pointer to the details."""
+    en = language == "en"
+    profile = state.profile
+    ticker, weight_pct, incompatible = _requested_assessment(state)
+    words = _profile_words(state, language)
+    best_label = scenario_label(best.name, language)
+    n_scenarios = _count_word(len(state.scenarios), language)
+    request_breaches = scenario_breaches(state, "as_requested")
+    is_judge = bool(ticker) or (profile is not None and profile.request_type == "judge")
+
+    if is_judge:
+        if ticker and weight_pct is not None:
+            subject = (
+                f"putting {_weight_text(weight_pct, 'en')} % in {ticker}"
+                if en
+                else f"consacrer {_weight_text(weight_pct, 'fr')} % à {ticker}"
             )
-            + "; ".join(
-                f"{_MACRO_LABELS.get(ev.value['metric'], (ev.value['metric'],) * 2)[0 if language == 'fr' else 1]} : "
-                f"{printable(ev)} [{ev.id}]"
-                for ev in macro
+        elif ticker:
+            subject = f"the proposed exposure to {ticker}" if en else f"l'exposition proposée à {ticker}"
+        else:
+            subject = "your request as is" if en else "votre demande telle quelle"
+            incompatible = bool(_real_conflicts(profile))
+        if incompatible:
+            p1 = (
+                f"No: this idea is poorly consistent with your profile because {subject} goes beyond its risk framework ({words})."
+                if en
+                else f"Non : cette idée est peu cohérente avec votre profil parce que {subject} dépasse son cadre de risque ({words})."
             )
-            + (
-                "; contexte général, sans prédire la trajectoire de l'actif"
-                if language == "fr"
-                else "; general context, not a prediction of the asset's path"
+        elif request_breaches:
+            p1 = (
+                f"Partly: this idea is partly consistent with your profile ({words}), but {subject} crosses at least one limit you declared."
+                if en
+                else f"En partie : cette idée est partiellement cohérente avec votre profil "
+                f"({words}), mais {subject} dépasse au moins une limite que vous avez déclarée."
             )
-            if language == "fr"
-            else "Observed macro context includes rates and inflation, but cannot by itself predict this asset's path."
+        else:
+            p1 = (
+                f"Yes: this idea is consistent with your profile; {subject} stays inside its risk framework ({words})."
+                if en
+                else f"Oui : cette idée est cohérente avec votre profil ; {subject} reste dans le cadre de risque de votre profil ({words})."
+            )
+        p1 += (
+            f" Of the {n_scenarios} versions compared, {best_label} is the closest to your "
+            "declared profile."
+            if en
+            else f" Parmi les {n_scenarios} versions comparées, c'est {best_label} qui "
+            "correspond le mieux à votre profil déclaré."
         )
     else:
-        details.append(
-            "Aucun indicateur macro exploitable n'est disponible."
-            if language == "fr"
-            else "No usable macro indicator is available."
+        p1 = (
+            f"Here is the simulated portfolio built for your request: of the {n_scenarios} "
+            f"versions compared, {best_label} is the closest to your declared profile ({words})."
+            if en
+            else f"Voici le portefeuille simulé construit pour votre demande : parmi les "
+            f"{n_scenarios} versions comparées, c'est {best_label} qui correspond le mieux à "
+            f"votre profil déclaré ({words})."
         )
-    if not metrics:
-        details.insert(
-            0,
-            "No asset-specific historical metrics are available."
-            if language == "en"
-            else "Aucun indicateur historique propre à cet actif n'est disponible."
-        )
-    details.append(
-        "Market capitalization, fundamental valuation, and an economic-cycle assessment are not available."
-        if language == "en"
-        else "Capitalisation boursière, valorisation fondamentale et phase du cycle économique ne sont pas disponibles"
+        description = describe_allocation(best, language)
+        if description:
+            p1 += " " + description
+
+    paragraphs = [p1, _comparison_paragraph(state, best, language)]
+    breaches = scenario_breaches(state, best.name)
+    if breaches:
+        sentences = [breach_sentence(state, b, language) for b in breaches[:MAX_BREACH_SENTENCES]]
+        sentences = list(dict.fromkeys(sentences))
+        if len(breaches) > MAX_BREACH_SENTENCES:
+            sentences.append(
+                "Other declared limits are crossed as well."
+                if en
+                else "D'autres limites déclarées sont aussi dépassées."
+            )
+        paragraphs.append(" ".join(sentences))
+    paragraphs.append(POINTER_EN if en else POINTER_FR)
+    return "\n\n".join(paragraphs)
+
+
+def _asset_claim(state: GraphState, language: str) -> dict | None:
+    """Historical metrics of the requested asset, as one claim for the data section."""
+    idea = state.profile.requested_idea if state.profile else None
+    ticker = idea.get("ticker") if idea else None
+    if not ticker:
+        return None
+    found: dict[str, Evidence] = {}
+    for ev in state.evidence.values():
+        value = ev.value
+        if isinstance(value, dict) and value.get("ticker") == ticker and value.get("metric"):
+            found.setdefault(str(value["metric"]), ev)
+    labels = (
+        ("volatility_ann", "volatilité annualisée historique", "historical annualized volatility"),
+        ("max_drawdown", "perte maximale historique", "historical maximum loss"),
+        ("stress_2022", "rendement pendant le choc de marché de 2022",
+         "return during the 2022 market stress"),
     )
-    return "; ".join(details) + "."
+    parts, ids = [], []
+    for metric, fr, en in labels:
+        ev = found.get(metric)
+        if ev is not None and numeric(ev) is not None:
+            parts.append(f"{en if language == 'en' else fr} {printable(ev)}")
+            ids.append(ev.id)
+    if not parts:
+        return None
+    sep = ": " if language == "en" else " : "
+    return {"claim": f"{ticker}{sep}{', '.join(parts)}.", "evidence": ids}
+
+
+# Internal terms that must not reach the plain-language answer, with their replacement.
+_PLAIN_TERMS = {
+    "fr": (
+        (r"\b(?:le |du |au )?sc[ée]nario plafonn[ée]\b", "la version ajustée à vos limites"),
+        (r"\b(?:le |du |au )?sc[ée]nario (?:brut )?demand[ée]\b", "votre demande telle quelle"),
+        (r"\bas[_ ]requested\b", "votre demande telle quelle"),
+        (r"\bcapped\b", "la version ajustée à vos limites"),
+        (r"\bprofile[_ ]baseline\b", "le profil de référence"),
+        (r"\b(?:indice |l'indice )?HHI(?: sectoriel)?\b", "concentration"),
+        (r"\bturnover\b", "rotation du portefeuille"),
+        (r"\bpersonas?\b", "profil"),
+        (r"\bproxy\b", "indicateur indirect"),
+        (r"\bpolicy_rate_ca\b", "taux directeur au Canada"),
+        (r"\bpolicy_rate_us\b", "taux directeur aux États-Unis"),
+        (r"\bcpi_yoy_ca\b", "inflation au Canada"),
+        (r"\bcpi_yoy_us\b", "inflation aux États-Unis"),
+    ),
+    "en": (
+        (r"\bthe capped scenario\b", "the version adjusted to your limits"),
+        (r"\bthe requested scenario\b", "your request as is"),
+        (r"\bas[_ ]requested\b", "your request as is"),
+        (r"\bcapped\b", "adjusted to your limits"),
+        (r"\b(?:the )?profile[_ ]baseline(?: scenario)?\b", "the reference profile"),
+        (r"\bHHI\b", "concentration"),
+        (r"\bturnover\b", "portfolio rotation"),
+        (r"\bpersonas?\b", "profile"),
+        (r"\bproxy\b", "indirect indicator"),
+        (r"\bpolicy_rate_ca\b", "policy rate in Canada"),
+        (r"\bpolicy_rate_us\b", "policy rate in the United States"),
+        (r"\bcpi_yoy_ca\b", "inflation in Canada"),
+        (r"\bcpi_yoy_us\b", "inflation in the United States"),
+    ),
+}
+_COUNT_NOUN = {"fr": r"(sc[ée]narios|versions)", "en": r"(scenarios|versions)"}
+
+
+def plain_terms(text: str, language: str = "fr") -> str:
+    """Replace internal terms by their plain-language wording (answer text only)."""
+    import re
+
+    for pattern, repl in _PLAIN_TERMS["en" if language == "en" else "fr"]:
+        def _sub(m, repl=repl):
+            return _cap(repl) if m.group(0)[:1].isupper() else repl
+        text = re.sub(pattern, _sub, text, flags=re.IGNORECASE)
+    return re.sub(r"[ \t]{2,}", " ", text)
+
+
+def fix_scenario_count(text: str, n: int, language: str = "fr") -> str:
+    """Make "les trois scénarios" agree with the number of scenarios actually present."""
+    import re
+
+    words = _COUNT_EN if language == "en" else _COUNT_FR
+    if not 2 <= n < len(words):
+        return text
+    noun = _COUNT_NOUN["en" if language == "en" else "fr"]
+    wrong = [w for i, w in enumerate(words) if 2 <= i <= 6 and i != n]
+
+    def _sub(m):
+        word = words[n]
+        return f"{_cap(word) if m.group(1)[:1].isupper() else word}{m.group(2)}{m.group(3)}"
+
+    return re.sub(rf"\b({'|'.join(wrong)})(\s+){noun}\b", _sub, text, flags=re.IGNORECASE)
+
+
+def finalise_resume(resume: str, state: GraphState, best_name: str, language: str = "fr") -> str:
+    """Deterministic guarantees on a model-written answer: plain terms, the right number of
+    scenarios, one sentence per crossed limit of the selected scenario, the pointer sentence."""
+    from alphaforge.evidence import EID_RE
+
+    en = language == "en"
+    pointer = POINTER_EN if en else POINTER_FR
+    text = plain_terms(str(resume or "").strip(), language)
+    text = fix_scenario_count(text, len(state.scenarios), language)
+    body = text.replace(pointer, "").rstrip()
+    cited = set(EID_RE.findall(body))
+    extra = []
+    for entry in scenario_breaches(state, best_name)[:MAX_BREACH_SENTENCES]:
+        ids = [e for e in entry.get("evidence") or [] if e in state.evidence]
+        sentence = breach_sentence(state, entry, language)
+        if sentence in body or sentence in extra:
+            continue
+        if ids and set(ids) <= cited:
+            continue  # the model already wrote this breach with its figures
+        extra.append(sentence)
+    parts = [body] if body else []
+    if extra:
+        parts.append(" ".join(extra))
+    parts.append(pointer)
+    return "\n\n".join(parts)
 
 
 def template_explanation(state: GraphState) -> dict:
@@ -526,7 +923,7 @@ def template_explanation(state: GraphState) -> dict:
                 donnees.append(
                     {
                         "claim": (
-                            f"Scenario {sc.name}: historical annualized volatility of {_fr(abs(vol) * 100, 1)} %, "
+                            f"{_cap(scenario_label(sc.name, 'en'))}: historical annualized volatility of {_fr(abs(vol) * 100, 1)} %, "
                             f"historical maximum loss of {_fr(abs(mdd) * 100, 1)} %."
                         ),
                         "evidence": ids,
@@ -536,7 +933,7 @@ def template_explanation(state: GraphState) -> dict:
                 donnees.append(
                     {
                         "claim": (
-                            f"Scénario {sc.name} : volatilité annualisée historique de {_fr(abs(vol) * 100, 1)} %, "
+                            f"{_cap(scenario_label(sc.name, 'fr'))} : volatilité annualisée historique de {_fr(abs(vol) * 100, 1)} %, "
                             f"perte maximale historique de {_fr(abs(mdd) * 100, 1)} %."
                         ),
                         "evidence": ids,
@@ -572,6 +969,10 @@ def template_explanation(state: GraphState) -> dict:
                     "evidence": [ev_tvl.id],
                 }
             )
+    asset_claim = _asset_claim(state, lang)
+    if asset_claim:
+        donnees.append(asset_claim)
+    best_breaches = scenario_breaches(state, best.name)
     bm = _metric_value(state, best, "max_drawdown")
     if bm is not None:
         caps_evidence = [
@@ -587,9 +988,14 @@ def template_explanation(state: GraphState) -> dict:
             pourquoi.append(
                 {
                     "claim": (
-                        f"The {best.name} scenario respects the profile's risk limits and has a "
-                        f"historical maximum loss of {_fr(abs(bm) * 100, 1)} %, making it the "
-                        f"most consistent with a '{tol_str}' risk tolerance."
+                        f"{_cap(scenario_label(best.name, 'en'))} "
+                        + (
+                            "crosses at least one limit you declared, but stays the closest to"
+                            if best_breaches
+                            else "stays within the profile's reference caps and is the closest to"
+                        )
+                        + f" a '{tol_str}' risk tolerance, with a historical maximum loss of "
+                        f"{_fr(abs(bm) * 100, 1)} %."
                     ),
                     "evidence": [best.metrics["max_drawdown"], *caps_evidence],
                 }
@@ -603,9 +1009,16 @@ def template_explanation(state: GraphState) -> dict:
             pourquoi.append(
                 {
                     "claim": (
-                        f"{_scenario_fr(best.name).capitalize()} respecte les limites de risque du profil et affiche "
-                        f"une perte maximale historique de {_fr(abs(bm) * 100, 1)} %, ce qui le rend "
-                        f"le plus cohérent avec une tolérance au risque « {tol_str} »."
+                        f"{_cap(scenario_label(best.name, 'fr'))} "
+                        + (
+                            "dépasse au moins une limite que vous avez déclarée, mais reste "
+                            "l'option la plus cohérente avec"
+                            if best_breaches
+                            else "reste sous les plafonds de référence du profil et est "
+                            "l'option la plus cohérente avec"
+                        )
+                        + f" une tolérance au risque « {tol_str} », avec une perte maximale "
+                        f"historique de {_fr(abs(bm) * 100, 1)} %."
                     ),
                     "evidence": [best.metrics["max_drawdown"], *caps_evidence],
                 }
@@ -618,7 +1031,7 @@ def template_explanation(state: GraphState) -> dict:
                 donnees.append(
                     {
                         "claim": (
-                            f"Scenario {best.name}: share of the portfolio in assets held by the ESGV fund "
+                            f"{_cap(scenario_label(best.name, 'en'))}: share of the portfolio in assets held by the ESGV fund "
                             f"(indirect proxy) of {_fr(abs(esg_val) * 100, 1)} %."
                         ),
                         "evidence": [best.metrics["esg_proxy_share"]],
@@ -628,22 +1041,13 @@ def template_explanation(state: GraphState) -> dict:
                 donnees.append(
                     {
                         "claim": (
-                            f"{_scenario_fr(best.name).capitalize()} : part du portefeuille dans des titres présents dans le fonds ESGV "
+                            f"{_cap(scenario_label(best.name, 'fr'))} : part du portefeuille dans des titres présents dans le fonds ESGV "
                             f"(indicateur indirect) de {_fr(abs(esg_val) * 100, 1)} %."
                         ),
                         "evidence": [best.metrics["esg_proxy_share"]],
                     }
                 )
-    ticker, weight_pct, incompatible = _requested_assessment(state)
-    horizon = getattr(state.profile, "horizon_years", 5) if state.profile else 5
-    scenario_label = "le scénario ajusté" if best.name == "capped" else "le profil de référence"
-
-    capacity = state.profile.risk_capacity if state.profile else "moderate"
-    capacity_label = (
-        {"low": "faible", "moderate": "modérée", "high": "élevée"}.get(capacity, capacity)
-        if lang != "en"
-        else {"low": "low", "moderate": "moderate", "high": "high"}.get(capacity, capacity)
-    )
+    resume = template_resume(state, best, lang)
 
     proxy_eids = [
         eid for eid, ev in state.evidence.items()
@@ -652,40 +1056,6 @@ def template_explanation(state: GraphState) -> dict:
     ]
 
     if lang == "en":
-        tol_str = (
-            TOLERANCE_EN.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
-            if state.profile
-            else "moderate"
-        )
-        if ticker and weight_pct is not None:
-            verdict = "poorly consistent" if incompatible else "within the profile's exposure limit"
-            p1 = (
-                f"Your request to allocate {_weight_text(weight_pct, 'en')} % to {ticker} is {verdict} with your "
-                f"{tol_str} risk tolerance, {capacity_label} capacity, and {horizon}-year horizon"
-            )
-            if incompatible:
-                p1 += "; it conflicts with your profile's risk limits"
-            p1 += f"; the {best.name.replace('_', ' ')} scenario is the most consistent."
-        elif ticker:
-            p1 = (
-                f"Your proposed exposure to {ticker} is "
-                f"{'poorly consistent' if incompatible else 'within the profile limits'} with "
-                f"your {tol_str} risk tolerance, {capacity_label} capacity, and {horizon}-year horizon."
-            )
-        else:
-            p1 = (
-                f"Your asset allocation request was evaluated for a {horizon}-year horizon with a {tol_str} risk profile. "
-                f"The {best.name.replace('_', ' ')} scenario emerges as the most consistent structure with your wealth objectives."
-            )
-
-        p2 = _market_summary(state, ticker, "en")
-        if state.profile and not state.profile.current_holdings:
-            p2 += (
-                " Current holdings were not provided, so the simulated remainder is hypothetical "
-                "and does not describe your portfolio."
-            )
-        resume = f"{p1}\n\n{p2}"
-
         if not donnees:
             donnees = [{"claim": "No numerical metrics available.", "evidence": []}]
         if not pourquoi:
@@ -743,41 +1113,6 @@ def template_explanation(state: GraphState) -> dict:
             "scenario_le_plus_coherent": best.name,
             "avertissement": DISCLAIMER_EN,
         }
-
-    tol_str = (
-        TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
-        if state.profile
-        else "modéré"
-    )
-    if ticker and weight_pct is not None:
-        verdict = "peu cohérente" if incompatible else "compatible avec la limite d'exposition du profil"
-        p1 = (
-            f"Consacrer {_weight_text(weight_pct, 'fr')} % à {ticker} est {verdict}, au regard de votre tolérance "
-            f"au risque {tol_str}, de votre capacité {capacity_label} et de votre horizon de {horizon} ans"
-        )
-        if incompatible:
-            p1 += "; cette part dépasse le cadre de risque du profil"
-        p1 += f"; {_scenario_fr(best.name)} est le plus cohérent."
-    elif ticker:
-        p1 = (
-            f"L'exposition proposée à {ticker} est "
-            f"{'peu cohérente' if incompatible else 'compatible avec les limites du profil'}, "
-            f"au regard de votre tolérance au risque {tol_str}, de votre capacité {capacity_label} "
-            f"et de votre horizon de {horizon} ans."
-        )
-    else:
-        p1 = (
-            f"Votre demande d'allocation a été évaluée pour un horizon de {horizon} ans avec une tolérance au risque {tol_str}. "
-            f"{scenario_label.capitalize()} ressort comme la structure la plus cohérente avec vos objectifs patrimoniaux."
-        )
-
-    p2 = _market_summary(state, ticker, "fr")
-    if state.profile and not state.profile.current_holdings:
-        p2 += (
-            " Vos avoirs ne sont pas fournis; le reste simulé est hypothétique et ne décrit "
-            "pas votre portefeuille."
-        )
-    resume = f"{p1}\n\n{p2}"
 
     if not donnees:
         donnees = [{"claim": "Aucun indicateur chiffré n'est disponible.", "evidence": []}]
@@ -866,6 +1201,12 @@ def generate_explanation(state: GraphState, llm_client=None) -> tuple[dict, bool
         return template_explanation(state), True
     data = out.model_dump()
     data["avertissement"] = disclaimer
+    best_name = data.get("scenario_le_plus_coherent", "profile_baseline")
+    data["resume"] = finalise_resume(data["resume"], state, best_name, lang)
+    for section in ("quelles_donnees", "pourquoi_ce_choix", "limites", "ce_qui_changerait_la_reponse"):
+        for item in data.get(section, []):
+            if isinstance(item, dict) and "claim" in item:
+                item["claim"] = plain_terms(item["claim"], lang)
     return data, False
 
 
