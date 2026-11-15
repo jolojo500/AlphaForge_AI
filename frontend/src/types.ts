@@ -183,6 +183,8 @@ export interface WhatIfDiff {
   change?: WhatIfChange;
   parent_run_id?: string;
   child_run_id?: string;
+  run_a_id?: string;
+  run_b_id?: string;
 }
 
 export interface UserOnboardingProfile {

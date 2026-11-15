@@ -161,6 +161,7 @@ class LocalJsonTraceStore(TraceStore):
             except Exception:  # noqa: BLE001
                 pass
 
+        golden_runs: list[dict[str, Any]] = []
         if include_golden:
             for golden in load_golden_runs():
                 rid = golden.get("run_id")
@@ -170,7 +171,7 @@ class LocalJsonTraceStore(TraceStore):
                 if rid and rid not in seen:
                     seen.add(rid)
                     v = golden.get("verification") or {}
-                    runs.append(
+                    golden_runs.append(
                         {
                             "run_id": rid,
                             "persona": p,
@@ -183,7 +184,7 @@ class LocalJsonTraceStore(TraceStore):
                         }
                     )
 
-        return runs[:limit]
+        return (golden_runs + runs)[:limit]
 
 
 class DynamoDBTraceStore(TraceStore):
@@ -350,6 +351,7 @@ class DynamoDBTraceStore(TraceStore):
         except Exception:  # noqa: BLE001
             pass
 
+        golden_runs: list[dict[str, Any]] = []
         if include_golden:
             for golden in load_golden_runs():
                 rid = golden.get("run_id")
@@ -359,7 +361,7 @@ class DynamoDBTraceStore(TraceStore):
                 if rid and rid not in seen:
                     seen.add(rid)
                     v = golden.get("verification") or {}
-                    items.append(
+                    golden_runs.append(
                         {
                             "run_id": rid,
                             "persona": p,
@@ -371,7 +373,7 @@ class DynamoDBTraceStore(TraceStore):
                             "is_golden": True,
                         }
                     )
-        return items[:limit]
+        return (golden_runs + items)[:limit]
 
 
 def get_trace_store() -> TraceStore:

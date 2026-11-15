@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Logo } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
 import { UserOnboardingProfile, BackendRunPayload } from '../types';
-import { ArrowUpRight, Settings, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, Settings, RotateCcw, Columns2 } from 'lucide-react';
 import { prepareBackendPayload } from '../api';
 import { DemoPersonas } from './DemoPersonas';
 import { PayloadModal } from './PayloadModal';
@@ -15,6 +15,7 @@ interface QueryScreenProps {
   onEditProfile: () => void;
   onResetProfile: () => void;
   onRunQuery: (payload: BackendRunPayload) => void;
+  onCompare?: () => void;
   onReplay?: () => void;
 }
 
@@ -23,6 +24,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   onEditProfile,
   onResetProfile,
   onRunQuery,
+  onCompare,
   onReplay,
 }) => {
   const [query, setQuery] = useState<string>('');
@@ -58,6 +60,19 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onCompare && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCompare}
+              className="h-8 gap-1.5 text-xs font-medium"
+            >
+              <Columns2 className="w-3.5 h-3.5 text-primary" />
+              <span className="hidden sm:inline">Comparer deux profils</span>
+              <span className="sm:hidden">Comparer</span>
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
