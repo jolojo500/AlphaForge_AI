@@ -52,6 +52,8 @@ Les risques se nomment parmi : marché, crédit, liquidité, taux et inflation, 
 Règles strictes :
 - Réponds avec les clés exactes du schéma : resume, quelles_donnees, pourquoi_ce_choix, limites, ce_qui_changerait_la_reponse, incertitude, scenario_le_plus_coherent, avertissement.
 - Le champ resume est la réponse principale, directe et brève (2 paragraphes) : dis clairement si l'idée est cohérente, partiellement cohérente ou peu cohérente avec la tolérance ET la capacité, l'objectif et l'horizon. Si elle est peu cohérente, dis-le sans ambiguïté et explique le risque déterminant, sans dramatiser. Ne dis jamais que tu connais le portefeuille si ses positions n'ont pas été fournies. Dans ce cas, précise que le poids demandé est évalué sur un portefeuille hypothétique et que son impact réel dépend des avoirs actuels, inconnus.
+- Style du résumé (lu par un non-spécialiste) : le premier paragraphe donne le constat en une phrase simple, avec un seul chiffre au plus. Le second paragraphe explique en langage courant, avec deux chiffres au plus, chacun introduit en toutes lettres par ce qu'il mesure (« la baisse maximale historique », « la volatilité annuelle »). Pas d'énumération de chiffres ni de parenthèses de chiffres : le détail chiffré va dans les sections.
+- Nomme toujours les scénarios « le scénario demandé », « le scénario plafonné » et « le profil de référence ». N'écris JAMAIS d'identifiant interne ni de nom de champ (as_requested, capped, profile_baseline, policy_rate_ca, esg_tilt, etc.) : décris la chose en français courant.
 - Sois concis : le résumé tient en 1 à 2 phrases directes réparties sur deux courts paragraphes; limite chaque autre section à 1 ou 2 affirmations brèves.
 - Adapte l'analyse à l'actif demandé : action (risque d'entreprise et concentration), FNB/indice (expositions sous-jacentes et chevauchements disponibles), cryptoactif (volatilité et risque de marché), or (matière première, devise et taux), autres actifs selon les données disponibles. Ne transpose pas un raisonnement propre à une classe d'actifs à une autre.
 - Justifie le constat par les preuves spécifiques à l'actif (historique, risque, liquidité si disponible), les actualités et les indicateurs macro effectivement fournis. N'invente ni cycle de marché, ni valorisation, ni capitalisation boursière, ni volume. Indique clairement dans les limites les facteurs importants absents des données; ne présente pas le contexte macro comme une conclusion sur l'actif si le lien n'est pas étayé.
@@ -76,6 +78,8 @@ Named risk types are: market, credit, liquidity, interest rate and inflation, cu
 Strict rules:
 - Respond using the exact schema keys: resume, quelles_donnees, pourquoi_ce_choix, limites, ce_qui_changerait_la_reponse, incertitude, scenario_le_plus_coherent, avertissement.
 - The resume is the direct, concise primary answer (2 paragraphs): clearly state whether the idea is consistent, partly consistent, or poorly consistent with risk tolerance AND capacity, objective, and horizon. If poorly consistent, say so plainly and explain the key risk without alarmism. Never imply knowledge of a portfolio whose holdings were not provided. In that case, state that the requested weight is evaluated against a hypothetical portfolio and its real impact depends on unknown current holdings.
+- Summary style (read by a non-specialist): the first paragraph states the finding in one plain sentence, with at most one figure. The second paragraph explains in everyday language, with at most two figures, each introduced in words by what it measures ('the historical maximum drawdown', 'the annual volatility'). No lists of figures and no figures in parentheses: numeric detail belongs in the sections.
+- Always name the scenarios 'the requested scenario', 'the capped scenario' and 'the reference profile'. NEVER write an internal identifier or field name (as_requested, capped, profile_baseline, policy_rate_ca, esg_tilt, etc.): describe the thing in plain English.
 - Be concise: keep the resume to 1 or 2 direct sentences across two short paragraphs, and limit every other section to 1 or 2 brief claims.
 - Adapt the analysis to the requested asset (stock: company and concentration risk; ETF/index: underlying exposures and available overlaps; crypto: volatility and market risk; gold: commodity, currency and rates; others based on available data). Do not apply one asset class's reasoning to another.
 - Ground the assessment in asset-specific evidence (history, risk, available liquidity), actual news, and macro indicators actually provided. Never invent market cycles, valuation, market capitalization, or volume. State important missing data in the limitations; do not imply macro conditions have a proven asset-specific effect unless evidence supports it.
@@ -404,6 +408,25 @@ def _requested_assessment(state: GraphState) -> tuple[str | None, float | None, 
     return ticker, weight_pct, incompatible
 
 
+_MACRO_LABELS = {
+    "policy_rate_ca": ("taux directeur au Canada", "policy rate in Canada"),
+    "policy_rate_us": ("taux directeur aux États-Unis", "policy rate in the United States"),
+    "cpi_yoy_ca": ("inflation sur un an au Canada", "year-over-year inflation in Canada"),
+    "cpi_yoy_us": ("inflation sur un an aux États-Unis", "year-over-year inflation in the United States"),
+}
+_SCENARIO_FR = {
+    "as_requested": "le scénario demandé",
+    "capped": "le scénario plafonné",
+    "profile_baseline": "le profil de référence",
+    "current": "le portefeuille actuel",
+}
+
+
+def _scenario_fr(name: str) -> str:
+    """Display name of a scenario; the verifier recognises these words as the scenario."""
+    return _SCENARIO_FR.get(name, name)
+
+
 def _market_summary(state: GraphState, ticker: str | None, language: str) -> str:
     if not ticker:
         return (
@@ -455,7 +478,8 @@ def _market_summary(state: GraphState, ticker: str | None, language: str) -> str
                 else "Macro context (policy rates and inflation): "
             )
             + "; ".join(
-                f"{ev.value['metric']} : {printable(ev)} [{ev.id}]"
+                f"{_MACRO_LABELS.get(ev.value['metric'], (ev.value['metric'],) * 2)[0 if language == 'fr' else 1]} : "
+                f"{printable(ev)} [{ev.id}]"
                 for ev in macro
             )
             + (
@@ -579,7 +603,7 @@ def template_explanation(state: GraphState) -> dict:
             pourquoi.append(
                 {
                     "claim": (
-                        f"Le scénario {best.name} respecte les limites de risque du profil et affiche "
+                        f"{_scenario_fr(best.name).capitalize()} respecte les limites de risque du profil et affiche "
                         f"une perte maximale historique de {_fr(abs(bm) * 100, 1)} %, ce qui le rend "
                         f"le plus cohérent avec une tolérance au risque « {tol_str} »."
                     ),
@@ -604,7 +628,7 @@ def template_explanation(state: GraphState) -> dict:
                 donnees.append(
                     {
                         "claim": (
-                            f"Scénario {best.name} : part du portefeuille dans des titres présents dans le fonds ESGV "
+                            f"{_scenario_fr(best.name).capitalize()} : part du portefeuille dans des titres présents dans le fonds ESGV "
                             f"(indicateur indirect) de {_fr(abs(esg_val) * 100, 1)} %."
                         ),
                         "evidence": [best.metrics["esg_proxy_share"]],
@@ -733,7 +757,7 @@ def template_explanation(state: GraphState) -> dict:
         )
         if incompatible:
             p1 += "; cette part dépasse le cadre de risque du profil"
-        p1 += f"; le scénario {best.name.replace('_', ' ')} est le plus cohérent."
+        p1 += f"; {_scenario_fr(best.name)} est le plus cohérent."
     elif ticker:
         p1 = (
             f"L'exposition proposée à {ticker} est "
