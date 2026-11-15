@@ -4,24 +4,16 @@ import { Activity, CheckCircle2, Clock, Cpu, Coins, ExternalLink } from 'lucide-
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
+import { nodeLabel } from '@/lib/labels';
 
 interface NodeTraceProps {
   trace: TraceEntry[];
   isRunning: boolean;
   cost?: RunCost;
+  /** Position in the detailed section, so the numbering stays continuous. */
+  sectionNumber?: number;
 }
-
-export const NODE_LABELS: Record<string, string> = {
-  profile: 'Profil (Agent 1)',
-  screening: 'Filtrage admissibilité',
-  quant: 'Métriques quantitatives',
-  macro: 'Contexte macroéconomique',
-  events: 'Actualités & Événements (Agent 2)',
-  scenarios: 'Génération des scénarios',
-  red_team: 'Critique contradictoire (Agent 3)',
-  explain: 'Explicabilité (Agent 4)',
-  verifier: 'Vérificateur déterministe',
-};
 
 // Fallback only, when the server sent no cost block: Anthropic list prices (USD per 1M tokens,
 // 2026-11-03) used as an estimate; the server converts with the Bank of Canada USD/CAD rate.
@@ -49,8 +41,11 @@ function calculateEstimatedCad(trace: TraceEntry[]): number {
   return totalUsd * USD_TO_CAD;
 }
 
-export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) => {
+export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost, sectionNumber }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+  const prefix = sectionNumber ? `${sectionNumber}. ` : '';
 
   if (trace.length === 0 && !isRunning) {
     return null;
@@ -74,7 +69,7 @@ export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) 
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
             <h2 className="text-sm sm:text-base font-semibold text-foreground">
-              Traçabilité & Exécution des Agents
+              {isEn ? `${prefix}Steps of the analysis` : `${prefix}Étapes de l'analyse`}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -87,15 +82,20 @@ export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) 
                   ? "bg-primary text-primary-foreground border-primary shadow-xs"
                   : "bg-muted/60 text-muted-foreground hover:text-foreground border-border hover:bg-muted"
               )}
-              title="Afficher la télémétrie LLM, jetons et coût estimé par exécution"
+              title={isEn ? 'Show model calls, tokens and the estimated cost of this run' : 'Afficher les appels au modèle, les jetons et le coût estimé de cette analyse'}
+              aria-expanded={showAdvanced}
             >
               <Cpu className="w-3.5 h-3.5" />
-              <span>{showAdvanced ? "Masquer panneau avancé" : "Panneau avancé (LLM & Coûts)"}</span>
+              <span>
+                {showAdvanced
+                  ? isEn ? 'Hide technical panel' : 'Masquer le panneau technique'
+                  : isEn ? 'Technical panel (model calls and cost)' : 'Panneau technique (appels au modèle et coût)'}
+              </span>
             </button>
             {isRunning && (
               <Badge variant="secondary" className="gap-1.5 animate-pulse text-[11px] py-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
-                Exécution en direct
+                {isEn ? 'Running' : 'En cours'}
               </Badge>
             )}
           </div>
@@ -107,18 +107,21 @@ export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) 
             const start = new Date(entry.started_at).getTime();
             const end = new Date(entry.ended_at).getTime();
             const durationMs = Math.max(0, end - start);
-            const durationStr = durationMs >= 1000 ? `${(durationMs / 1000).toFixed(2)}s` : `${durationMs}ms`;
+            const durationStr =
+              durationMs >= 1000
+                ? `${(durationMs / 1000).toLocaleString(isEn ? 'en-CA' : 'fr-CA', { maximumFractionDigits: 1 })}\u00a0s`
+                : `${durationMs}\u00a0ms`;
 
             return (
               <div
                 key={`${entry.node}-${idx}`}
                 className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 border border-border/70 text-xs hover:bg-muted/70 transition-colors"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-foreground text-xs uppercase tracking-wider">
-                      {NODE_LABELS[entry.node] || entry.node}
+                      {idx + 1}. {nodeLabel(entry.node, language)}
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
                       <Clock className="w-3 h-3" />
@@ -135,7 +138,7 @@ export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) 
             <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm animate-pulse">
               <div className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin shrink-0" />
               <span className="text-xs font-medium text-blue-800 dark:text-blue-300">
-                Traitement du nœud en cours...
+                {isEn ? 'Step in progress...' : 'Étape en cours...'}
               </span>
             </div>
           )}
@@ -177,7 +180,7 @@ export const NodeTrace: React.FC<NodeTraceProps> = ({ trace, isRunning, cost }) 
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-semibold text-foreground">
-                          {NODE_LABELS[entry.node] || entry.node}
+                          {nodeLabel(entry.node, language)}
                         </span>
                         <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
                           {nodeModel}
