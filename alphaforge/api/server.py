@@ -8,6 +8,7 @@ import datetime as dt
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -514,6 +515,73 @@ TOLERANCES = {"low", "low_moderate", "moderate", "high"}
 CAPACITIES = {"low", "moderate", "high"}
 
 
+ESG_LEVELS = {"strict", "tilt", "neutral"}
+AGE_BAND_RE = re.compile(r"^(?:\d{1,3}-\d{1,3}|\d{1,3}\+|<\d{1,3}|\d{1,3})$")
+
+
+def _esg_level(value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    level = str(value).strip().lower()
+    if level not in ESG_LEVELS:
+        raise HTTPException(400, f"esg_level must be one of {sorted(ESG_LEVELS)}")
+    return level
+
+
+def _declared_limit_fields(data: dict[str, Any]) -> dict[str, Any]:
+    """Questionnaire limits validated and forwarded with the codes `declared_limits` reads (#186).
+
+    age_band "18-29" / "60+"; currency_preference "cad" | "usd" | "mixed" | "none";
+    sector_cap_pct 0-100 or "none"; crypto_preference "none" | "1-5" | "5-15" | "15+" (or a number).
+    """
+    from alphaforge.personas import age_band as parse_age_band
+    from alphaforge.personas import crypto_target_min, currency_pref
+
+    out: dict[str, Any] = {
+        "age_band": None,
+        "currency_preference": None,
+        "sector_cap_pct": None,
+        "crypto_preference": None,
+    }
+    raw_age = data.get("age_band")
+    if raw_age not in (None, ""):
+        band = parse_age_band(raw_age)
+        if band is None or len(str(raw_age)) > 20 or not AGE_BAND_RE.match(band):
+            raise HTTPException(400, "age_band must look like '18-29' or '60+'")
+        out["age_band"] = band
+    raw_cur = data.get("currency_preference")
+    if raw_cur not in (None, ""):
+        code = str(raw_cur).strip().lower()
+        if code in {"cad", "usd", "mixed"}:
+            out["currency_preference"] = code
+        elif code == "none":
+            out["currency_preference"] = None
+        elif len(code) <= 60 and currency_pref(code) is not None:
+            out["currency_preference"] = currency_pref(code)
+        else:
+            raise HTTPException(400, "currency_preference must be one of ['cad', 'mixed', 'none', 'usd']")
+    raw_cap = data.get("sector_cap_pct")
+    if raw_cap not in (None, "", "none"):
+        try:
+            cap = float(raw_cap)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "sector_cap_pct must be a number between 0 and 100") from None
+        if cap <= 1.0:
+            cap *= 100.0
+        if not 0 < cap <= 100:
+            raise HTTPException(400, "sector_cap_pct must be a number between 0 and 100")
+        out["sector_cap_pct"] = cap
+    raw_crypto = data.get("crypto_preference")
+    if raw_crypto not in (None, ""):
+        bad = "crypto_preference must be a code such as 'none', '1-5', '5-15' or '15+'"
+        if isinstance(raw_crypto, bool) or len(str(raw_crypto)) > 80:
+            raise HTTPException(400, bad)
+        if crypto_target_min(raw_crypto) is None:
+            raise HTTPException(400, bad)
+        out["crypto_preference"] = raw_crypto if isinstance(raw_crypto, (int, float)) else str(raw_crypto).strip()
+    return out
+
+
 def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
     """Validated persona-table entry for a questionnaire profile (400 on bad values)."""
     tolerance = data.get("risk_tolerance", "moderate")
@@ -542,7 +610,15 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
     account_type = str(data.get("account_type") or "non_registered").lower()
     if account_type not in {"tfsa", "rrsp", "fhsa", "non_registered", "mixed"}:
         account_type = "non_registered"
+    limits = _declared_limit_fields(data)
+    try:
+        profile_version = int(data["profile_version"]) if data.get("profile_version") is not None else None
+    except (TypeError, ValueError):
+        profile_version = None
     return {
+        **limits,
+        "profile_version": profile_version,
+        "esg_level": _esg_level(data.get("esg_level")),
         "label": str(data.get("label") or "Profil personnalisé"),
         "objective": str(data.get("objective") or "balanced"),
         "horizon_years": horizon,
@@ -584,6 +660,16 @@ def health() -> dict[str, Any]:
         "data_as_of": as_of_str,
         "fallback": fallback,
     }
+
+
+@app.get("/universe")
+def get_universe() -> list[dict[str, str]]:
+    """The 31-asset universe (ticker, name, asset_class) for ticker autocomplete (#175)."""
+    df = get_provider().universe()
+    return [
+        {"ticker": str(r["ticker"]), "name": str(r.get("name", "")), "asset_class": str(r.get("asset_class", ""))}
+        for r in df.to_dict("records")
+    ]
 
 
 @app.get("/personas")
@@ -673,7 +759,19 @@ def get_user_profile_endpoint(
             "current_holdings": None,
             "is_advisor": user.is_advisor,
         }
-    return data
+    return _with_profile_summary(data)
+
+
+def _with_profile_summary(record: dict[str, Any]) -> dict[str, Any]:
+    """The users-store record plus `profile_summary`: every field with its French label (#170)."""
+    from alphaforge.questionnaire import profile_summary
+
+    full = dict(record.get("profile") or {})
+    if record.get("account_type") is not None and "account_type" not in full:
+        full["account_type"] = record["account_type"]
+    if record.get("current_holdings") is not None:
+        full["current_holdings"] = record["current_holdings"]
+    return {**record, "profile_summary": profile_summary(full)}
 
 
 @app.put("/user/profile")
@@ -695,14 +793,21 @@ def update_user_profile_endpoint(
         from alphaforge.user_dossier import append_profile_update
 
         full_profile = dict(req.profile)
-        if req.account_type is not None:
-            full_profile["account_type"] = req.account_type
-        if req.current_holdings is not None:
-            full_profile["current_holdings"] = req.current_holdings
-        append_profile_update(user.username, full_profile)
+        if res.get("account_type") is not None:
+            full_profile["account_type"] = res["account_type"]
+        if res.get("current_holdings") is not None:
+            full_profile["current_holdings"] = res["current_holdings"]
+        history = res.get("profile_history") or []
+        last = history[-1] if history else {}
+        append_profile_update(
+            user.username,
+            full_profile,
+            version=res.get("profile_version"),
+            changes=last.get("changes") if last else None,
+        )
     except Exception:
         logging.exception("Failed to append profile update to dossier for %s", user.username)
-    return res
+    return _with_profile_summary(res)
 
 
 @app.get("/users/me/dossier")

@@ -39,6 +39,54 @@ def _from_dynamodb_friendly(obj: Any) -> Any:
     return obj
 
 
+MAX_PROFILE_HISTORY = 50
+
+
+def _versioned_item(
+    existing: dict[str, Any],
+    *,
+    user_id: str,
+    profile: dict[str, Any],
+    current_holdings: Any,
+    account_type: str | None,
+    username: str | None,
+    email: str | None,
+    is_advisor: bool,
+) -> dict[str, Any]:
+    """The record to store: one profile, a version number and the dated diff of each change (#170)."""
+    from alphaforge.questionnaire import diff_profiles
+
+    now = dt.datetime.now(dt.UTC).isoformat()
+    holdings = current_holdings if current_holdings is not None else existing.get("current_holdings")
+    acct = account_type if account_type is not None else existing.get("account_type")
+    old_full = dict(
+        existing.get("profile") or {},
+        account_type=existing.get("account_type"),
+        current_holdings=existing.get("current_holdings"),
+    )
+    new_full = dict(profile, account_type=acct, current_holdings=holdings)
+    changes = diff_profiles(old_full, new_full)
+    try:
+        version = int(existing.get("profile_version") or 0) + 1
+    except (TypeError, ValueError):
+        version = 1
+    history = list(existing.get("profile_history") or [])
+    history.append({"version": version, "updated_at": now, "changes": changes})
+    history = history[-MAX_PROFILE_HISTORY:]
+    return {
+        "user_id": user_id,
+        "username": username or existing.get("username") or user_id,
+        "email": email or existing.get("email") or f"{user_id}@alphaforge.demo",
+        "profile": dict(profile, profile_version=version),
+        "current_holdings": holdings,
+        "account_type": acct,
+        "is_advisor": is_advisor or existing.get("is_advisor", False),
+        "updated_at": now,
+        "profile_version": version,
+        "profile_history": history,
+    }
+
+
 class UserStore(abc.ABC):
     @abc.abstractmethod
     def get_user_profile(self, user_id: str) -> dict[str, Any] | None:
@@ -146,17 +194,16 @@ class LocalUserStore(UserStore):
         is_advisor: bool = False,
     ) -> dict[str, Any]:
         existing = self.get_user_profile(user_id) or {}
-        now = dt.datetime.now(dt.UTC).isoformat()
-        item = {
-            "user_id": user_id,
-            "username": username or existing.get("username") or user_id,
-            "email": email or existing.get("email") or f"{user_id}@alphaforge.demo",
-            "profile": profile,
-            "current_holdings": current_holdings if current_holdings is not None else existing.get("current_holdings"),
-            "account_type": account_type if account_type is not None else existing.get("account_type"),
-            "is_advisor": is_advisor or existing.get("is_advisor", False),
-            "updated_at": now,
-        }
+        item = _versioned_item(
+            existing,
+            user_id=user_id,
+            profile=profile,
+            current_holdings=current_holdings,
+            account_type=account_type,
+            username=username,
+            email=email,
+            is_advisor=is_advisor,
+        )
         self._users[user_id] = item
         if username and username != user_id:
             self._users[username] = item
@@ -220,17 +267,16 @@ class DynamoDBUserStore(UserStore):
         is_advisor: bool = False,
     ) -> dict[str, Any]:
         existing = self.get_user_profile(user_id) or {}
-        now = dt.datetime.now(dt.UTC).isoformat()
-        item = {
-            "user_id": user_id,
-            "username": username or existing.get("username") or user_id,
-            "email": email or existing.get("email") or f"{user_id}@alphaforge.demo",
-            "profile": profile,
-            "current_holdings": current_holdings if current_holdings is not None else existing.get("current_holdings"),
-            "account_type": account_type if account_type is not None else existing.get("account_type"),
-            "is_advisor": is_advisor or existing.get("is_advisor", False),
-            "updated_at": now,
-        }
+        item = _versioned_item(
+            existing,
+            user_id=user_id,
+            profile=profile,
+            current_holdings=current_holdings,
+            account_type=account_type,
+            username=username,
+            email=email,
+            is_advisor=is_advisor,
+        )
         db_item = _to_dynamodb_friendly(item)
         try:
             self._table.put_item(Item=db_item)

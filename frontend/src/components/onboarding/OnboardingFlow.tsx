@@ -30,9 +30,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [familySituation, setFamilySituation] = useState<string>(
     initialProfile?.familySituation || ''
   );
-  const [investmentExperience, setInvestmentExperience] = useState<
-    'Débutant' | 'Intermédiaire' | 'Avancé' | ''
-  >(initialProfile?.investmentExperience || '');
+  const [investmentExperience, setInvestmentExperience] = useState<string>(
+    initialProfile?.investmentExperience || ''
+  );
   const [businessModelsUnderstanding, setBusinessModelsUnderstanding] = useState<
     string | string[]
   >(initialProfile?.businessModelsUnderstanding || []);
@@ -56,9 +56,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     initialProfile?.netWorthShare || ''
   );
 
-  const [riskTolerance, setRiskTolerance] = useState<
-    'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé' | ''
-  >(initialProfile?.riskTolerance || '');
+  const [riskTolerance, setRiskTolerance] = useState<string>(initialProfile?.riskTolerance || '');
   const [maxLossTolerance, setMaxLossTolerance] = useState<string>(
     initialProfile?.maxLossTolerance || ''
   );
@@ -103,41 +101,56 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [currentHoldings, setCurrentHoldings] = useState<Record<string, number>>(
     initialProfile?.currentHoldings || {}
   );
+  const [hasExistingHoldings, setHasExistingHoldings] = useState<'none' | 'some' | ''>(
+    initialProfile?.hasExistingHoldings ||
+      (initialProfile?.currentHoldings && Object.keys(initialProfile.currentHoldings).length > 0 ? 'some' : '')
+  );
+  const [holdingsUnit, setHoldingsUnit] = useState<'pct' | 'cad'>(initialProfile?.holdingsUnit || 'pct');
+  const [unanalysedConfirmed, setUnanalysedConfirmed] = useState<string[]>(
+    initialProfile?.unanalysedConfirmed || []
+  );
   const [fictionalCapitalAcknowledged, setFictionalCapitalAcknowledged] = useState<boolean>(
     initialProfile?.fictionalCapitalAcknowledged ?? false
   );
 
   const handleSave = () => {
+    // Every answer is a code (lib/questionnaireCodes.ts); nothing here is a French label.
     const profile: UserOnboardingProfile = {
-      ageRange: ageRange || 'Non spécifié',
-      familySituation: familySituation || 'Non spécifié',
-      investmentExperience: (investmentExperience || 'Intermédiaire') as 'Débutant' | 'Intermédiaire' | 'Avancé',
+      ageRange,
+      familySituation,
+      investmentExperience: investmentExperience || 'intermediate',
       businessModelsUnderstanding: Array.isArray(businessModelsUnderstanding)
-        ? businessModelsUnderstanding.join(', ')
-        : businessModelsUnderstanding || 'Non spécifié',
-      primaryObjective: primaryObjective || 'Non spécifié',
-      firstWithdrawalHorizon: firstWithdrawalHorizon || 'Non spécifié',
-      withdrawalMethod: withdrawalMethod || 'Non spécifié',
+        ? businessModelsUnderstanding
+        : businessModelsUnderstanding
+        ? businessModelsUnderstanding.split(', ').filter(Boolean)
+        : [],
+      primaryObjective: primaryObjective || 'balanced',
+      firstWithdrawalHorizon: firstWithdrawalHorizon || '5 ans · Moyen terme',
+      withdrawalMethod: withdrawalMethod || 'none',
       simulatedCapital: simulatedCapital || 0,
       simulatedCapitalFormatted: simulatedCapital > 0 ? `${simulatedCapital.toLocaleString('fr-CA')} $ CAD` : '0 $ CAD',
-      accountType: accountType || 'Non spécifié',
-      netWorthShare: netWorthShare || 'Moins de 25 %',
-      riskTolerance: (riskTolerance || 'Modéré') as 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé',
-      maxLossTolerance: maxLossTolerance || 'Non spécifié',
-      sectorConcentrationLimit: sectorConcentrationLimit || 'Non spécifié',
-      capitalNeedNext12Months: capitalNeedNext12Months || 'Non spécifié',
-      essentialExpensesImpact: essentialExpensesImpact || 'Non spécifié',
-      debtLevel: debtLevel || 'Aucune dette',
-      incomeStability: incomeStability || 'Revenus stables',
+      accountType: accountType || 'non_registered',
+      netWorthShare: netWorthShare || 'lt_25',
+      riskTolerance: riskTolerance || 'moderate',
+      maxLossTolerance,
+      sectorConcentrationLimit,
+      capitalNeedNext12Months,
+      essentialExpensesImpact,
+      debtLevel: debtLevel || 'none',
+      incomeStability: incomeStability || 'stable',
       interestedSectors,
-      cryptoPreference: cryptoPreference || 'Non spécifié',
-      esgImportance: esgImportance || 'Non spécifié',
+      cryptoPreference,
+      esgImportance,
       excludedCategories,
-      currencyPreference: currencyPreference || 'Non spécifié',
+      currencyPreference,
       additionalNotes,
       currentHoldingsCsv,
       currentHoldings: Object.keys(currentHoldings).length > 0 ? currentHoldings : undefined,
+      hasExistingHoldings: hasExistingHoldings || (Object.keys(currentHoldings).length > 0 ? 'some' : 'none'),
+      holdingsUnit,
+      unanalysedConfirmed,
       fictionalCapitalAcknowledged,
+      profileVersion: initialProfile?.profileVersion ?? null,
       completedAt: new Date().toISOString(),
     };
 
@@ -289,6 +302,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               currentHoldingsCsv={currentHoldingsCsv}
               setCurrentHoldingsCsv={setCurrentHoldingsCsv}
               setCurrentHoldings={setCurrentHoldings}
+              hasExistingHoldings={hasExistingHoldings}
+              setHasExistingHoldings={setHasExistingHoldings}
+              holdingsUnit={holdingsUnit}
+              setHoldingsUnit={setHoldingsUnit}
+              setUnanalysedConfirmed={setUnanalysedConfirmed}
+              initialUnanalysedConfirmed={initialProfile?.unanalysedConfirmed}
               fictionalCapitalAcknowledged={fictionalCapitalAcknowledged}
               setFictionalCapitalAcknowledged={setFictionalCapitalAcknowledged}
               onSave={handleSave}

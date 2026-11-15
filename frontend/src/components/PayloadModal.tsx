@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BackendRunPayload, UserOnboardingProfile } from '../types';
+import { labelOf } from '../lib/questionnaireCodes';
 import { CheckCircle2, Copy, Check, Eye, Code2 } from 'lucide-react';
 import {
   Dialog,
@@ -86,7 +87,7 @@ export const PayloadModal: React.FC<PayloadModalProps> = ({
               <div className="p-2.5 bg-muted/40 rounded-lg border border-border/60">
                 <span className="text-muted-foreground block text-[11px]">Objectif</span>
                 <span className="font-semibold text-foreground mt-0.5 block truncate">
-                  {profile.primaryObjective}
+                  {labelOf('primaryObjective', profile.primaryObjective)}
                 </span>
               </div>
               <div className="p-2.5 bg-muted/40 rounded-lg border border-border/60">
@@ -98,7 +99,7 @@ export const PayloadModal: React.FC<PayloadModalProps> = ({
               <div className="p-2.5 bg-muted/40 rounded-lg border border-border/60">
                 <span className="text-muted-foreground block text-[11px]">Tolérance au risque</span>
                 <span className="font-semibold text-foreground mt-0.5 block truncate">
-                  {profile.riskTolerance}
+                  {labelOf('riskTolerance', profile.riskTolerance)}
                 </span>
               </div>
               <div className="p-2.5 bg-muted/40 rounded-lg border border-border/60">
@@ -110,13 +111,13 @@ export const PayloadModal: React.FC<PayloadModalProps> = ({
               <div className="p-2.5 bg-muted/40 rounded-lg border border-border/60">
                 <span className="text-muted-foreground block text-[11px]">Cryptoactifs</span>
                 <span className="font-semibold text-foreground mt-0.5 block truncate">
-                  {profile.cryptoPreference}
+                  {labelOf('cryptoPreference', profile.cryptoPreference)}
                 </span>
               </div>
               <div className="p-2.5 bg-muted/40 rounded-lg border border-border/60">
                 <span className="text-muted-foreground block text-[11px]">Expérience</span>
                 <span className="font-semibold text-foreground mt-0.5 block truncate">
-                  {profile.investmentExperience}
+                  {labelOf('investmentExperience', profile.investmentExperience)}
                 </span>
               </div>
             </div>

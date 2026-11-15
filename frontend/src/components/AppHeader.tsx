@@ -4,6 +4,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import { UserOnboardingProfile, AuthUser } from '../types';
 import { DEMO_PERSONAS } from '../lib/demoProfiles';
+import { labelOf, labelsOf } from '../lib/questionnaireCodes';
 import { useLanguage } from '@/context/LanguageContext';
 import {
   Dialog,
@@ -222,7 +223,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     {isEn ? 'Risk Tolerance' : 'Tolérance au risque'}
                   </span>
                   <span className="font-semibold text-foreground text-sm capitalize">
-                    {userProfile.riskTolerance}
+                    {labelOf('riskTolerance', userProfile.riskTolerance)}
                   </span>
                 </div>
               </div>
@@ -244,7 +245,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <span className="text-muted-foreground block text-[11px]">
                       {isEn ? 'Investment Objective' : "Objectif d'investissement"}
                     </span>
-                    <span className="font-medium text-foreground">{userProfile.primaryObjective}</span>
+                    <span className="font-medium text-foreground">{labelOf('primaryObjective', userProfile.primaryObjective)}</span>
                   </div>
                 </div>
 
@@ -266,7 +267,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <span className="text-muted-foreground block text-[11px]">
                       {isEn ? 'Account Type' : 'Type de compte'}
                     </span>
-                    <span className="font-medium text-foreground">{userProfile.accountType || 'Non spécifié'}</span>
+                    <span className="font-medium text-foreground">{labelOf('accountType', userProfile.accountType)}</span>
                   </div>
                 </div>
 
@@ -276,7 +277,42 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <span className="text-muted-foreground block text-[11px]">
                       {isEn ? 'Crypto Preference' : 'Préférence crypto'}
                     </span>
-                    <span className="font-medium text-foreground">{userProfile.cryptoPreference}</span>
+                    <span className="font-medium text-foreground">{labelOf('cryptoPreference', userProfile.cryptoPreference)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-muted-foreground block">{isEn ? 'Age band' : 'Tranche d’âge'}</span>
+                    <span className="font-medium text-foreground">{labelOf('ageRange', userProfile.ageRange)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">{isEn ? 'Sector cap' : 'Plafond sectoriel'}</span>
+                    <span className="font-medium text-foreground">
+                      {labelOf('sectorConcentrationLimit', userProfile.sectorConcentrationLimit)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">{isEn ? 'Currency' : 'Devise d’ancrage'}</span>
+                    <span className="font-medium text-foreground">
+                      {labelOf('currencyPreference', userProfile.currencyPreference)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">ESG</span>
+                    <span className="font-medium text-foreground">{labelOf('esgImportance', userProfile.esgImportance)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">{isEn ? 'Sectors of interest' : 'Secteurs d’intérêt'}</span>
+                    <span className="font-medium text-foreground">
+                      {labelsOf('interestedSectors', userProfile.interestedSectors)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">{isEn ? 'Saved profile' : 'Profil enregistré'}</span>
+                    <span className="font-medium text-foreground font-mono">
+                      {userProfile.profileVersion ? `v${userProfile.profileVersion}` : isEn ? 'local only' : 'local seulement'}
+                    </span>
                   </div>
                 </div>
 
@@ -288,7 +324,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                         {isEn ? 'Specific Exclusions' : 'Exclusions spécifiques'}
                       </span>
                       <span className="font-medium text-foreground">
-                        {userProfile.excludedCategories.join(', ')}
+                        {labelsOf('excludedCategories', userProfile.excludedCategories)}
                       </span>
                     </div>
                   </div>
@@ -363,7 +399,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       )}
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      {customProfile.simulatedCapitalFormatted} · {customProfile.riskTolerance} ·{' '}
+                      {customProfile.simulatedCapitalFormatted} · {labelOf('riskTolerance', customProfile.riskTolerance)} ·{' '}
                       {customProfile.firstWithdrawalHorizon}
                     </p>
                   </div>
