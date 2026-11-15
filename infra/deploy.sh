@@ -85,10 +85,14 @@ redeploy_via_ssm() {
     echo "Sending update command to ${INSTANCE_ID} via SSM..."
     DOCKER_CMD="aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com && docker pull ${ECR_URI}:latest && docker rm -f alphaforge || true && FINNHUB_KEY=\$(aws ssm get-parameter --name /alphaforge/finnhub_api_key --with-decryption --query Parameter.Value --output text 2>/dev/null || true) && TAVILY_KEY=\$(aws ssm get-parameter --name /alphaforge/tavily_api_key --with-decryption --query Parameter.Value --output text 2>/dev/null || true) && docker run -d --name alphaforge --restart always -p 80:8000 --log-driver awslogs --log-opt awslogs-group=/alphaforge/app --log-opt awslogs-region=${AWS_REGION} --log-opt awslogs-create-group=true -e AF_S3_BUCKET=${S3_BUCKET} -e AF_DYNAMODB_TABLE=${DYNAMODB_TABLE} -e AF_TRACE_BACKEND=dynamodb -e AF_CHECKPOINTER=dynamodb -e AF_CHECKPOINTS_TABLE=${CHECKPOINTS_TABLE} -e AF_USERS_TABLE=alphaforge-users -e AF_COGNITO_USER_POOL_ID=us-east-1_XjxuVar8b -e AF_COGNITO_CLIENT_ID=9lreq61mqkf01s9h9h48gkcfe \${AF_AUTH:+-e AF_AUTH=\${AF_AUTH}} -e AF_NEWS_MODE=\$( [ -n \"\${FINNHUB_KEY}\${TAVILY_KEY}\" ] && echo live || echo cache ) \${FINNHUB_KEY:+-e FINNHUB_API_KEY=\${FINNHUB_KEY}} \${TAVILY_KEY:+-e TAVILY_API_KEY=\${TAVILY_KEY}} -e AWS_REGION=${AWS_REGION} ${ECR_URI}:latest"
 
+    # Pass the command as JSON: the shorthand "commands=[...]" form cannot carry the
+    # ${...} and $(...) the command uses, and the CLI rejects it.
+    PARAMS_FILE=$(mktemp)
+    DOCKER_CMD="${DOCKER_CMD}" python3 -c 'import json, os; print(json.dumps({"commands": [os.environ["DOCKER_CMD"]]}))' > "${PARAMS_FILE}"
     CMD_ID=$(aws ssm send-command \
         --instance-ids "${INSTANCE_ID}" \
         --document-name "AWS-RunShellScript" \
-        --parameters "commands=[\"${DOCKER_CMD}\"]" \
+        --parameters "file://${PARAMS_FILE}" \
         --comment "AlphaForge redeploy" \
         --query "Command.CommandId" --output text)
 
