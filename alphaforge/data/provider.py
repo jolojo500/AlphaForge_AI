@@ -24,6 +24,23 @@ class DataProvider(ABC):
     """Every frame returned uses pandas Timestamps in its `date` (or `ex_date`) column."""
 
     name: str = "abstract"
+    fallback: bool = False
+
+    @property
+    def evidence_source(self) -> str:
+        return "prices_daily.csv + fx_usdcad_daily.csv"
+
+    @property
+    def default_as_of(self) -> dt.date:
+        from alphaforge import config
+
+        return config.DEFAULT_AS_OF
+
+    @property
+    def data_as_of(self) -> dt.date:
+        from alphaforge import config
+
+        return config.DEFAULT_AS_OF
 
     # --- raw access, implemented by each provider ---------------------------------------
 
@@ -138,3 +155,8 @@ def _provider(name: str) -> DataProvider:
 
         return YFinanceProvider()
     raise ValueError(f"unknown data provider {name!r}; available: csv, yfinance")
+
+
+def clear_provider_cache() -> None:
+    """Clear the cached singleton provider instance (useful in tests)."""
+    _provider.cache_clear()

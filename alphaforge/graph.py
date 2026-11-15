@@ -186,12 +186,17 @@ def initial_state(
         or (profile.language if profile and getattr(profile, "language", None) else None)
         or detect_language(request_text)
     )
+    if as_of_date is None:
+        from alphaforge.data.provider import get_provider
+
+        as_of_date = getattr(get_provider(), "default_as_of", config.DEFAULT_AS_OF)
+
     return {
         "persona": persona,
         "persona_data": persona_data,
         "owner": owner,
         "request_text": request_text,
-        "as_of_date": as_of_date or config.DEFAULT_AS_OF,
+        "as_of_date": as_of_date,
         "profile": profile,
         "language": lang,
     }

@@ -14,6 +14,7 @@ frontend/dist/
 # local traces
 data/traces/
 data/users/
+data/cache/yfinance/
 .storage/
 
 # defillama disk cache

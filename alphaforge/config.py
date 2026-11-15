@@ -11,6 +11,9 @@ STARTER_DIR = Path(
     os.getenv("AF_STARTER_DIR", REPO_ROOT / "Datathon2026" / "alphaforge_starter")
 )
 CACHE_DIR = Path(os.getenv("AF_CACHE_DIR", REPO_ROOT / "data" / "cache"))
+YF_CACHE_DIR = Path(os.getenv("AF_YF_CACHE_DIR", CACHE_DIR / "yfinance"))
+YF_CACHE_HOURS = float(os.getenv("AF_YF_CACHE_HOURS", "12"))
+YF_TIMEOUT_S = float(os.getenv("AF_YF_TIMEOUT_S", "20"))
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 MODEL_MAIN = os.getenv("AF_MODEL_MAIN", "global.anthropic.claude-sonnet-5-5")
