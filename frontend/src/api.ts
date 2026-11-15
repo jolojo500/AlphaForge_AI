@@ -199,11 +199,37 @@ export function prepareBackendPayload(
   let riskCapacity: 'low' | 'moderate' | 'high' = 'low';
   const expensesCovered = profile.essentialExpensesImpact?.includes('couvertes') ?? false;
   const hasEmergencyFund = profile.capitalNeedNext12Months?.includes('urgence') ?? false;
+  const hasHighInterestDebt =
+    profile.debtLevel?.includes('taux élevé') || profile.debtLevel?.includes('cartes') || false;
+
+  let netWorthShareNum: number | null = null;
+  if (profile.netWorthShare) {
+    if (profile.netWorthShare.includes('Moins de 25')) netWorthShareNum = 0.2;
+    else if (profile.netWorthShare.includes('25') && profile.netWorthShare.includes('50')) netWorthShareNum = 0.35;
+    else if (profile.netWorthShare.includes('Plus de 50') || profile.netWorthShare.includes('Majorité'))
+      netWorthShareNum = 0.65;
+    else {
+      const parsed = parseFloat(profile.netWorthShare);
+      if (!isNaN(parsed)) netWorthShareNum = parsed > 1 ? parsed / 100 : parsed;
+    }
+  }
+
+  let investmentKnowledge = 'intermediate';
+  if (profile.investmentExperience === 'Débutant') investmentKnowledge = 'beginner';
+  else if (profile.investmentExperience === 'Avancé') investmentKnowledge = 'advanced';
+
+  let withdrawalPlan = 'none';
+  if (profile.withdrawalMethod?.includes('unique')) withdrawalPlan = 'lump_sum';
+  else if (profile.withdrawalMethod?.includes('périodiques') || profile.withdrawalMethod?.includes('réguliers'))
+    withdrawalPlan = 'regular_income';
+
   const noWithdrawalSoon =
     horizonYears >= 3 || (profile.withdrawalMethod && profile.withdrawalMethod.includes('Réinvestissement'));
 
-  if (expensesCovered && hasEmergencyFund) {
+  if (expensesCovered && hasEmergencyFund && !hasHighInterestDebt) {
     riskCapacity = noWithdrawalSoon ? 'high' : 'moderate';
+  } else if (hasHighInterestDebt || !hasEmergencyFund) {
+    riskCapacity = 'low';
   } else if (expensesCovered || hasEmergencyFund) {
     riskCapacity = 'moderate';
   }
@@ -249,6 +275,23 @@ export function prepareBackendPayload(
   }
   if (profile.sectorConcentrationLimit) {
     contextParts.push(`Plafond sectoriel : ${profile.sectorConcentrationLimit}`);
+  }
+  if (profile.netWorthShare) {
+    contextParts.push(`Part du patrimoine représentée : ${profile.netWorthShare}`);
+  }
+  if (profile.debtLevel) {
+    contextParts.push(`Situation d'endettement : ${profile.debtLevel}`);
+  }
+  if (profile.incomeStability) {
+    contextParts.push(`Stabilité des revenus : ${profile.incomeStability}`);
+  }
+  if (profile.currentHoldings) {
+    const holdingsStr = Array.isArray(profile.currentHoldings)
+      ? (profile.currentHoldings as string[]).join(', ')
+      : Object.entries(profile.currentHoldings).map(([t, w]) => `${t}: ${w}`).join(', ');
+    if (holdingsStr) {
+      contextParts.push(`Autres avoirs détenus : ${holdingsStr}`);
+    }
   }
   if (profile.additionalNotes?.trim()) {
     contextParts.push(`Remarques libres : ${profile.additionalNotes.trim()}`);
@@ -296,6 +339,13 @@ export function prepareBackendPayload(
       max_loss_pct: maxLossPct,
       notes: profile.additionalNotes,
       current_holdings: profile.currentHoldings,
+      has_emergency_fund: hasEmergencyFund,
+      has_high_interest_debt: hasHighInterestDebt,
+      debt_level: profile.debtLevel || (hasHighInterestDebt ? 'high_interest' : 'none'),
+      net_worth_share: netWorthShareNum,
+      investment_knowledge: investmentKnowledge,
+      withdrawal_plan: withdrawalPlan,
+      income_stability: profile.incomeStability || 'stable',
     },
   };
 

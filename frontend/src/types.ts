@@ -17,6 +17,26 @@ export const SCENARIO_METRIC_LABELS: Record<string, string> = {
   tax_drag: 'Friction fiscale estimée',
 };
 
+export interface KycField {
+  name: string;
+  label?: string;
+  required: boolean;
+  collected: boolean;
+  source: 'persona' | 'questionnaire' | 'text' | 'assumption';
+  value?: unknown;
+  assumption_note?: string | null;
+  evidence_id?: string | null;
+}
+
+export interface KycCompleteness {
+  is_complete: boolean;
+  score: number;
+  required_fields: string[];
+  optional_fields: string[];
+  missing_fields: string[];
+  fields: Record<string, KycField>;
+}
+
 export interface Profile {
   persona: PersonaId;
   objective: string;
@@ -32,6 +52,20 @@ export interface Profile {
   excluded_tickers: string[];
   conflicts: string[];
   clarification_needed: string | null;
+
+  // Extra KYC fields (#117)
+  has_emergency_fund?: boolean | null;
+  has_high_interest_debt?: boolean | null;
+  debt_level?: string | null;
+  net_worth_share?: number | string | null;
+  net_worth_cad?: number | null;
+  liquidity_need_12m?: string | number | null;
+  current_holdings?: string[];
+  investment_knowledge?: string | null;
+  withdrawal_plan?: string | null;
+  income_stability?: string | null;
+  kyc_completeness?: KycCompleteness | null;
+  hard_gate_notes?: string[];
 }
 
 export interface Evidence {
@@ -247,6 +281,7 @@ export interface UserOnboardingProfile {
   simulatedCapital: number;
   simulatedCapitalFormatted: string;
   accountType: string;
+  netWorthShare?: string;
 
   // Step 3: Tolérance au risque & garde-fous
   riskTolerance: 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé' | '';
@@ -254,6 +289,8 @@ export interface UserOnboardingProfile {
   sectorConcentrationLimit: string;
   capitalNeedNext12Months: string;
   essentialExpensesImpact: string;
+  debtLevel?: string;
+  incomeStability?: string;
 
   // Step 4: Préférences & exclusions
   interestedSectors: string[];
@@ -287,6 +324,14 @@ export interface BackendRunPayload {
     budget_cad: number | null;
     max_loss_pct?: number | null;
     notes?: string;
-    current_holdings?: Record<string, number>;
+    current_holdings?: Record<string, number> | string[];
+    has_emergency_fund?: boolean | null;
+    has_high_interest_debt?: boolean | null;
+    debt_level?: string | null;
+    net_worth_share?: number | string | null;
+    liquidity_need_12m?: string | null;
+    investment_knowledge?: string | null;
+    withdrawal_plan?: string | null;
+    income_stability?: string | null;
   };
 }

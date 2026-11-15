@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import operator
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -47,6 +47,29 @@ def risk_gap(tolerance: str, capacity: str) -> int:
     return rank.get(tolerance, 2) - rank.get(capacity, 2)
 
 
+FieldSource = Literal["persona", "questionnaire", "text", "assumption"]
+
+
+class KycField(BaseModel):
+    name: str
+    label: str = ""
+    required: bool = True
+    collected: bool = False
+    source: FieldSource = "assumption"
+    value: Any = None
+    assumption_note: str | None = None
+    evidence_id: str | None = None
+
+
+class KycCompleteness(BaseModel):
+    is_complete: bool = False
+    score: float = 0.0
+    required_fields: list[str] = Field(default_factory=list)
+    optional_fields: list[str] = Field(default_factory=list)
+    missing_fields: list[str] = Field(default_factory=list)
+    fields: dict[str, KycField] = Field(default_factory=dict)
+
+
 class Profile(BaseModel):
     persona: PersonaId
     objective: str
@@ -64,6 +87,19 @@ class Profile(BaseModel):
     clarification_needed: str | None = None
     current_holdings: dict[str, float] | None = None
     not_analysed_holdings: list[str] = Field(default_factory=list)
+
+    # Extra KYC fields (#117, relation to #128)
+    has_emergency_fund: bool | None = None
+    has_high_interest_debt: bool | None = None
+    debt_level: str | None = None
+    net_worth_share: float | str | None = None
+    net_worth_cad: float | None = None
+    liquidity_need_12m: str | float | None = None
+    investment_knowledge: str | None = None
+    withdrawal_plan: str | None = None
+    income_stability: str | None = None
+    kyc_completeness: KycCompleteness | None = None
+    hard_gate_notes: list[str] = Field(default_factory=list)
 
 
 class Evidence(BaseModel):

@@ -607,6 +607,8 @@ def scenarios_node(state: GraphState) -> dict:
                 notes = list(draft_notes(sc, evidence_so_far | reg.items())) or notes
             except Exception:
                 pass  # the LLM is optional here; templated notes are always valid
+        if profile.hard_gate_notes:
+            notes = list(profile.hard_gate_notes) + notes
         sc.notes = notes
         scenarios.append(sc)
 

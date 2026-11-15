@@ -257,3 +257,174 @@ def test_tolerance_far_above_capacity_is_a_conflict():
     assert any("capacité" in c for c in out)
     assert not detect_conflict(tolerance="low_moderate", horizon_years=4, constraints=[], idea=None,
                                capacity="low")
+
+
+# ---- B-13 KYC completeness and multi-turn clarification tests (#117)
+def test_kyc_completeness_model_canonical_personas():
+    p = _run("amira", PERSONAS["amira"]["example_request"])
+    assert p.kyc_completeness is not None
+    assert p.kyc_completeness.is_complete is True
+    assert p.kyc_completeness.score == 1.0
+    assert "has_emergency_fund" in p.kyc_completeness.required_fields
+    assert p.kyc_completeness.fields["has_emergency_fund"].source == "persona"
+    assert p.kyc_completeness.fields["has_emergency_fund"].collected is True
+    assert p.has_emergency_fund is True
+    assert p.has_high_interest_debt is False
+    assert p.net_worth_share == 0.20
+
+
+def test_kyc_completeness_model_questionnaire_source():
+    persona_data = {
+        "objective": "growth",
+        "horizon_years": 10,
+        "risk_tolerance": "moderate",
+        "risk_capacity": "moderate",
+        "has_emergency_fund": True,
+        "has_high_interest_debt": False,
+        "net_worth_share": 0.30,
+        "investment_knowledge": "intermediate",
+        "current_holdings": ["pension"],
+    }
+    state = GraphState(
+        as_of_date=dt.date(2026, 11, 12),
+        persona="custom",
+        persona_data=persona_data,
+        request_text="Construire une allocation diversifiée",
+    )
+    res = profile_node(state)
+    p = res["profile"]
+    assert p.kyc_completeness is not None
+    assert p.kyc_completeness.fields["has_emergency_fund"].source == "questionnaire"
+    assert p.kyc_completeness.fields["has_emergency_fund"].collected is True
+    assert p.net_worth_share == 0.30
+
+
+def test_clarification_loop_multi_turn_ranked_by_impact_on_caps():
+    # A custom profile with missing goal, missing emergency fund, and missing debt
+    tid = uuid.uuid4().hex
+    inputs = initial_state(
+        persona="custom",
+        request_text="Je veux investir",
+        persona_data={
+            "objective": "balanced",
+            "horizon_years": 8,
+            "risk_tolerance": "moderate",
+            "risk_capacity": "moderate",
+        },
+    )
+    # Turn 1: should ask goal first (impact on entire allocation / caps)
+    events_1 = list(stream_run(inputs, tid))
+    q1 = [e for e in events_1 if e["type"] == "interrupt"]
+    assert len(q1) == 1
+    assert "construire" in q1[0]["question"].lower() or "allocation" in q1[0]["question"].lower()
+
+    # Turn 2: answer goal, next should ask emergency fund (hard gate on liquidity & capacity)
+    events_2 = list(resume_run("Construire une allocation diversifiée", tid))
+    q2 = [e for e in events_2 if e["type"] == "interrupt"]
+    assert len(q2) == 1
+    assert "fonds d'urgence" in q2[0]["question"].lower()
+
+    # Turn 3: answer emergency fund, next should ask high-interest debt (hard gate)
+    events_3 = list(resume_run("Oui, j'ai 6 mois d'épargne d'urgence", tid))
+    q3 = [e for e in events_3 if e["type"] == "interrupt"]
+    assert len(q3) == 1
+    assert "dettes" in q3[0]["question"].lower()
+
+    # Turn 4: answer debt, loop reached 3 questions limit, finishes
+    events_4 = list(resume_run("Non, aucune dette", tid))
+    assert events_4[-1]["type"] == "final"
+    final = events_4[-1]["state"]
+    assert final.profile is not None
+    assert final.retries.get("clarify") == 3
+    assert final.profile.has_emergency_fund is True
+    assert final.profile.has_high_interest_debt is False
+
+
+def test_unanswered_kyc_fields_become_assumptions_with_evidence_ids():
+    tid = uuid.uuid4().hex
+    inputs = initial_state(
+        persona="custom",
+        request_text="Allocation diversifiée",
+        persona_data={
+            "objective": "balanced",
+            "horizon_years": 8,
+            "risk_tolerance": "moderate",
+            "risk_capacity": "moderate",
+        },
+    )
+    events_1 = list(stream_run(inputs, tid))
+    assert events_1[0]["type"] == "interrupt"
+    assert "fonds d'urgence" in events_1[0]["question"].lower()
+
+    # User says "je ne sais pas"
+    events_2 = list(resume_run("je ne sais pas", tid))
+    assert events_2[0]["type"] == "interrupt"
+    assert "dettes" in events_2[0]["question"].lower()
+
+    # User skips debt
+    events_3 = list(resume_run("passer", tid))
+    assert events_3[0]["type"] == "interrupt"
+    assert "patrimoine" in events_3[0]["question"].lower()
+
+    # User answers net worth share -> 3 questions answered!
+    events_4 = list(resume_run("20 %", tid))
+    assert events_4[-1]["type"] == "final"
+    final = events_4[-1]["state"]
+    p = final.profile
+    assert p.kyc_completeness is not None
+    assert any(k.startswith("EK") for k in final.evidence)
+    ef_field = p.kyc_completeness.fields["has_emergency_fund"]
+    assert ef_field.source == "assumption"
+    assert ef_field.evidence_id is not None
+    assert ef_field.evidence_id.startswith("EK")
+    assert final.evidence[ef_field.evidence_id].confidence == "assumption"
+
+
+def test_hard_gates_no_emergency_fund_note():
+    persona_data = {
+        "objective": "growth",
+        "horizon_years": 10,
+        "risk_tolerance": "high",
+        "risk_capacity": "high",
+        "has_emergency_fund": False,
+        "has_high_interest_debt": False,
+        "net_worth_share": 0.20,
+        "investment_knowledge": "advanced",
+    }
+    state = GraphState(
+        as_of_date=dt.date(2026, 11, 12),
+        persona="custom",
+        persona_data=persona_data,
+        request_text="Construire une allocation diversifiée",
+    )
+    res = profile_node(state)
+    p = res["profile"]
+    assert p.has_emergency_fund is False
+    assert len(p.hard_gate_notes) >= 1
+    assert any("fonds d'urgence" in note.lower() for note in p.hard_gate_notes)
+    assert any("fonds d'urgence" in c.lower() for c in p.conflicts)
+
+
+def test_hard_gates_high_interest_debt_note():
+    persona_data = {
+        "objective": "balanced",
+        "horizon_years": 5,
+        "risk_tolerance": "moderate",
+        "risk_capacity": "moderate",
+        "has_emergency_fund": True,
+        "has_high_interest_debt": True,
+        "net_worth_share": 0.20,
+        "investment_knowledge": "intermediate",
+    }
+    state = GraphState(
+        as_of_date=dt.date(2026, 11, 12),
+        persona="custom",
+        persona_data=persona_data,
+        request_text="Construire une allocation",
+    )
+    res = profile_node(state)
+    p = res["profile"]
+    assert p.has_high_interest_debt is True
+    assert len(p.hard_gate_notes) >= 1
+    assert any("dettes" in note.lower() for note in p.hard_gate_notes)
+    assert any("dettes" in c.lower() for c in p.conflicts)

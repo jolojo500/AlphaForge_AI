@@ -53,6 +53,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [accountType, setAccountType] = useState<string>(
     initialProfile?.accountType || ''
   );
+  const [netWorthShare, setNetWorthShare] = useState<string>(
+    initialProfile?.netWorthShare || ''
+  );
 
   const [riskTolerance, setRiskTolerance] = useState<
     'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé' | ''
@@ -68,6 +71,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   );
   const [essentialExpensesImpact, setEssentialExpensesImpact] = useState<string>(
     initialProfile?.essentialExpensesImpact || ''
+  );
+  const [debtLevel, setDebtLevel] = useState<string>(
+    initialProfile?.debtLevel || ''
+  );
+  const [incomeStability, setIncomeStability] = useState<string>(
+    initialProfile?.incomeStability || ''
   );
 
   const [interestedSectors, setInterestedSectors] = useState<string[]>(
@@ -110,11 +119,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       simulatedCapital: simulatedCapital || 0,
       simulatedCapitalFormatted: simulatedCapital > 0 ? `${simulatedCapital.toLocaleString('fr-CA')} $ CAD` : '0 $ CAD',
       accountType: accountType || 'Non spécifié',
+      netWorthShare: netWorthShare || 'Moins de 25 %',
       riskTolerance: (riskTolerance || 'Modéré') as 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé',
       maxLossTolerance: maxLossTolerance || 'Non spécifié',
       sectorConcentrationLimit: sectorConcentrationLimit || 'Non spécifié',
       capitalNeedNext12Months: capitalNeedNext12Months || 'Non spécifié',
       essentialExpensesImpact: essentialExpensesImpact || 'Non spécifié',
+      debtLevel: debtLevel || 'Aucune dette',
+      incomeStability: incomeStability || 'Revenus stables',
       interestedSectors,
       cryptoPreference: cryptoPreference || 'Non spécifié',
       esgImportance: esgImportance || 'Non spécifié',
@@ -145,10 +157,10 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         : Boolean(businessModelsUnderstanding))
   );
   const isStep2Complete = Boolean(
-    primaryObjective && firstWithdrawalHorizon && withdrawalMethod && simulatedCapital > 0 && accountType
+    primaryObjective && firstWithdrawalHorizon && withdrawalMethod && simulatedCapital > 0 && accountType && netWorthShare
   );
   const isStep3Complete = Boolean(
-    riskTolerance && maxLossTolerance && sectorConcentrationLimit && capitalNeedNext12Months && essentialExpensesImpact
+    riskTolerance && maxLossTolerance && sectorConcentrationLimit && capitalNeedNext12Months && essentialExpensesImpact && debtLevel && incomeStability
   );
   const isStep4Complete = Boolean(
     interestedSectors.length > 0 && cryptoPreference && esgImportance
@@ -219,6 +231,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               setSimulatedCapital={setSimulatedCapital}
               accountType={accountType}
               setAccountType={setAccountType}
+              netWorthShare={netWorthShare}
+              setNetWorthShare={setNetWorthShare}
             />
           )}
 
@@ -234,6 +248,10 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               setCapitalNeedNext12Months={setCapitalNeedNext12Months}
               essentialExpensesImpact={essentialExpensesImpact}
               setEssentialExpensesImpact={setEssentialExpensesImpact}
+              debtLevel={debtLevel}
+              setDebtLevel={setDebtLevel}
+              incomeStability={incomeStability}
+              setIncomeStability={setIncomeStability}
               simulatedCapital={simulatedCapital}
             />
           )}

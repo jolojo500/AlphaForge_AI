@@ -10,17 +10,26 @@ it falls back to the persona table plus a regex read of the request.
 from __future__ import annotations
 
 import csv
+import datetime as dt
 import re
 from functools import lru_cache
-from typing import Literal
+from typing import Any, Literal
 
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from alphaforge import config, llm
+from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.scenarios import CAPS
 from alphaforge.personas import PERSONAS
-from alphaforge.state import GraphState, Profile, effective_risk, risk_gap
+from alphaforge.state import (
+    GraphState,
+    KycCompleteness,
+    KycField,
+    Profile,
+    effective_risk,
+    risk_gap,
+)
 from alphaforge.tracing import traced
 
 KNOWN_CONSTRAINTS = {"no_crypto", "esg_only", "no_controversies"}
@@ -165,10 +174,15 @@ def extract_profile(
     if not text.strip():
         return Extraction(), False
     persona = state_persona if isinstance(state_persona, dict) else PERSONAS[state_persona]
+    obj = persona.get("objective", "balanced")
+    hor = persona.get("horizon_years", 5)
+    tol = persona.get("risk_tolerance", "moderate")
+    cap = persona.get("risk_capacity", "moderate")
+    con = persona.get("constraints", [])
+    pref = persona.get("preferences", [])
     prompt = (
-        f"Persona hypotheses: objective={persona['objective']}, horizon={persona['horizon_years']} "
-        f"years, tolerance={persona['risk_tolerance']}, capacity={persona['risk_capacity']}, "
-        f"constraints={persona['constraints']}, preferences={persona['preferences']}.\n"
+        f"Persona hypotheses: objective={obj}, horizon={hor} years, tolerance={tol}, capacity={cap}, "
+        f"constraints={con}, preferences={pref}.\n"
         f"Allowed tickers: {', '.join(sorted(_universe()))}.\n"
         f'Request (French): """{text}"""'
     )
@@ -231,6 +245,372 @@ def detect_conflict(
     return out
 
 
+REQUIRED_KYC_SPECS = [
+    ("has_emergency_fund", "Fonds d'urgence (3 à 6 mois de dépenses)"),
+    ("has_high_interest_debt", "Absence de dettes à taux d'intérêt élevé"),
+    ("net_worth_share", "Part du patrimoine représentée"),
+    ("investment_knowledge", "Connaissances et expérience en investissement"),
+    ("horizon_years", "Horizon d'investissement"),
+    ("risk_tolerance", "Tolérance au risque"),
+    ("risk_capacity", "Capacité financière"),
+]
+
+OPTIONAL_KYC_SPECS = [
+    ("income_stability", "Stabilité des revenus"),
+    ("liquidity_need_12m", "Besoins de liquidités à 12 mois"),
+    ("current_holdings", "Autres avoirs (actions employeur, pension)"),
+    ("withdrawal_plan", "Plan de retraits"),
+    ("budget_cad", "Budget d'investissement"),
+]
+
+
+def extract_kyc_from_text(text: str) -> dict[str, Any]:
+    """Deterministic extraction of KYC indicators from text."""
+    lowered = text.lower()
+    res: dict[str, Any] = {}
+
+    # Emergency fund:
+    if re.search(
+        r"\b(?:sans|pas de|aucun|aucune)\s+(?:fonds|r[ée]serve|[ée]pargne)\s+d'urgence\b|\bpas de fonds\b|\baucun fonds\b|\bpas d'[ée]pargne de pr[ée]caution\b",
+        lowered,
+    ):
+        res["has_emergency_fund"] = False
+    elif re.search(
+        r"\b(?:fonds d'urgence|r[ée]serve d'urgence|[ée]pargne de pr[ée]caution)\b|\b(?:j'ai un fonds|r[ée]serve de liquidit[ée]s?|urgence assur[ée]e)\b",
+        lowered,
+    ):
+        res["has_emergency_fund"] = True
+
+    # High interest debt:
+    if re.search(
+        r"\b(?:carte[s]? de cr[ée]dit|pr[êe]t[s]? personnel[s]?|dette[s]? [àa] taux [ée]lev[ée]|dettes importantes)\b",
+        lowered,
+    ):
+        res["has_high_interest_debt"] = True
+        res["debt_level"] = "high_interest"
+    elif re.search(
+        r"\b(?:sans|pas de|aucune)\s+dette[s]?\b|\baucune dette\b|\bpas de dette\b|\bhypoth[èe]que seulement\b|\bpr[êe]t hypoth[ée]caire uniquement\b",
+        lowered,
+    ):
+        res["has_high_interest_debt"] = False
+        res["debt_level"] = "none"
+
+    # Net worth share:
+    m_pct = re.search(
+        r"(\d+(?:[.,]\d+)?)\s*%\s*(?:de mon patrimoine|de ma valeur nette|de mes avoirs|du total)",
+        lowered,
+    )
+    if m_pct:
+        res["net_worth_share"] = float(m_pct.group(1).replace(",", ".")) / 100.0
+    elif re.search(r"\b(?:la moiti[ée]|half)\b.*(?:patrimoine|valeur nette|avoirs)", lowered):
+        res["net_worth_share"] = 0.50
+    elif re.search(r"\b(?:un quart|quarter)\b.*(?:patrimoine|valeur nette|avoirs)", lowered):
+        res["net_worth_share"] = 0.25
+    elif re.search(r"\b(?:majorit[ée]|presque tout|totalit[ée])\b.*(?:patrimoine|avoirs)", lowered):
+        res["net_worth_share"] = 0.80
+
+    # Knowledge:
+    if re.search(
+        r"\bd[ée]butant\b|\bnovice\b|\bbeginner\b|\baucune exp[ée]rience\b|\bpeu d'exp[ée]rience\b",
+        lowered,
+    ):
+        res["investment_knowledge"] = "beginner"
+    elif re.search(r"\bavanc[ée]\b|\bexpert\b|\badvanced\b|\bgrande exp[ée]rience\b", lowered):
+        res["investment_knowledge"] = "advanced"
+    elif re.search(r"\binterm[ée]diaire\b|\bintermediate\b|\bexp[ée]rience moyenne\b", lowered):
+        res["investment_knowledge"] = "intermediate"
+
+    # Withdrawal plan:
+    if re.search(r"\blump[- ]sum\b|\bd[ée]caissement unique\b|\bretrait unique\b|\ben une fois\b", lowered):
+        res["withdrawal_plan"] = "lump_sum"
+    elif re.search(r"\brevenu[s]? r[ée]gulier[s]?\b|\bretraits r[ée]guliers\b|\bpension r[ée]guli[èe]re\b", lowered):
+        res["withdrawal_plan"] = "regular_income"
+    elif re.search(r"\baucun retrait\b|\br[ée]investissement total\b|\br[ée]investir\b", lowered):
+        res["withdrawal_plan"] = "none"
+
+    return res
+
+
+def apply_clarification_answer(key: str, answer: str, kyc_data: dict[str, Any]) -> None:
+    ans_lower = answer.strip().lower()
+    if ans_lower in ("je ne sais pas", "pas sûr", "aucune idée", "skip", "passer"):
+        return
+    if key == "emergency_fund":
+        if re.search(r"\bnon\b|\baucun\b|\bpas de\b|\bpas d'urgence\b", ans_lower):
+            kyc_data["has_emergency_fund"] = False
+        elif re.search(r"\boui\b|\bj'ai\b|\bconstitu[ée]\b|\bpr[ée]sent\b|\bcouvert\b", ans_lower):
+            kyc_data["has_emergency_fund"] = True
+    elif key == "high_interest_debt":
+        if re.search(r"\boui\b|\bcarte\b|\bcr[ée]dit\b|\bpersonnel\b", ans_lower):
+            kyc_data["has_high_interest_debt"] = True
+            kyc_data["debt_level"] = "high_interest"
+        elif re.search(r"\bnon\b|\baucune\b|\bpas de\b|\bhypoth[èe]que\b", ans_lower):
+            kyc_data["has_high_interest_debt"] = False
+            kyc_data["debt_level"] = "none"
+    elif key == "net_worth_share":
+        m = re.search(r"(\d+(?:[.,]\d+)?)\s*%", ans_lower)
+        if m:
+            kyc_data["net_worth_share"] = float(m.group(1).replace(",", ".")) / 100.0
+        elif "moitié" in ans_lower or "50" in ans_lower:
+            kyc_data["net_worth_share"] = 0.50
+        elif "quart" in ans_lower or "25" in ans_lower:
+            kyc_data["net_worth_share"] = 0.25
+        elif "majorité" in ans_lower or "tout" in ans_lower:
+            kyc_data["net_worth_share"] = 0.75
+        else:
+            kyc_data["net_worth_share"] = 0.20
+    elif key == "investment_knowledge":
+        if "débutant" in ans_lower or "novice" in ans_lower:
+            kyc_data["investment_knowledge"] = "beginner"
+        elif "avancé" in ans_lower or "expert" in ans_lower:
+            kyc_data["investment_knowledge"] = "advanced"
+        elif "intermédiaire" in ans_lower:
+            kyc_data["investment_knowledge"] = "intermediate"
+    elif key == "withdrawal_plan":
+        if "unique" in ans_lower or "lump" in ans_lower:
+            kyc_data["withdrawal_plan"] = "lump_sum"
+        elif "régulier" in ans_lower or "revenu" in ans_lower:
+            kyc_data["withdrawal_plan"] = "regular_income"
+        elif "aucun" in ans_lower or "réinvest" in ans_lower:
+            kyc_data["withdrawal_plan"] = "none"
+
+
+def get_next_clarification_question(
+    persona_id: str,
+    persona_data: dict | None,
+    text: str,
+    ext: Extraction,
+    asked: set[str],
+    current_kyc: dict[str, Any],
+) -> tuple[str | None, str | None]:
+    """Next clarification question ranked by impact on caps. Deterministic (no LLM call)."""
+    # Priority 1: Goal or idea weight
+    if "goal" not in asked and not text.strip():
+        return "goal", ASK_GOAL
+    if "goal" not in asked and ext.ticker is None and not _INTENT_RE.search(text):
+        return "goal", ASK_GOAL
+    if "weight" not in asked and ext.ticker and ext.weight_pct is None:
+        return "weight", f"Quelle part de votre portefeuille souhaitez-vous consacrer à {ext.ticker} (en %) ?"
+
+    # KYC fields check (ranking by impact on caps):
+    base = persona_data or (PERSONAS[persona_id] if persona_id in PERSONAS else {})
+    from_text = extract_kyc_from_text(text)
+    combined = {**base, **from_text, **current_kyc}
+
+    # Priority 2: Emergency fund
+    if "emergency_fund" not in asked and combined.get("has_emergency_fund") is None:
+        return (
+            "emergency_fund",
+            "Disposez-vous d'un fonds d'urgence liquide (3 à 6 mois de dépenses courantes) pour couvrir vos besoins des 12 prochains mois ?",
+        )
+
+    # Priority 3: High-interest debt
+    if "high_interest_debt" not in asked and combined.get("has_high_interest_debt") is None:
+        return (
+            "high_interest_debt",
+            "Avez-vous des dettes, en particulier des dettes à taux d'intérêt élevé (cartes de crédit, prêts personnels) à rembourser en priorité ?",
+        )
+
+    # Priority 4: Net worth share
+    if "net_worth_share" not in asked and combined.get("net_worth_share") is None:
+        return (
+            "net_worth_share",
+            "Quelle part approximative de votre patrimoine global cet investissement représente-t-il (ex. moins de 25 %, la moitié, la majorité) ?",
+        )
+
+    # Priority 5: Investment knowledge
+    if "investment_knowledge" not in asked and combined.get("investment_knowledge") is None:
+        return (
+            "investment_knowledge",
+            "Quel est votre niveau d'expérience et de connaissance en matière d'investissements (débutant, intermédiaire, avancé) ?",
+        )
+
+    return None, None
+
+
+def build_kyc_completeness_and_assumptions(
+    persona_id: str,
+    persona_data: dict | None,
+    text: str,
+    kyc_answers: dict[str, Any],
+    as_of_date: dt.date,
+    profile_fields: dict[str, Any],
+) -> tuple[dict[str, Any], KycCompleteness, dict[str, Any]]:
+    """Build KycCompleteness model and register assumptions for missing fields.
+
+    Returns (resolved_kyc_dict, KycCompleteness, evidence_items).
+    """
+    reg = EvidenceRegistry(prefix="EK")
+    text_kyc = extract_kyc_from_text(text)
+
+    resolved: dict[str, Any] = {}
+    fields: dict[str, KycField] = {}
+    missing_required: list[str] = []
+
+    ASSUMED_DEFAULTS = {
+        "has_emergency_fund": (
+            True,
+            "fonds d'urgence de 3 à 6 mois supposé constitué",
+            "Fonds d'urgence de précaution supposé constitué",
+        ),
+        "has_high_interest_debt": (
+            False,
+            "absence de dettes à taux d'intérêt élevé supposée",
+            "Aucune dette à taux d'intérêt élevé supposée",
+        ),
+        "net_worth_share": (
+            0.20,
+            "investissement estimé à 20 % du patrimoine net global",
+            "Part du patrimoine net estimée à 20 %",
+        ),
+        "investment_knowledge": (
+            "intermediate",
+            "niveau de connaissances financières supposé intermédiaire",
+            "Niveau de connaissance financière supposé intermédiaire",
+        ),
+        "withdrawal_plan": (
+            "none",
+            "aucun retrait anticipé prévu (réinvestissement)",
+            "Aucun plan de retrait anticipé supposé",
+        ),
+        "income_stability": (
+            "stable",
+            "revenus supposés stables et réguliers",
+            "Revenus supposés stables",
+        ),
+        "liquidity_need_12m": (
+            "none",
+            "aucun besoin de liquidité exceptionnel à 12 mois",
+            "Besoins de liquidités à 12 mois couverts",
+        ),
+        "current_holdings": (
+            [],
+            "aucun titre employeur ou pension influençant les plafonds",
+            "Aucune concentration d'actifs préexistante déclarée",
+        ),
+    }
+
+    # Evaluate required fields
+    for field_name, label in REQUIRED_KYC_SPECS:
+        if field_name in profile_fields and profile_fields[field_name] is not None:
+            source = "questionnaire" if persona_data else ("persona" if persona_id in PERSONAS else "text")
+            val = profile_fields[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=True, collected=True, source=source, value=val
+            )
+            resolved[field_name] = val
+            continue
+
+        if field_name in kyc_answers and kyc_answers[field_name] is not None:
+            val = kyc_answers[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=True, collected=True, source="text", value=val
+            )
+            resolved[field_name] = val
+        elif field_name in text_kyc and text_kyc[field_name] is not None:
+            val = text_kyc[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=True, collected=True, source="text", value=val
+            )
+            resolved[field_name] = val
+        elif persona_data and field_name in persona_data and persona_data[field_name] is not None:
+            val = persona_data[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=True, collected=True, source="questionnaire", value=val
+            )
+            resolved[field_name] = val
+        elif persona_id in PERSONAS and field_name in PERSONAS[persona_id] and PERSONAS[persona_id][field_name] is not None:
+            val = PERSONAS[persona_id][field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=True, collected=True, source="persona", value=val
+            )
+            resolved[field_name] = val
+        else:
+            missing_required.append(field_name)
+            default_val, method_desc, note_desc = ASSUMED_DEFAULTS.get(
+                field_name, ("assumed", "hypothèse de convenance", "Valeur par défaut")
+            )
+            eid = reg.add(
+                value=default_val,
+                source="assumption:kyc",
+                date=as_of_date,
+                method=f"Hypothèse KYC : {method_desc}",
+                confidence="assumption",
+            )
+            fields[field_name] = KycField(
+                name=field_name,
+                label=label,
+                required=True,
+                collected=False,
+                source="assumption",
+                value=default_val,
+                assumption_note=f"{note_desc} ({eid}).",
+                evidence_id=eid,
+            )
+            resolved[field_name] = default_val
+
+    # Evaluate optional fields
+    for field_name, label in OPTIONAL_KYC_SPECS:
+        if field_name in profile_fields and profile_fields[field_name] is not None:
+            source = "questionnaire" if persona_data else ("persona" if persona_id in PERSONAS else "text")
+            val = profile_fields[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=False, collected=True, source=source, value=val
+            )
+            resolved[field_name] = val
+            continue
+        if field_name in kyc_answers and kyc_answers[field_name] is not None:
+            val = kyc_answers[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=False, collected=True, source="text", value=val
+            )
+            resolved[field_name] = val
+        elif field_name in text_kyc and text_kyc[field_name] is not None:
+            val = text_kyc[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=False, collected=True, source="text", value=val
+            )
+            resolved[field_name] = val
+        elif persona_data and field_name in persona_data and persona_data[field_name] is not None:
+            val = persona_data[field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=False, collected=True, source="questionnaire", value=val
+            )
+            resolved[field_name] = val
+        elif persona_id in PERSONAS and field_name in PERSONAS[persona_id] and PERSONAS[persona_id][field_name] is not None:
+            val = PERSONAS[persona_id][field_name]
+            fields[field_name] = KycField(
+                name=field_name, label=label, required=False, collected=True, source="persona", value=val
+            )
+            resolved[field_name] = val
+        else:
+            fields[field_name] = KycField(
+                name=field_name,
+                label=label,
+                required=False,
+                collected=False,
+                source="assumption",
+                value=None,
+            )
+            resolved[field_name] = None
+
+    req_names = [f[0] for f in REQUIRED_KYC_SPECS]
+    opt_names = [f[0] for f in OPTIONAL_KYC_SPECS]
+    collected_count = sum(1 for n in req_names if fields[n].collected)
+    score = round(collected_count / len(req_names), 2)
+    is_complete = len(missing_required) == 0
+
+    completeness = KycCompleteness(
+        is_complete=is_complete,
+        score=score,
+        required_fields=req_names,
+        optional_fields=opt_names,
+        missing_fields=missing_required,
+        fields=fields,
+    )
+    return resolved, completeness, reg.items()
+
+
 def needs_clarification(text: str, ext: Extraction) -> str | None:
     """ONE targeted question when an essential field is missing, else None."""
     if not text.strip():
@@ -252,29 +632,35 @@ def _clean_tags(tags: list[str]) -> list[str]:
 
 
 def build_profile(
-    persona_id: str, ext: Extraction, used_fallback: bool, persona_data: dict | None = None
+    persona_id: str,
+    ext: Extraction,
+    used_fallback: bool,
+    persona_data: dict | None = None,
+    kyc_completeness: KycCompleteness | None = None,
+    resolved_kyc: dict[str, Any] | None = None,
+    hard_gate_notes: list[str] | None = None,
 ) -> Profile:
-    p = persona_data or PERSONAS[persona_id]
+    p = persona_data or (PERSONAS[persona_id] if persona_id in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
     idea = None
     if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100:
         idea = {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
-    constraints = list(p["constraints"])
+    constraints = list(p.get("constraints") or [])
     for c in _clean_tags(ext.extra_constraints):
         if c in KNOWN_CONSTRAINTS and c not in constraints:
             constraints.append(c)
-    preferences = list(p["preferences"])
+    preferences = list(p.get("preferences") or [])
     for t in _clean_tags(ext.extra_preferences):
         if t not in preferences:
             preferences.append(t)
-    horizon = p["horizon_years"]
+    horizon = p.get("horizon_years", 5)
     if ext.horizon_years and 1 <= ext.horizon_years <= 50:
         horizon = ext.horizon_years
-    budget = p["budget_cad"]
+    budget = p.get("budget_cad")
     if ext.budget_cad and ext.budget_cad > 0:
         budget = float(ext.budget_cad)
     conflicts = detect_conflict(
-        tolerance=p["risk_tolerance"],
+        tolerance=p.get("risk_tolerance", "moderate"),
         horizon_years=horizon,
         constraints=constraints,
         idea=idea,
@@ -304,12 +690,25 @@ def build_profile(
         or p.get("account_type")
         or "non_registered"
     )
+    resolved = resolved_kyc or {}
+    gate_notes = list(hard_gate_notes or [])
+
+    if resolved.get("has_emergency_fund") is False:
+        conflicts.append("Garde-fou KYC : Fonds d'urgence manquant. Prioriser l'épargne de précaution.")
+    if resolved.get("has_high_interest_debt") is True:
+        conflicts.append("Garde-fou KYC : Dettes à taux élevé non soldées. Prioriser le remboursement des dettes.")
+
+    # Record KYC assumptions in conflicts list so explainers and auditors see them
+    if kyc_completeness:
+        for f in kyc_completeness.fields.values():
+            if f.required and not f.collected and f.assumption_note:
+                conflicts.append(f"Hypothèse KYC ({f.evidence_id}) : {f.assumption_note}")
     return Profile(
         persona=persona_id,
-        objective=p["objective"],
+        objective=p.get("objective", "balanced"),
         horizon_years=horizon,
-        risk_tolerance=p["risk_tolerance"],
-        risk_capacity=p["risk_capacity"],
+        risk_tolerance=p.get("risk_tolerance", "moderate"),
+        risk_capacity=p.get("risk_capacity", "moderate"),
         constraints=constraints,
         preferences=preferences,
         budget_cad=budget,
@@ -318,6 +717,17 @@ def build_profile(
         requested_idea=idea,
         conflicts=conflicts,
         current_holdings=current_holdings,
+        has_emergency_fund=resolved.get("has_emergency_fund"),
+        has_high_interest_debt=resolved.get("has_high_interest_debt"),
+        debt_level=resolved.get("debt_level"),
+        net_worth_share=resolved.get("net_worth_share"),
+        net_worth_cad=resolved.get("net_worth_cad"),
+        liquidity_need_12m=resolved.get("liquidity_need_12m"),
+        investment_knowledge=resolved.get("investment_knowledge"),
+        withdrawal_plan=resolved.get("withdrawal_plan"),
+        income_stability=resolved.get("income_stability"),
+        kyc_completeness=kyc_completeness,
+        hard_gate_notes=gate_notes,
     )
 
 
@@ -342,33 +752,54 @@ def is_contradictory_profile(
 def profile_node(state: GraphState) -> dict:
     text = state.request_text.strip()
     update: dict = {}
+    kyc_answers: dict[str, Any] = {}
+    clarified_count = state.retries.get("clarify", 0)
+    asked_keys: set[str] = set()
+
     # LangGraph re-runs the node from the top on resume, so the decision to ask must be
     # deterministic (regex reading, no model call) for interrupt() to be reached again.
-    question = needs_clarification(text, _regex_extract(text))
-    if question and not state.retries.get("clarify"):
+    # Clarification loop of up to 3 questions, ranked by impact on caps (#117).
+    while clarified_count < 3:
+        ext_pre = _regex_extract(text)
+        next_key, next_q = get_next_clarification_question(
+            persona_id=state.persona,
+            persona_data=state.persona_data,
+            text=text,
+            ext=ext_pre,
+            asked=asked_keys,
+            current_kyc=kyc_answers,
+        )
+        if not next_q or not next_key:
+            break
+        asked_keys.add(next_key)
         try:
-            answer = str(interrupt({"question": question})).strip()
+            answer = str(interrupt({"question": next_q})).strip()
             text = f"{text} {answer}".strip()
-            update = {"request_text": text, "retries": {"clarify": 1}}
+            clarified_count += 1
+            update = {"request_text": text, "retries": {"clarify": clarified_count}}
+            apply_clarification_answer(next_key, answer, kyc_answers)
         except RuntimeError:
-            pass
+            break
 
     ext, fallback = extract_profile(state.persona_data or state.persona, text, kind="main")
 
-    p = state.persona_data or PERSONAS[state.persona]
+    p = state.persona_data or (PERSONAS[state.persona] if state.persona in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
     idea = (
         {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
         if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
         else None
     )
-    horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p["horizon_years"]
-    constraints = list(p["constraints"])
+    horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p.get("horizon_years", 5)
+    constraints = list(p.get("constraints") or [])
     for c in _clean_tags(ext.extra_constraints):
         if c in KNOWN_CONSTRAINTS and c not in constraints:
             constraints.append(c)
     conflicts = detect_conflict(
-        tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea,
+        tolerance=p.get("risk_tolerance", "moderate"),
+        horizon_years=horizon,
+        constraints=constraints,
+        idea=idea,
         capacity=p.get("risk_capacity"),
     )
 
@@ -381,10 +812,13 @@ def profile_node(state: GraphState) -> dict:
             if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
             else None
         )
-        horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p["horizon_years"]
+        horizon = ext.horizon_years if (ext.horizon_years and 1 <= ext.horizon_years <= 50) else p.get("horizon_years", 5)
         conflicts = detect_conflict(
-            tolerance=p["risk_tolerance"], horizon_years=horizon, constraints=constraints, idea=idea,
-        capacity=p.get("risk_capacity"),
+            tolerance=p.get("risk_tolerance", "moderate"),
+            horizon_years=horizon,
+            constraints=constraints,
+            idea=idea,
+            capacity=p.get("risk_capacity"),
         )
         if is_contradictory_profile(conflicts, idea, horizon, constraints) and not state.retries.get("clarify"):
             target_asset = idea["ticker"] if idea else "cryptoactifs"
@@ -400,11 +834,61 @@ def profile_node(state: GraphState) -> dict:
             except RuntimeError:
                 pass
 
-    profile = build_profile(state.persona, ext, fallback, state.persona_data)
+    budget = p.get("budget_cad")
+    if ext.budget_cad and ext.budget_cad > 0:
+        budget = float(ext.budget_cad)
+
+    profile_fields = {
+        "horizon_years": horizon,
+        "risk_tolerance": p.get("risk_tolerance", "moderate"),
+        "risk_capacity": p.get("risk_capacity", "moderate"),
+        "budget_cad": budget,
+    }
+    resolved, completeness, kyc_evidence = build_kyc_completeness_and_assumptions(
+        persona_id=state.persona,
+        persona_data=state.persona_data,
+        text=text,
+        kyc_answers=kyc_answers,
+        as_of_date=state.as_of_date,
+        profile_fields=profile_fields,
+    )
+
+    # Hard gates: no emergency fund, or high-interest debt, produce a top-of-page note (#117)
+    hard_gate_notes: list[str] = []
+    if resolved.get("has_emergency_fund") is False:
+        note = (
+            "Avertissement préalable (Garde-fou : Absence de fonds d'urgence) : "
+            "Vous avez indiqué ne pas disposer d'une réserve de liquidités équivalente à 3 à 6 mois de dépenses courantes. "
+            "Tout investissement sur les marchés financiers comporte un risque de perte en capital. "
+            "Il est fortement recommandé de constituer une épargne de précaution avant d'immobiliser vos capitaux."
+        )
+        hard_gate_notes.append(note)
+        conflicts.append("Garde-fou KYC : Fonds d'urgence manquant. Prioriser l'épargne de précaution.")
+
+    if resolved.get("has_high_interest_debt") is True:
+        note = (
+            "Avertissement préalable (Garde-fou : Dettes à taux élevé) : "
+            "Vous avez déclaré des dettes à taux d'intérêt élevé (cartes de crédit, prêts personnels). "
+            "Rembourser une dette à taux élevé procure un rendement financier garanti équivalent aux intérêts économisés, "
+            "sans aucun risque de marché. Ce remboursement doit être priorisé avant tout investissement."
+        )
+        hard_gate_notes.append(note)
+        conflicts.append("Garde-fou KYC : Dettes à taux élevé non soldées. Prioriser le remboursement des dettes.")
+
+    profile = build_profile(
+        persona_id=state.persona,
+        ext=ext,
+        used_fallback=fallback,
+        persona_data=state.persona_data,
+        kyc_completeness=completeness,
+        resolved_kyc=resolved,
+        hard_gate_notes=hard_gate_notes,
+    )
+
     if profile.request_type == "judge":
         summary = f"Profil compris : évaluation de {profile.requested_idea['ticker']}."
     else:
         summary = "Profil compris : construction d'une allocation."
     if profile.conflicts:
         summary += f" {len(profile.conflicts)} point(s) de tension relevé(s)."
-    return {**update, "profile": profile, "summary": summary}
+    return {**update, "evidence": kyc_evidence, "profile": profile, "summary": summary}

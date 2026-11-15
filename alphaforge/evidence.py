@@ -14,10 +14,11 @@ PREFIXES = {
     "EM": "macro",
     "EN": "news",
     "EP": "portfolio",
+    "EK": "kyc",
 }
 
 # Matches evidence ids inside free text, e.g. "EQ12". Used by the verifier.
-EID_RE = re.compile(r"\bE[SQMNP]\d+\b")
+EID_RE = re.compile(r"\bE[SQMNPK]\d+\b")
 
 
 class EvidenceRegistry:
