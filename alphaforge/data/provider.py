@@ -133,4 +133,8 @@ def _provider(name: str) -> DataProvider:
         from alphaforge.data.csv_provider import CsvProvider
 
         return CsvProvider()
-    raise ValueError(f"unknown data provider {name!r}; available: csv")
+    if name == "yfinance":
+        from alphaforge.data.yfinance_provider import YFinanceProvider
+
+        return YFinanceProvider()
+    raise ValueError(f"unknown data provider {name!r}; available: csv, yfinance")
