@@ -311,7 +311,8 @@ def test_custom_profiles_are_isolated_per_run():
     b = client.post("/runs", json={"persona": "custom_user", "request_text": text,
                                    "profile_data": _custom("low", 3)}).json()["run_id"]
     sa, sb = _wait_final(client, a), _wait_final(client, b)
-    assert sa["persona"] != sb["persona"]
+    assert sa["persona_data"]["risk_tolerance"] == "high"
+    assert sb["persona_data"]["risk_tolerance"] == "low"
     assert sa["profile"]["risk_tolerance"] == "high" and sa["profile"]["horizon_years"] == 15
     assert sb["profile"]["risk_tolerance"] == "low" and sb["profile"]["horizon_years"] == 3
 
@@ -396,3 +397,48 @@ def test_replay_golden_run_state_and_whatif():
     assert diff_data["parent_run_id"] == "golden_robert_tsla"
     assert diff_data["child_run_id"] == child_id
     assert "scenarios" in diff_data
+
+
+def test_custom_runs_do_not_grow_the_persona_table():
+    client = TestClient(app)
+    before = set(PERSONAS)
+    for tol in ("high", "low", "moderate"):
+        rid = client.post("/runs", json={"persona": "custom_user",
+                                         "request_text": "Je veux construire un portefeuille.",
+                                         "profile_data": _custom(tol)}).json()["run_id"]
+        _wait_final(client, rid)
+    assert set(PERSONAS) == before
+
+
+def test_runs_are_private_to_their_owner():
+    alice = TestClient(app, headers={"X-Client-Id": "alice"})
+    bob = TestClient(app, headers={"X-Client-Id": "bob"})
+    rid = alice.post("/runs", json={"persona": "robert",
+                                    "request_text": PERSONAS["robert"]["example_request"]}).json()["run_id"]
+    _wait_final(alice, rid)
+    assert bob.get(f"/runs/{rid}").status_code == 404
+    assert bob.post(f"/runs/{rid}/whatif", json={"field": "horizon_years", "value": 10}).status_code == 404
+    assert bob.post(f"/runs/{rid}/answer", json={"text": "x"}).status_code == 404
+    assert rid in {r["run_id"] for r in alice.get("/runs").json()}
+    listed = bob.get("/runs").json()
+    assert rid not in {r["run_id"] for r in listed}
+    assert all(r["is_golden"] for r in listed)
+    # golden demo runs stay readable by anyone
+    assert bob.get("/runs/golden_robert_tsla").status_code == 200
+
+
+def test_api_docs_are_not_public():
+    client = TestClient(app)
+    assert client.get("/openapi.json").status_code in (404, 200) and "openapi" not in client.get("/openapi.json").text[:200]
+    assert "swagger" not in client.get("/docs").text.lower()
+
+
+def test_rate_limit_per_ip(monkeypatch):
+    from alphaforge.api import server
+
+    monkeypatch.setattr(server, "RATE_LIMIT_RUNS", 2)
+    monkeypatch.setattr(server, "_rate", server.defaultdict(server.deque))
+    client = TestClient(app)
+    body = {"persona": "robert", "request_text": PERSONAS["robert"]["example_request"]}
+    codes = [client.post("/runs", json=body).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]

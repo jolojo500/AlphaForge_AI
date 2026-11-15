@@ -166,10 +166,18 @@ def set_graph(graph=None) -> None:
 
 
 def initial_state(
-    persona: str, request_text: str, as_of_date: dt.date | None = None, profile=None
+    persona: str,
+    request_text: str,
+    as_of_date: dt.date | None = None,
+    profile=None,
+    *,
+    persona_data: dict | None = None,
+    owner: str | None = None,
 ) -> dict:
     return {
         "persona": persona,
+        "persona_data": persona_data,
+        "owner": owner,
         "request_text": request_text,
         "as_of_date": as_of_date or config.DEFAULT_AS_OF,
         "profile": profile,

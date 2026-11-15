@@ -6,14 +6,34 @@ import { GraphState, PersonaMeta, SavedRunSummary, SSEEvent, WhatIfDiff } from '
 
 const API_BASE = '';
 
+/** Random per-browser session id: the server only shows a run to the session that started it. */
+function clientId(): string {
+  try {
+    let id = localStorage.getItem('alphaforge_client_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('alphaforge_client_id', id);
+    }
+    return id;
+  } catch {
+    return 'anonymous';
+  }
+}
+
+function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set('X-Client-Id', clientId());
+  return fetch(url, { ...init, headers });
+}
+
 export async function fetchHealth(): Promise<{ status: string }> {
-  const res = await fetch(`${API_BASE}/health`);
+  const res = await apiFetch(`${API_BASE}/health`);
   if (!res.ok) throw new Error(`Health check failed: ${res.statusText}`);
   return res.json();
 }
 
 export async function fetchPersonas(): Promise<Record<string, PersonaMeta>> {
-  const res = await fetch(`${API_BASE}/personas`);
+  const res = await apiFetch(`${API_BASE}/personas`);
   if (!res.ok) throw new Error(`Failed to fetch personas: ${res.statusText}`);
   return res.json();
 }
@@ -24,7 +44,7 @@ export async function createRun(
   asOfDate?: string,
   extraPayload?: Partial<BackendRunPayload>
 ): Promise<{ run_id: string }> {
-  const res = await fetch(`${API_BASE}/runs`, {
+  const res = await apiFetch(`${API_BASE}/runs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -43,7 +63,7 @@ export async function createRun(
 }
 
 export async function answerRun(runId: string, text: string): Promise<{ run_id: string; status: string }> {
-  const res = await fetch(`${API_BASE}/runs/${runId}/answer`, {
+  const res = await apiFetch(`${API_BASE}/runs/${runId}/answer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
@@ -56,7 +76,7 @@ export async function answerRun(runId: string, text: string): Promise<{ run_id: 
 }
 
 export async function fetchRunState(runId: string): Promise<GraphState> {
-  const res = await fetch(`${API_BASE}/runs/${runId}`);
+  const res = await apiFetch(`${API_BASE}/runs/${runId}`);
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Failed to fetch run state: ${res.statusText}`);
@@ -66,7 +86,7 @@ export async function fetchRunState(runId: string): Promise<GraphState> {
 
 export async function fetchSavedRuns(persona?: string): Promise<SavedRunSummary[]> {
   const url = persona ? `${API_BASE}/runs?persona=${encodeURIComponent(persona)}` : `${API_BASE}/runs`;
-  const res = await fetch(url);
+  const res = await apiFetch(url);
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Failed to fetch saved runs: ${res.statusText}`);
@@ -79,7 +99,7 @@ export async function createWhatIf(
   field: string,
   value: unknown
 ): Promise<{ run_id: string; parent_run_id: string }> {
-  const res = await fetch(`${API_BASE}/runs/${parentId}/whatif`, {
+  const res = await apiFetch(`${API_BASE}/runs/${parentId}/whatif`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ field, value }),
@@ -92,7 +112,7 @@ export async function createWhatIf(
 }
 
 export async function fetchRunDiff(childRunId: string): Promise<WhatIfDiff> {
-  const res = await fetch(`${API_BASE}/runs/${childRunId}/diff`);
+  const res = await apiFetch(`${API_BASE}/runs/${childRunId}/diff`);
   if (!res.ok) {
     const errorBody = await res.json().catch(() => ({}));
     throw new Error(errorBody.detail || `Failed to fetch what-if diff: ${res.statusText}`);
@@ -101,7 +121,7 @@ export async function fetchRunDiff(childRunId: string): Promise<WhatIfDiff> {
 }
 
 export async function compareRuns(runA: string, runB: string): Promise<WhatIfDiff> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/runs/compare?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`
   );
   if (!res.ok) {
@@ -116,7 +136,7 @@ export function subscribeRunEvents(
   onEvent: (event: SSEEvent) => void,
   onError?: (error: unknown) => void
 ): () => void {
-  const source = new EventSource(`${API_BASE}/runs/${runId}/events`);
+  const source = new EventSource(`${API_BASE}/runs/${runId}/events?client=${encodeURIComponent(clientId())}`);
 
   source.onmessage = (event) => {
     try {
