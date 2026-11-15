@@ -5,6 +5,8 @@ interface SegmentedControlProps<T extends string> {
   value: T | '';
   onChange: (val: T) => void;
   className?: string;
+  /** Label shown for each option code; the code itself when absent. */
+  labels?: Partial<Record<T, string>>;
 }
 
 export function SegmentedControl<T extends string>({
@@ -12,6 +14,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   className = '',
+  labels,
 }: SegmentedControlProps<T>) {
   return (
     <div className={cn("bg-muted p-1 rounded-lg flex items-center gap-1 border border-border/60", className)}>
@@ -29,7 +32,7 @@ export function SegmentedControl<T extends string>({
                 : "text-muted-foreground hover:text-foreground font-normal cursor-pointer hover:bg-background/40"
             )}
           >
-            {opt}
+            {labels?.[opt] ?? opt}
           </button>
         );
       })}

@@ -334,207 +334,59 @@ export function subscribeRunEvents(
   };
 }
 
-import { UserOnboardingProfile, BackendRunPayload } from './types';
+import { UserOnboardingProfile, BackendRunPayload, UniverseAsset } from './types';
+import { toProfileData, UNIVERSE_FALLBACK } from './lib/questionnaireCodes';
+
+/** The 31-asset universe for ticker autocomplete (#175); the bundled copy when offline. */
+export async function fetchUniverse(): Promise<UniverseAsset[]> {
+  try {
+    const res = await apiFetch(`${API_BASE}/universe`);
+    if (!res.ok) return UNIVERSE_FALLBACK;
+    const rows = (await res.json()) as UniverseAsset[];
+    return Array.isArray(rows) && rows.length > 0 ? rows : UNIVERSE_FALLBACK;
+  } catch {
+    return UNIVERSE_FALLBACK;
+  }
+}
 
 /**
- * Prepares the payload for the AlphaForge multi-agent backend.
- * Integrates questionnaire profile and user question, ready for POST /runs.
+ * Saves the questionnaire as the user's one server profile (#170): the engine profile derived
+ * by `toProfileData` plus the raw questionnaire, so a later login restores it. The server
+ * assigns the version number and appends the dated diff to the dossier.
+ */
+export async function saveQuestionnaire(profile: UserOnboardingProfile): Promise<UserProfileData> {
+  const data = toProfileData(profile);
+  return updateUserProfile({
+    profile: { ...data, questionnaire: profile },
+    account_type: data.account_type || null,
+    current_holdings: (data.current_holdings as Record<string, number> | undefined) || null,
+  });
+}
+
+/** The questionnaire stored in a server profile, if any (restored on login, #170). */
+export function questionnaireOf(data: UserProfileData | null | undefined): UserOnboardingProfile | null {
+  const q = data?.profile?.questionnaire as UserOnboardingProfile | undefined;
+  if (!q || typeof q !== 'object' || !q.primaryObjective) return null;
+  return { ...q, profileVersion: data?.profile_version ?? q.profileVersion ?? null };
+}
+
+/**
+ * Prepares the payload for the AlphaForge multi-agent backend (POST /runs).
+ * `profile_data` is exactly what `saveQuestionnaire` stored: codes only, limits included.
  */
 export function prepareBackendPayload(
   profile: UserOnboardingProfile,
   requestText: string,
   language?: 'fr' | 'en'
 ): BackendRunPayload {
-  let objective = 'capital_preservation';
-  if (profile.primaryObjective.includes('équilibrée')) {
-    objective = 'balanced';
-  } else if (profile.primaryObjective.includes('Croissance')) {
-    objective = 'growth';
-  } else if (profile.primaryObjective.includes('revenus') || profile.primaryObjective.includes('Revenus')) {
-    objective = 'income';
-  }
-
-  let horizonYears = 5;
-  const matchNum = profile.firstWithdrawalHorizon.match(/\d+/);
-  if (matchNum) {
-    horizonYears = parseInt(matchNum[0], 10);
-  } else if (profile.firstWithdrawalHorizon.includes('Court')) {
-    horizonYears = 2;
-  } else if (profile.firstWithdrawalHorizon.includes('Long')) {
-    horizonYears = 15;
-  }
-
-  let riskTolerance = 'low_moderate';
-  if (profile.riskTolerance === 'Faible') riskTolerance = 'low';
-  else if (profile.riskTolerance === 'Faible à modéré') riskTolerance = 'low_moderate';
-  else if (profile.riskTolerance === 'Modéré') riskTolerance = 'moderate';
-  else if (profile.riskTolerance === 'Élevé') riskTolerance = 'high';
-
-  let riskCapacity: 'low' | 'moderate' | 'high' = 'low';
-  const expensesCovered = profile.essentialExpensesImpact?.includes('couvertes') ?? false;
-  const hasEmergencyFund = profile.capitalNeedNext12Months?.includes('urgence') ?? false;
-  const hasHighInterestDebt =
-    profile.debtLevel?.includes('taux élevé') || profile.debtLevel?.includes('cartes') || false;
-
-  let netWorthShareNum: number | null = null;
-  if (profile.netWorthShare) {
-    if (profile.netWorthShare.includes('Moins de 25')) netWorthShareNum = 0.2;
-    else if (profile.netWorthShare.includes('25') && profile.netWorthShare.includes('50')) netWorthShareNum = 0.35;
-    else if (profile.netWorthShare.includes('Plus de 50') || profile.netWorthShare.includes('Majorité'))
-      netWorthShareNum = 0.65;
-    else {
-      const parsed = parseFloat(profile.netWorthShare);
-      if (!isNaN(parsed)) netWorthShareNum = parsed > 1 ? parsed / 100 : parsed;
-    }
-  }
-
-  let investmentKnowledge = 'intermediate';
-  if (profile.investmentExperience === 'Débutant') investmentKnowledge = 'beginner';
-  else if (profile.investmentExperience === 'Avancé') investmentKnowledge = 'advanced';
-
-  let withdrawalPlan = 'none';
-  if (profile.withdrawalMethod?.includes('unique')) withdrawalPlan = 'lump_sum';
-  else if (profile.withdrawalMethod?.includes('périodiques') || profile.withdrawalMethod?.includes('réguliers'))
-    withdrawalPlan = 'regular_income';
-
-  const noWithdrawalSoon =
-    horizonYears >= 3 || (profile.withdrawalMethod && profile.withdrawalMethod.includes('Réinvestissement'));
-
-  if (expensesCovered && hasEmergencyFund && !hasHighInterestDebt) {
-    riskCapacity = noWithdrawalSoon ? 'high' : 'moderate';
-  } else if (hasHighInterestDebt || !hasEmergencyFund) {
-    riskCapacity = 'low';
-  } else if (expensesCovered || hasEmergencyFund) {
-    riskCapacity = 'moderate';
-  }
-
-  const constraints: string[] = [];
-  if (profile.cryptoPreference.includes('Exclusion totale') || profile.cryptoPreference.includes('0 %')) {
-    constraints.push('no_crypto');
-  }
-  if (profile.esgImportance.includes('Prioritaire') || profile.esgImportance.includes('strict')) {
-    constraints.push('esg_only', 'no_controversies');
-  } else if (
-    profile.esgImportance.includes('Secondaire') ||
-    profile.esgImportance.includes('Favoriser') ||
-    profile.esgImportance.includes('esg_tilt')
-  ) {
-    // Soft ESG wish maps to esg_tilt preference
-  }
-  if (profile.excludedCategories) {
-    profile.excludedCategories.forEach((ex) => {
-      // Only constraints the engine implements are sent (see screening.py).
-      if (ex.includes('fossiles')) constraints.push('esg_only', 'no_controversies');
-      if (ex.includes('Cryptoactifs')) constraints.push('no_crypto');
-    });
-  }
-
-  // Map questionnaire labels to the preference tokens the scenario builder understands
-  // (PREFERENCE_SECTORS in alphaforge/nodes/scenarios.py); other labels pass through.
-  const preferences: string[] = profile.interestedSectors.map((s) => {
-    if (/tech|ia\b/i.test(s)) return 'likes_tech';
-    if (/responsable|esg/i.test(s)) return 'esg_tilt';
-    return s;
-  });
-  if (
-    (profile.esgImportance.includes('Secondaire') ||
-      profile.esgImportance.includes('Favoriser') ||
-      profile.esgImportance.includes('esg_tilt')) &&
-    !preferences.includes('esg_tilt')
-  ) {
-    preferences.push('esg_tilt');
-  }
-  if (/modérée|majeurs/i.test(profile.cryptoPreference) && !preferences.includes('likes_crypto')) {
-    preferences.push('likes_crypto');
-  }
-
-  // Contextual information appended to request_text so Agent 1 and LLM prompt
-  // see all investor background, loss tolerance, account type and notes.
-  const contextParts: string[] = [];
-  if (profile.ageRange && profile.ageRange !== 'Non spécifié') {
-    contextParts.push(`Tranche d'âge : ${profile.ageRange}`);
-  }
-  if (profile.familySituation && profile.familySituation !== 'Non spécifié') {
-    contextParts.push(`Situation familiale : ${profile.familySituation}`);
-  }
-  if (profile.accountType) {
-    contextParts.push(`Type de compte : ${profile.accountType}`);
-  }
-  if (profile.maxLossTolerance) {
-    contextParts.push(`Tolérance de perte sur 12 mois : ${profile.maxLossTolerance} %`);
-  }
-  if (profile.sectorConcentrationLimit) {
-    contextParts.push(`Plafond sectoriel : ${profile.sectorConcentrationLimit}`);
-  }
-  if (profile.netWorthShare) {
-    contextParts.push(`Part du patrimoine représentée : ${profile.netWorthShare}`);
-  }
-  if (profile.debtLevel) {
-    contextParts.push(`Situation d'endettement : ${profile.debtLevel}`);
-  }
-  if (profile.incomeStability) {
-    contextParts.push(`Stabilité des revenus : ${profile.incomeStability}`);
-  }
-  if (profile.currentHoldings) {
-    const holdingsStr = Array.isArray(profile.currentHoldings)
-      ? (profile.currentHoldings as string[]).join(', ')
-      : Object.entries(profile.currentHoldings).map(([t, w]) => `${t}: ${w}`).join(', ');
-    if (holdingsStr) {
-      contextParts.push(`Autres avoirs détenus : ${holdingsStr}`);
-    }
-  }
-  if (profile.additionalNotes?.trim()) {
-    contextParts.push(`Remarques libres : ${profile.additionalNotes.trim()}`);
-  }
-
-  let maxLossPct: number | null = null;
-  const parsedLoss = parseFloat(profile.maxLossTolerance);
-  if (!isNaN(parsedLoss)) {
-    maxLossPct = parsedLoss;
-  }
-
-  let accountType: 'tfsa' | 'rrsp' | 'fhsa' | 'non_registered' | 'mixed' = 'non_registered';
-  const at = (profile.accountType || '').toLowerCase();
-  if (at.includes('celi') && at.includes('app')) {
-    accountType = 'fhsa';
-  } else if (at.includes('celi') || at.includes('tfsa')) {
-    accountType = 'tfsa';
-  } else if (at.includes('reer') || at.includes('rrsp') || at.includes('cri') || at.includes('ferr')) {
-    accountType = 'rrsp';
-  } else if (at.includes('mixte') || at.includes('mixed')) {
-    accountType = 'mixed';
-  } else if (at.includes('non') || at.includes('imposable')) {
-    accountType = 'non_registered';
-  }
-
+  const profileData = toProfileData(profile);
   const payload: BackendRunPayload = {
     persona: 'custom_user',
     request_text: requestText.trim(),
     language,
     user_profile: profile,
-    current_holdings: profile.currentHoldings,
-    profile_data: {
-      objective,
-      horizon_years: horizonYears,
-      risk_tolerance: riskTolerance,
-      risk_capacity: riskCapacity,
-      account_type: accountType,
-      constraints: Array.from(new Set(constraints)),
-      preferences,
-      budget_cad: profile.simulatedCapital,
-      max_loss_pct: maxLossPct,
-      notes: profile.additionalNotes,
-      current_holdings: profile.currentHoldings,
-      has_emergency_fund: hasEmergencyFund,
-      has_high_interest_debt: hasHighInterestDebt,
-      debt_level: profile.debtLevel || (hasHighInterestDebt ? 'high_interest' : 'none'),
-      net_worth_share: netWorthShareNum,
-      investment_knowledge: investmentKnowledge,
-      withdrawal_plan: withdrawalPlan,
-      income_stability: profile.incomeStability || 'stable',
-    },
+    current_holdings: profileData.current_holdings as Record<string, number> | undefined,
+    profile_data: profileData,
   };
-
-  console.log('[AlphaForge] Payload prepared for backend execution:', payload);
   return payload;
 }

@@ -131,6 +131,15 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.year': 'an',
     'common.loading': 'Chargement...',
     'common.error': 'Une erreur est survenue',
+    // --- Profile (stream ui-profile, #170 / #175): keep this block at the end of the FR map ---
+    'profile.modal_title': 'Mon profil d’investisseur',
+    'profile.modal_desc': 'Profil enregistré côté serveur : c’est exactement ce qui est envoyé avec chaque analyse. Chaque enregistrement crée une nouvelle version et ajoute l’écart daté au dossier.',
+    'profile.last_saved': 'Dernier enregistrement',
+    'profile.none_saved': 'Aucun profil enregistré : remplissez le questionnaire pour en créer un.',
+    'profile.history': 'Historique des versions',
+    'profile.first_version': 'Première version enregistrée',
+    'profile.changed_fields': 'Champs modifiés',
+    'profile.edit_questionnaire': 'Modifier via le questionnaire',
   },
   en: {
     // Top Bar & App Navigation
@@ -262,6 +271,15 @@ export const translations: Record<Language, Record<string, string>> = {
     'common.year': 'year',
     'common.loading': 'Loading...',
     'common.error': 'An error occurred',
+    // --- Profile (stream ui-profile, #170 / #175): keep this block at the end of the EN map ---
+    'profile.modal_title': 'My investor profile',
+    'profile.modal_desc': 'Profile saved on the server: exactly what is sent with every analysis. Each save creates a new version and appends the dated change to your record.',
+    'profile.last_saved': 'Last saved',
+    'profile.none_saved': 'No saved profile yet: complete the questionnaire to create one.',
+    'profile.history': 'Version history',
+    'profile.first_version': 'First saved version',
+    'profile.changed_fields': 'Changed fields',
+    'profile.edit_questionnaire': 'Edit via the questionnaire',
   },
 };
 

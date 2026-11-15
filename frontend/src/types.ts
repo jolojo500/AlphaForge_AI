@@ -318,11 +318,15 @@ export interface WhatIfDiff {
   run_b_id?: string;
 }
 
+/**
+ * Questionnaire answers. Every option is stored as a code (see lib/questionnaireCodes.ts);
+ * legacy French labels from older saved profiles are still accepted by `codeOf`.
+ */
 export interface UserOnboardingProfile {
   // Step 1: Identité, situation & expérience
   ageRange: string;
   familySituation: string;
-  investmentExperience: 'Débutant' | 'Intermédiaire' | 'Avancé' | '';
+  investmentExperience: string;
   businessModelsUnderstanding: string | string[];
 
   // Step 2: Objectifs & paramètres financiers
@@ -335,7 +339,7 @@ export interface UserOnboardingProfile {
   netWorthShare?: string;
 
   // Step 3: Tolérance au risque & garde-fous
-  riskTolerance: 'Faible' | 'Faible à modéré' | 'Modéré' | 'Élevé' | '';
+  riskTolerance: string;
   maxLossTolerance: string;
   sectorConcentrationLimit: string;
   capitalNeedNext12Months: string;
@@ -353,9 +357,16 @@ export interface UserOnboardingProfile {
   // Step 5: Informations supplémentaires & Portefeuille existant
   additionalNotes: string;
   currentHoldingsCsv?: string;
+  /** Per ticker: fraction of the portfolio (holdingsUnit "pct") or an amount in CAD ("cad"). */
   currentHoldings?: Record<string, number>;
+  hasExistingHoldings?: 'none' | 'some' | '';
+  holdingsUnit?: 'pct' | 'cad';
+  /** Tickers outside the universe the user confirmed as "non analysé". */
+  unanalysedConfirmed?: string[];
   fictionalCapitalAcknowledged: boolean;
 
+  /** Version of the saved server profile this questionnaire corresponds to (#170). */
+  profileVersion?: number | null;
   completedAt: string;
 }
 
@@ -385,7 +396,46 @@ export interface BackendRunPayload {
     investment_knowledge?: string | null;
     withdrawal_plan?: string | null;
     income_stability?: string | null;
+    // Declared limits read by `declared_limits` on the server (#186)
+    age_band?: string | null;
+    currency_preference?: string | null;
+    sector_cap_pct?: number | string | null;
+    crypto_preference?: string | null;
+    esg_level?: string | null;
+    // Questionnaire-only answers, as codes, exported in the dossier (#170)
+    objective_detail?: string;
+    account_type_detail?: string;
+    net_worth_share_band?: string;
+    family_situation?: string | null;
+    asset_familiarity?: string[];
+    capital_need_12m?: string | null;
+    essential_expenses_impact?: string | null;
+    exclusions?: string[];
+    has_existing_holdings?: string;
+    holdings_unit?: string;
+    holdings_unanalysed_confirmed?: string[];
+    profile_version?: number | null;
+    /** The raw questionnaire, kept on the server so a login restores it (#170). */
+    questionnaire?: UserOnboardingProfile;
   };
+}
+
+export interface ProfileHistoryEntry {
+  version: number;
+  updated_at: string;
+  changes: Record<string, { old: unknown; new: unknown }>;
+}
+
+export interface ProfileSummaryRow {
+  key: string;
+  label: string;
+  value: string;
+}
+
+export interface UniverseAsset {
+  ticker: string;
+  name: string;
+  asset_class: string;
 }
 
 export interface AuthUser {
@@ -405,6 +455,10 @@ export interface UserProfileData {
   current_holdings?: Record<string, unknown> | null;
   is_advisor?: boolean;
   updated_at?: string;
+  profile_version?: number;
+  profile_history?: ProfileHistoryEntry[];
+  /** Every saved field with its French label, from the server's one label map (#170). */
+  profile_summary?: ProfileSummaryRow[];
 }
 
 export interface LoginResponse {

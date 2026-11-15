@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from alphaforge import config
+from alphaforge.questionnaire import diff_lines_fr, profile_lines_fr
 from alphaforge.state import GraphState
 
 logger = logging.getLogger(__name__)
@@ -237,25 +238,13 @@ def _get_val(obj: Any, *keys: str, default: Any = "Non renseigné") -> Any:
     return default
 
 
-def _format_holdings(holdings: Any) -> str:
-    if not holdings:
-        return "Aucun avoir initial déclaré"
-    if isinstance(holdings, str):
-        return holdings
-    try:
-        return json.dumps(holdings, indent=2, ensure_ascii=False)
-    except Exception:
-        return str(holdings)
-
-
-def _format_list(items: Any, default: str = "Aucune") -> str:
-    if not items:
-        return default
-    if isinstance(items, list):
-        if not items:
-            return default
-        return ", ".join(str(x) for x in items)
-    return str(items)
+def _profile_lines_md(profile: dict[str, Any] | None) -> list[str]:
+    """Every questionnaire field as "- **Label :** value" with French labels, never raw codes."""
+    src = profile if isinstance(profile, dict) else {}
+    if isinstance(src.get("profile"), dict):  # a users-store record
+        src = dict(src["profile"], account_type=src.get("account_type", src["profile"].get("account_type")),
+                   current_holdings=src.get("current_holdings", src["profile"].get("current_holdings")))
+    return [f"- **{label} :** {value}" for label, value in profile_lines_fr(src, all_fields=True)]
 
 
 def _build_initial_dossier(
@@ -266,21 +255,6 @@ def _build_initial_dossier(
 ) -> str:
     clean_username = sanitize_username(username)
     email_display = email or _get_val(profile, "email", default="Non renseigné")
-
-    objective = _get_val(profile, "objective")
-    horizon = _get_val(profile, "horizon_years", "horizon")
-    if horizon != "Non renseigné":
-        horizon = f"{horizon} ans"
-    tolerance = _get_val(profile, "risk_tolerance", "tolerance")
-    capacity = _get_val(profile, "risk_capacity", "capacity")
-    budget = _get_val(profile, "budget_cad", "budget")
-    if budget != "Non renseigné":
-        budget = f"{budget} CAD"
-    account_type = _get_val(profile, "account_type")
-    constraints = _format_list(_get_val(profile, "constraints", default=[]), default="Aucune contrainte stricte")
-    preferences = _format_list(_get_val(profile, "preferences", default=[]), default="Aucune préférence particulière")
-    holdings = _format_holdings(_get_val(profile, "current_holdings", "holdings", default=None))
-    notes = _get_val(profile, "notes", default="Aucune note")
 
     lines = [
         f"# Dossier d'investisseur : {clean_username}",
@@ -293,50 +267,33 @@ def _build_initial_dossier(
         "",
         "## Profil à la création",
         "",
-        f"- **Objectif :** {objective}",
-        f"- **Horizon :** {horizon}",
-        f"- **Tolérance au risque :** {tolerance}",
-        f"- **Capacité de risque :** {capacity}",
-        f"- **Budget :** {budget}",
-        f"- **Type de compte :** {account_type}",
-        f"- **Contraintes :** {constraints}",
-        f"- **Préférences :** {preferences}",
-        f"- **Avoirs actuels :** {holdings}",
-        f"- **Notes :** {notes}",
+        *_profile_lines_md(profile),
     ]
     return "\n".join(lines)
 
 
-def _build_profile_update_section(profile: dict[str, Any], updated_at: str) -> str:
-    objective = _get_val(profile, "objective")
-    horizon = _get_val(profile, "horizon_years", "horizon")
-    if horizon != "Non renseigné":
-        horizon = f"{horizon} ans"
-    tolerance = _get_val(profile, "risk_tolerance", "tolerance")
-    capacity = _get_val(profile, "risk_capacity", "capacity")
-    budget = _get_val(profile, "budget_cad", "budget")
-    if budget != "Non renseigné":
-        budget = f"{budget} CAD"
-    account_type = _get_val(profile, "account_type")
-    constraints = _format_list(_get_val(profile, "constraints", default=[]), default="Aucune contrainte stricte")
-    preferences = _format_list(_get_val(profile, "preferences", default=[]), default="Aucune préférence particulière")
-    holdings = _format_holdings(_get_val(profile, "current_holdings", "holdings", default=None))
-    notes = _get_val(profile, "notes", default="Aucune note")
-
-    lines = [
-        f"## Mise à jour du profil — {updated_at}",
-        "",
-        f"- **Objectif :** {objective}",
-        f"- **Horizon :** {horizon}",
-        f"- **Tolérance au risque :** {tolerance}",
-        f"- **Capacité de risque :** {capacity}",
-        f"- **Budget :** {budget}",
-        f"- **Type de compte :** {account_type}",
-        f"- **Contraintes :** {constraints}",
-        f"- **Préférences :** {preferences}",
-        f"- **Avoirs actuels :** {holdings}",
-        f"- **Notes :** {notes}",
-    ]
+def _build_profile_update_section(
+    profile: dict[str, Any],
+    updated_at: str,
+    version: int | None = None,
+    changes: dict[str, dict[str, Any]] | None = None,
+) -> str:
+    title = f"## Mise à jour du profil — {updated_at}"
+    if version is not None:
+        title = f"## Mise à jour du profil (version {version}) — {updated_at}"
+    lines = [title, ""]
+    if changes is not None:
+        lines.append("### Modifications par rapport à la version précédente")
+        lines.append("")
+        diff = diff_lines_fr(changes)
+        if diff:
+            lines.extend(f"- {d}" for d in diff)
+        else:
+            lines.append("- Aucune modification")
+        lines.append("")
+        lines.append("### Profil complet")
+        lines.append("")
+    lines.extend(_profile_lines_md(profile))
     return "\n".join(lines)
 
 
@@ -387,29 +344,12 @@ def _build_decision_section(
     ]
 
     if profile:
-        objective = _get_val(profile, "objective")
-        horizon = _get_val(profile, "horizon_years", "horizon")
-        if horizon != "Non renseigné":
-            horizon = f"{horizon} ans"
-        tolerance = _get_val(profile, "risk_tolerance", "tolerance")
-        capacity = _get_val(profile, "risk_capacity", "capacity")
-        budget = _get_val(profile, "budget_cad", "budget")
-        if budget != "Non renseigné":
-            budget = f"{budget} CAD"
-        account_type = _get_val(profile, "account_type")
-        constraints = _format_list(_get_val(profile, "constraints", default=[]), default="Aucune")
-        preferences = _format_list(_get_val(profile, "preferences", default=[]), default="Aucune")
-
-        lines.extend([
-            f"- **Objectif :** {objective}",
-            f"- **Horizon :** {horizon}",
-            f"- **Tolérance au risque :** {tolerance}",
-            f"- **Capacité de risque :** {capacity}",
-            f"- **Budget :** {budget}",
-            f"- **Type de compte :** {account_type}",
-            f"- **Contraintes :** {constraints}",
-            f"- **Préférences :** {preferences}",
-        ])
+        prof_dict = profile if isinstance(profile, dict) else profile.model_dump(mode="json")
+        lines.extend(
+            f"- **{label} :** {value}"
+            for label, value in profile_lines_fr(prof_dict)
+            if label not in ("Remarques", "Avoirs actuels")
+        )
     else:
         lines.append("- Aucun profil formellement attaché.")
 
@@ -566,7 +506,12 @@ def _create_dossier_unlocked(
     return content
 
 
-def _append_profile_update_unlocked(username: str, profile: dict[str, Any]) -> str:
+def _append_profile_update_unlocked(
+    username: str,
+    profile: dict[str, Any],
+    version: int | None = None,
+    changes: dict[str, dict[str, Any]] | None = None,
+) -> str:
     """Append a dated 'Mise à jour du profil' section to the user's dossier (creates if missing)."""
     store = get_dossier_store()
     existing = store.read_dossier(username)
@@ -574,7 +519,9 @@ def _append_profile_update_unlocked(username: str, profile: dict[str, Any]) -> s
         return _create_dossier_unlocked(username=username, profile=profile)
 
     now_utc = dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
-    section = _build_profile_update_section(profile=profile, updated_at=now_utc)
+    section = _build_profile_update_section(
+        profile=profile, updated_at=now_utc, version=version, changes=changes
+    )
     new_content = existing.rstrip() + "\n\n---\n\n" + section + "\n"
     store.write_dossier(username, new_content)
     return new_content
@@ -623,10 +570,15 @@ def create_dossier(
         return _create_dossier_unlocked(username, email, profile, raise_if_exists)
 
 
-def append_profile_update(username: str, profile: dict[str, Any]) -> str:
-    """Append a dated profile update (creates the dossier if missing)."""
+def append_profile_update(
+    username: str,
+    profile: dict[str, Any],
+    version: int | None = None,
+    changes: dict[str, dict[str, Any]] | None = None,
+) -> str:
+    """Append a dated profile update with its version and diff (creates the dossier if missing)."""
     with _write_lock:
-        return _append_profile_update_unlocked(username, profile)
+        return _append_profile_update_unlocked(username, profile, version, changes)
 
 
 def append_decision(

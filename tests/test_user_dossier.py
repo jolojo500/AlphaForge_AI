@@ -58,17 +58,21 @@ def test_dossier_creation_and_questionnaire_fields(clean_dossier_storage: LocalU
     assert "Date de création (UTC)" in content
     assert "amira@alphaforge.demo" in content
 
-    # All questionnaire fields must be present
-    assert "Objectif" in content and "growth" in content
+    # All questionnaire fields must be present, with French labels and no raw codes (#170)
+    assert "Objectif principal" in content and "Croissance du capital" in content
+    assert "growth" not in content
     assert "Horizon" in content and "15 ans" in content
-    assert "Tolérance au risque" in content and "high" in content
-    assert "Capacité de risque" in content and "moderate" in content
-    assert "Budget" in content and "100000 CAD" in content
+    assert "Tolérance au risque" in content and "Élevé" in content
+    assert "Capacité financière" in content and "Modérée" in content
+    assert "Capital simulé" in content and "100 000 $ CAD" in content
     assert "Type de compte" in content and "CELI" in content
     assert "Contraintes" in content and "crypto_max_10" in content
-    assert "Préférences" in content and "technology" in content
-    assert "Avoirs actuels" in content and "XIU" in content
-    assert "Notes" in content and "Intérêt marqué pour l'innovation" in content
+    assert "Secteurs et thématiques" in content and "technology" in content
+    assert "Avoirs actuels" in content and "XIU 50 %" in content
+    assert "Remarques" in content and "Intérêt marqué pour l'innovation" in content
+    # Unanswered questionnaire fields are listed as not provided rather than omitted
+    assert "Tranche d'âge :** Non renseigné" in content
+    assert "Place accordée aux cryptoactifs :** Non renseigné" in content
 
     # Verify read_dossier returns the exact same content
     read_content = read_dossier("amira")
@@ -85,7 +89,7 @@ def test_dossier_no_overwrite(clean_dossier_storage: LocalUserDossierStore):
         "budget_cad": 500000,
     }
     original_content = create_dossier("robert", email="robert@alphaforge.demo", profile=initial_profile)
-    assert "capital_preservation" in original_content
+    assert "Préservation du capital" in original_content
 
     # Attempt second create with different data
     new_profile = {
@@ -98,7 +102,7 @@ def test_dossier_no_overwrite(clean_dossier_storage: LocalUserDossierStore):
     # Dossier on disk/store must not be overwritten
     current = read_dossier("robert")
     assert current == original_content
-    assert "capital_preservation" in current
+    assert "Préservation du capital" in current
     assert "hacker@alphaforge.demo" not in current
     assert second_result == original_content
 
@@ -123,13 +127,21 @@ def test_append_profile_update(clean_dossier_storage: LocalUserDossierStore):
         "current_holdings": {"ESGV": 1.0},
         "notes": "Augmentation du capital d'apport.",
     }
-    updated_dossier = append_profile_update("mateo", updated_profile)
+    updated_dossier = append_profile_update(
+        "mateo",
+        updated_profile,
+        version=2,
+        changes={"objective": {"old": "balanced", "new": "growth"}, "budget_cad": {"old": 80000, "new": 120000}},
+    )
 
     assert "## Profil à la création" in updated_dossier
-    assert "## Mise à jour du profil" in updated_dossier
-    assert "120000 CAD" in updated_dossier
+    assert "## Mise à jour du profil (version 2)" in updated_dossier
+    assert "120 000 $ CAD" in updated_dossier
     assert "ESG strict" in updated_dossier
     assert "Augmentation du capital d'apport" in updated_dossier
+    # The dated diff lists each change with French labels, never raw codes
+    assert "Objectif principal : Croissance équilibrée et stabilité → Croissance du capital" in updated_dossier
+    assert "Capital simulé : 80 000 $ CAD → 120 000 $ CAD" in updated_dossier
 
 
 def test_append_decision_from_real_offline_run(clean_dossier_storage: LocalUserDossierStore):
@@ -436,8 +448,9 @@ def test_update_profile_endpoint_appends_dossier_via_api(clean_dossier_storage: 
     dossier = read_dossier("profileuser")
     assert dossier is not None
     assert "Mise à jour du profil" in dossier
-    assert "capital_preservation" in dossier
-    assert "250000 CAD" in dossier
+    assert "Préservation du capital" in dossier
+    assert "capital_preservation" not in dossier
+    assert "250 000 $ CAD" in dossier
     assert "Plan de retraite révisé" in dossier
 
 

@@ -18,7 +18,9 @@ import {
   fetchCurrentUser,
   logout,
   getAuthToken,
-  updateUserProfile,
+  saveQuestionnaire,
+  fetchUserProfile,
+  questionnaireOf,
 } from './api';
 import { ThemeProvider } from './components/ThemeProvider';
 import { LanguageProvider, useLanguage } from './context/LanguageContext';
@@ -78,12 +80,42 @@ export const AppContent: React.FC = () => {
   // Unsubscribe ref for SSE stream
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Verify auth session on mount
+  /**
+   * The saved server profile is the one profile (#170): when it holds a questionnaire, it
+   * replaces the local copy and the user lands on the query screen instead of the questionnaire.
+   */
+  const hydrateProfileFromServer = async (): Promise<boolean> => {
+    try {
+      const data = await fetchUserProfile();
+      const q = questionnaireOf(data);
+      if (!q) return false;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(q));
+      } catch (e) {
+        console.warn('Error saving to localStorage:', e);
+      }
+      setCustomProfile(q);
+      setActivePersonaId('custom');
+      setView((v) => (v === 'welcome' || v === 'onboarding' ? 'query' : v));
+      return true;
+    } catch (e) {
+      console.warn('Server profile fetch error:', e);
+      return false;
+    }
+  };
+
+  const handleAuthSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    void hydrateProfileFromServer();
+  };
+
+  // Verify auth session on mount, then restore the server profile (#170)
   useEffect(() => {
     if (getAuthToken()) {
       fetchCurrentUser()
         .then((res) => {
           setCurrentUser(res.user);
+          void hydrateProfileFromServer();
         })
         .catch(() => {
           setCurrentUser(null);
@@ -136,26 +168,26 @@ export const AppContent: React.FC = () => {
     return customProfile || DEMO_PERSONAS.robert.profile;
   })();
 
-  // Handle questionnaire completion
-  const handleOnboardingComplete = (profile: UserOnboardingProfile) => {
+  // Handle questionnaire completion: save locally and, when logged in, as the one server
+  // profile (full questionnaire + engine profile + holdings); the server returns the version.
+  const persistProfile = (profile: UserOnboardingProfile) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     } catch (e) {
       console.warn('Error saving to localStorage:', e);
     }
     setCustomProfile(profile);
+  };
+
+  const handleOnboardingComplete = (profile: UserOnboardingProfile) => {
+    persistProfile(profile);
     setActivePersonaId('custom');
-    if (getAuthToken()) {
-      updateUserProfile({
-        profile: {
-          objective: profile.primaryObjective,
-          horizon_years: parseInt(profile.firstWithdrawalHorizon.match(/\d+/)?.[0] || '10', 10),
-          risk_tolerance: profile.riskTolerance,
-          budget_cad: profile.simulatedCapital,
-          notes: profile.additionalNotes,
-        },
-        account_type: profile.accountType || null,
-      }).catch((e) => console.warn('Server profile sync error:', e));
+    if (getAuthToken() && currentUser) {
+      saveQuestionnaire(profile)
+        .then((res) => {
+          persistProfile({ ...profile, profileVersion: res.profile_version ?? profile.profileVersion ?? null });
+        })
+        .catch((e) => console.warn('Server profile sync error:', e));
     }
     setView('query');
   };
@@ -400,14 +432,13 @@ export const AppContent: React.FC = () => {
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
-          onSuccess={(user) => {
-            setCurrentUser(user);
-          }}
+          onSuccess={handleAuthSuccess}
         />
         <ProfileModal
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           currentUser={currentUser}
+          onEditQuestionnaire={() => setView('onboarding')}
         />
       </>
     );
@@ -452,14 +483,13 @@ export const AppContent: React.FC = () => {
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
-          onSuccess={(user) => {
-            setCurrentUser(user);
-          }}
+          onSuccess={handleAuthSuccess}
         />
         <ProfileModal
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
           currentUser={currentUser}
+          onEditQuestionnaire={() => setView('onboarding')}
         />
       </>
     );
@@ -583,14 +613,13 @@ export const AppContent: React.FC = () => {
           <AuthModal
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
-            onSuccess={(user) => {
-              setCurrentUser(user);
-            }}
+            onSuccess={handleAuthSuccess}
           />
           <ProfileModal
             isOpen={isProfileModalOpen}
             onClose={() => setIsProfileModalOpen(false)}
             currentUser={currentUser}
+            onEditQuestionnaire={() => setView('onboarding')}
           />
         </>
       );

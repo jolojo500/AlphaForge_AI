@@ -2,6 +2,17 @@ import React from 'react';
 import { CheckboxCard } from './CheckboxCard';
 import { RadioCard } from './RadioCard';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { AlertTriangle } from 'lucide-react';
+import {
+  CRYPTO_OPTIONS,
+  CURRENCY_OPTIONS,
+  ESG_OPTIONS,
+  EXCLUSION_OPTIONS,
+  SECTOR_OPTIONS,
+  codeOf,
+  codesOf,
+  questionnaireWarnings,
+} from '@/lib/questionnaireCodes';
 
 interface Step4Props {
   interestedSectors: string[];
@@ -28,57 +39,29 @@ export const Step4Preferences: React.FC<Step4Props> = ({
   currencyPreference,
   setCurrencyPreference,
 }) => {
-  const sectorOptions = [
-    'Technologies & IA',
-    'Banques & Finance',
-    'Dividendes & Services publics',
-    'Santé & Consommation',
-    'Obligations & Revenu fixe',
-    'Or & Valeurs refuges',
-    'Énergie & Ressources',
-    'Investissement responsable & ESG (tilt)',
-  ];
+  const sectors = codesOf('interestedSectors', interestedSectors);
+  const exclusions = codesOf('excludedCategories', excludedCategories);
+  const cryptoCode = codeOf('cryptoPreference', cryptoPreference);
+  const esgCode = codeOf('esgImportance', esgImportance);
+  const currencyCode = codeOf('currencyPreference', currencyPreference);
 
-  const cryptoOptions = [
-    'Exclusion totale (0 % crypto)',
-    'Exposition prudente / modérée (1 à 5 %)',
-    'Favorable / Ouvert (5 à 15 %)',
-    'Très favorable / Offensif (15 % et plus)',
-  ];
-
-  const esgOptions = [
-    'Prioritaire · Filtres stricts',
-    'Secondaire · Favoriser les mieux notés',
-    'Neutre · Performance financière pure',
-  ];
-
-  const exclusionChoices = [
-    'Énergies fossiles & controverses climatiques',
-    'Cryptoactifs & devises virtuelles',
-  ];
-
-  const currencyOptions = [
-    'Priorité CAD (Dollar canadien)',
-    'Mixte CAD / USD (Canadien & Américain)',
-    'Sans contrainte de devise',
-  ];
-
-  const toggleSector = (sector: string) => {
-    if (interestedSectors.includes(sector)) {
-      setInterestedSectors(interestedSectors.filter((s) => s !== sector));
-    } else {
-      setInterestedSectors([...interestedSectors, sector]);
-    }
+  const toggleSector = (code: string) => {
+    setInterestedSectors(sectors.includes(code) ? sectors.filter((s) => s !== code) : [...sectors, code]);
   };
 
-  const toggleExclusion = (item: string) => {
+  const toggleExclusion = (code: string) => {
     if (!setExcludedCategories) return;
-    if (excludedCategories.includes(item)) {
-      setExcludedCategories(excludedCategories.filter((e) => e !== item));
-    } else {
-      setExcludedCategories([...excludedCategories, item]);
-    }
+    setExcludedCategories(
+      exclusions.includes(code) ? exclusions.filter((e) => e !== code) : [...exclusions, code]
+    );
   };
+
+  const warnings = questionnaireWarnings({
+    cryptoPreference,
+    excludedCategories,
+    interestedSectors,
+    esgImportance,
+  });
 
   return (
     <div className="space-y-4">
@@ -97,12 +80,12 @@ export const Step4Preferences: React.FC<Step4Props> = ({
           Secteurs et thématiques d’intérêt <span className="text-destructive">*</span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {sectorOptions.map((opt) => (
+          {SECTOR_OPTIONS.map((opt) => (
             <CheckboxCard
-              key={opt}
-              label={opt}
-              checked={interestedSectors.includes(opt)}
-              onToggle={() => toggleSector(opt)}
+              key={opt.code}
+              label={opt.label}
+              checked={sectors.includes(opt.code)}
+              onToggle={() => toggleSector(opt.code)}
             />
           ))}
         </div>
@@ -113,13 +96,13 @@ export const Step4Preferences: React.FC<Step4Props> = ({
         <label className="block text-xs font-medium text-foreground mb-1.5">
           Place accordée aux cryptoactifs <span className="text-destructive">*</span>
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {cryptoOptions.map((opt) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {CRYPTO_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={cryptoPreference === opt}
-              onClick={() => setCryptoPreference(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={cryptoCode === opt.code}
+              onClick={() => setCryptoPreference(opt.code)}
             />
           ))}
         </div>
@@ -131,15 +114,15 @@ export const Step4Preferences: React.FC<Step4Props> = ({
           <label className="text-xs font-medium text-foreground">
             Critères environnementaux, sociaux et gouvernance (ESG) <span className="text-destructive">*</span>
           </label>
-          <InfoTooltip content="ESG : Critères évaluant l'impact environnemental, social et la gouvernance d'une entreprise." />
+          <InfoTooltip content="ESG : Critères évaluant l'impact environnemental, social et la gouvernance d'une entreprise. « Secondaire » favorise la part détenue par le FNB ESGV sans exclure de titres." />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {esgOptions.map((opt) => (
+          {ESG_OPTIONS.map((opt) => (
             <RadioCard
-              key={opt}
-              label={opt}
-              selected={esgImportance === opt}
-              onClick={() => setEsgImportance(opt)}
+              key={opt.code}
+              label={opt.label}
+              selected={esgCode === opt.code}
+              onClick={() => setEsgImportance(opt.code)}
             />
           ))}
         </div>
@@ -152,12 +135,12 @@ export const Step4Preferences: React.FC<Step4Props> = ({
             Exclusions éthiques ou sectorielles spécifiques (facultatif)
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {exclusionChoices.map((item) => (
+            {EXCLUSION_OPTIONS.map((opt) => (
               <CheckboxCard
-                key={item}
-                label={item}
-                checked={excludedCategories.includes(item)}
-                onToggle={() => toggleExclusion(item)}
+                key={opt.code}
+                label={opt.label}
+                checked={exclusions.includes(opt.code)}
+                onToggle={() => toggleExclusion(opt.code)}
               />
             ))}
           </div>
@@ -171,15 +154,29 @@ export const Step4Preferences: React.FC<Step4Props> = ({
             Devise & marché d’ancrage <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {currencyOptions.map((opt) => (
+            {CURRENCY_OPTIONS.map((opt) => (
               <RadioCard
-                key={opt}
-                label={opt}
-                selected={currencyPreference === opt}
-                onClick={() => setCurrencyPreference(opt)}
+                key={opt.code}
+                label={opt.label}
+                selected={currencyCode === opt.code}
+                onClick={() => setCurrencyPreference(opt.code)}
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {warnings.length > 0 && (
+        <div
+          role="alert"
+          className="p-3 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs space-y-1"
+        >
+          {warnings.map((w) => (
+            <p key={w} className="flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>{w}</span>
+            </p>
+          ))}
         </div>
       )}
     </div>
