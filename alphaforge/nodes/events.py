@@ -261,12 +261,13 @@ def _select(items: list[NewsItem], as_of: dt.date) -> list[NewsItem]:
     """Drop look-ahead and duplicates, interleave tickers, cap at MAX_CLASSIFIED.
 
     Duplicates: same filing (accession id) or same URL; the same story from two outlets on
-    the same day; and repeated filings of one company with an identical title, where only
-    the most recent is kept (a run of identical "Form 8-K" lines reads as a duplicate).
+    the same day; and repeated filings of one company with an identical title on the same
+    day, where only one is kept. Two quarterly 8-Ks with the same item list on different
+    dates are distinct filings and both stay (#186, item 9).
     """
     uniq: dict[str, NewsItem] = {}
     titles: set[tuple[str, str, dt.date]] = set()
-    filing_titles: set[tuple[str, str]] = set()
+    filing_titles: set[tuple[str, str, dt.date]] = set()
     ordered = sorted(
         (i for i in items if i.published_date is not None and i.published_date <= as_of),
         key=lambda x: (x.published_at, x.url or ""),
@@ -279,9 +280,9 @@ def _select(items: list[NewsItem], as_of: dt.date) -> list[NewsItem]:
         if key in uniq:
             continue
         if i.provider == "sec_edgar":
-            if (i.ticker, title) in filing_titles:
-                continue  # an older filing with the same title as one already kept
-            filing_titles.add((i.ticker, title))
+            if (i.ticker, title, d) in filing_titles:
+                continue  # a same-day filing with the same title as one already kept
+            filing_titles.add((i.ticker, title, d))
         elif (i.ticker, title, d) in titles:
             continue  # same story from another outlet
         titles.add((i.ticker, title, d))

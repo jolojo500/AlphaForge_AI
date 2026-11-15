@@ -31,6 +31,7 @@ from alphaforge.tax import (
     REGISTERED_ACCOUNTS,
     en_money,
     fr_money,
+    listed_crypto_vehicles,
     tfsa_room_check,
     tfsa_room_for_band,
     tfsa_room_sentences,
@@ -368,7 +369,12 @@ def _eligibility_entry(profile: Profile, sc: Scenario, evidence: dict[str, Evide
     if account not in REGISTERED_ACCOUNTS:
         return None
     u = _universe()
-    spot = sorted(t for t, w in sc.weights.items() if w > EPS and u.get(t, {}).get("asset_class") == "crypto")
+    # Crypto held or asked for through a listed ETF is analysed through its spot proxy but
+    # is a qualified investment (#186, item 2): only the spot part counts.
+    vehicles = listed_crypto_vehicles(profile.current_holdings, profile.requested_vehicle)
+    crypto = sorted(t for t, w in sc.weights.items() if w > EPS and u.get(t, {}).get("asset_class") == "crypto")
+    spot = [t for t in crypto if t not in vehicles]
+    via_etf = {t: vehicles[t] for t in crypto if t in vehicles}
     held = sum(float(sc.weights[t]) for t in spot)
     eids = _find_evidence(
         evidence, "ES", lambda e: (e.method or "").startswith("account eligibility")
@@ -390,14 +396,35 @@ def _eligibility_entry(profile: Profile, sc: Scenario, evidence: dict[str, Evide
         )
         return _entry("account_eligibility", label_fr, label_en, sc.name, account,
                       round(held, 6), "breach", eids, fr, en, tickers=spot)
+    if via_etf:
+        etf_share = sum(float(sc.weights[t]) for t in via_etf)
+        desc = ", ".join(f"{', '.join(etfs)} → {t}" for t, etfs in sorted(via_etf.items()))
+        fr = _cap(
+            f"{v_fr} contient {fr_pct(etf_share)} de cryptoactifs via un FNB coté ({desc}), "
+            f"placement admissible dans un {acc_fr} ; le FNB est analysé à travers son "
+            "sous-jacent (hypothèse). Aucun cryptoactif détenu directement."
+        )
+        en = _cap(
+            f"{v_en} holds {en_pct(etf_share)} in cryptoassets through a listed ETF ({desc}), "
+            f"a qualified investment in a {acc_en}; the ETF is analysed through its "
+            "underlying (assumption). No directly held cryptoasset."
+        )
+        return _entry("account_eligibility", label_fr, label_en, sc.name, account, 0.0, "ok",
+                      eids, fr, en, via_etf=via_etf)
     fr = _cap(f"{v_fr} ne contient aucun cryptoactif détenu directement, non admissible dans un {acc_fr}.")
     en = _cap(f"{v_en} holds no directly held cryptoasset, which a {acc_en} cannot hold.")
     return _entry("account_eligibility", label_fr, label_en, sc.name, account, 0.0, "ok", eids, fr, en)
 
 
 def tfsa_room_entry(profile: Profile, evidence: dict[str, Evidence]) -> dict | None:
-    """One entry (scenario None) comparing a TFSA budget with the age band's maximum room."""
+    """One entry (scenario None) comparing a STATED TFSA budget with the age band's maximum room.
+
+    A budget inferred from the dollar total of the holdings is a balance, which can exceed
+    the cumulative room through growth: it is never compared (#186, item 3).
+    """
     if (profile.account_type or "").lower() != "tfsa" or not profile.budget_cad:
+        return None
+    if profile.budget_inferred:
         return None
     room = tfsa_room_for_band(profile.age_band)
     if room is None:

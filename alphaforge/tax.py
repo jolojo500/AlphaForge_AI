@@ -133,13 +133,27 @@ TFSA_ANNUAL_LIMITS: dict[int, int] = {
     2024: 7000, 2025: 7000, 2026: 7000,
 }
 TFSA_ROOM_AS_OF_YEAR: int = 2026
+# Stated in the EK evidence: the room is computed as if the birthday had already passed in
+# the as-of year (a person born late in the year turned 18 one year earlier and would have
+# one more annual limit of room).
+TFSA_ROOM_ASSUMPTION_FR: str = (
+    "hypothèse : l'anniversaire est déjà passé dans l'année d'analyse (une personne née en fin "
+    "d'année a eu 18 ans un an plus tôt et disposerait d'un plafond annuel de plus)"
+)
 TFSA_ROOM_SOURCE: str = "Agence du revenu du Canada (plafonds annuels de cotisation au CELI)"
 TFSA_ROOM_URL: str = TFSA_URL
 
 
 def tfsa_room_for_age(age: int, year: int = TFSA_ROOM_AS_OF_YEAR) -> int:
     """Maximum cumulative TFSA room at `age` in `year` (resident and eligible throughout,
-    no contribution and no withdrawal counted)."""
+    no contribution and no withdrawal counted).
+
+    Assumption: the person has already had their birthday in `year`, so they turned 18 in
+    `year - age + 18`. Someone aged 29 in 2026 born in December 1996 turned 18 in 2014 and
+    would have 83 500 $, not 78 000 $; the figure here is the smaller of the two, which is
+    the one the age-band check needs (a stated amount above it is above the room for the
+    whole band). The assumption is stated in the EK evidence (`tfsa_room_evidence`).
+    """
     if age < 18:
         return 0
     first = max(min(TFSA_ANNUAL_LIMITS), year - age + 18)
@@ -168,7 +182,8 @@ def _band_oldest_age(age_band: str | None) -> int | None:
 def tfsa_room_for_band(age_band: str | None, year: int = TFSA_ROOM_AS_OF_YEAR) -> int | None:
     """Maximum cumulative TFSA room for the OLDEST age of the band, None if the band is unknown.
 
-    "18-29" in 2026: turned 18 in 2015 at the earliest, so 78 000 $.
+    "18-29" in 2026: turned 18 in 2015 at the earliest (birthday already passed, see
+    `tfsa_room_for_age`), so 78 000 $.
     """
     oldest = _band_oldest_age(age_band)
     return None if oldest is None else tfsa_room_for_age(oldest, year)
@@ -228,16 +243,53 @@ def tfsa_room_evidence(check: dict, as_of: dt.date) -> dict:
             "budget_cad": check["budget"],
             "excess_cad": check["excess"],
             "value": fr,
+            "assumption": TFSA_ROOM_ASSUMPTION_FR,
         },
         "source": TFSA_ROOM_SOURCE,
         "url": TFSA_ROOM_URL,
         "date": as_of,
         "method": (
             "somme des plafonds annuels CELI depuis l'année des 18 ans (2009 au plus tôt) "
-            "pour l'âge le plus élevé de la tranche, sans cotisation ni retrait antérieurs"
+            "pour l'âge le plus élevé de la tranche, sans cotisation ni retrait antérieurs ; "
+            + TFSA_ROOM_ASSUMPTION_FR
         ),
         "confidence": "assumption",
     }
+
+
+def listed_crypto_vehicles(
+    current_holdings: dict[str, float] | None, requested_vehicle: str | None
+) -> dict[str, list[str]]:
+    """{spot proxy ticker: [listed crypto ETFs]} for crypto that is held or asked for THROUGH
+    a listed ETF (BTCC.B.TO, IBIT, ETHH.TO...), as in `COMMON_PROXIES` and `LISTED_CRYPTO_ETFS`.
+
+    The ETF is analysed through its spot underlying (BTC-USD / ETH-USD), but the ETF itself is
+    a qualified investment in a TFSA, RRSP or FHSA: the spot-crypto exclusion must not apply
+    to it. A holding typed as "BTC-USD" or "BTC" is spot and is not returned here.
+    """
+    from alphaforge.holdings import COMMON_PROXIES
+
+    out: dict[str, list[str]] = {}
+    names = [str(k) for k in (current_holdings or {})]
+    if requested_vehicle:
+        names.append(str(requested_vehicle))
+    for raw in names:
+        key = raw.strip().upper().replace("$", "")
+        if not key:
+            continue
+        candidates = (key, key.removesuffix(".TO"), f"{key}.TO")
+        proxy = next(
+            (
+                table[c]
+                for c in candidates
+                for table in (LISTED_CRYPTO_ETFS, COMMON_PROXIES)
+                if c in table and is_spot_crypto(table[c])
+            ),
+            None,
+        )
+        if proxy and key not in out.get(proxy, []):
+            out.setdefault(proxy, []).append(key)
+    return out
 
 
 def is_spot_crypto(ticker: str, asset_class: str | None = None) -> bool:
