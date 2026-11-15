@@ -304,23 +304,16 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
         raise HTTPException(status_code=400, detail="Parent profile is not established")
 
     try:
-        if req.field == "as_of_date":
-            as_of = (
-                dt.date.fromisoformat(req.value)
-                if isinstance(req.value, str)
-                else req.value
-            )
-            new_profile = parent_state.profile
-        else:
-            as_of = parent_state.as_of_date
-            new_profile = apply_change(parent_state.profile, req.field, req.value)
+        inputs = prepare_whatif_inputs(
+            parent_state, {"field": req.field, "value": req.value}
+        )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
     child_run = store.create(
-        persona=parent_state.persona,
-        request_text=parent_state.request_text,
-        as_of_date=as_of,
+        persona=inputs["persona"],
+        request_text=inputs["request_text"],
+        as_of_date=inputs["as_of_date"],
     )
     child_run.parent_run_id = parent.run_id
     child_run.change = {"field": req.field, "value": req.value}
@@ -328,12 +321,7 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
     start_run_thread(
         child_run,
         stream_run,
-        initial_state(
-            child_run.persona,
-            child_run.request_text,
-            child_run.as_of_date,
-            profile=new_profile,
-        ),
+        inputs,
         child_run.run_id,
     )
 

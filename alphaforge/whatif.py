@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any
 
-from alphaforge.graph import run
+from alphaforge.graph import initial_state, run
 from alphaforge.state import (
     SCENARIO_NAMES,
     Evidence,
@@ -13,13 +13,6 @@ from alphaforge.state import (
     Profile,
     Scenario,
 )
-
-SINGLE_STOCK_CAPS: dict[str, float] = {
-    "high": 0.10,
-    "moderate": 0.07,
-    "low_moderate": 0.05,
-    "low": 0.03,
-}
 
 
 def apply_change(
@@ -57,12 +50,11 @@ def apply_change(
     raise ValueError(f"Unsupported what-if field: {field}")
 
 
-def rerun(
+def prepare_whatif_inputs(
     state: GraphState,
     change: dict[str, Any] | tuple[str, Any],
-    thread_id: str | None = None,
-) -> GraphState:
-    """Rerun the graph with the modified profile, entering at screening (skipping Agent 1)."""
+) -> dict[str, Any]:
+    """Prepare initial_state dictionary for a what-if rerun."""
     if isinstance(change, tuple):
         field, value = change
     else:
@@ -82,37 +74,28 @@ def rerun(
         as_of = state.as_of_date
         new_profile = apply_change(state.profile, field, value)
 
-    new_state = run(
+    return initial_state(
         persona=state.persona,
         request_text=state.request_text,
         as_of_date=as_of,
         profile=new_profile,
-        thread_id=thread_id,
     )
 
-    # Reconcile stub scenarios if stub scenario builder is active
-    for sc in new_state.scenarios:
-        # Excluded tickers must not remain in any scenario
-        if new_profile.excluded_tickers:
-            for ex in new_profile.excluded_tickers:
-                if ex in sc.weights:
-                    del sc.weights[ex]
-            total = sum(sc.weights.values())
-            if total > 0:
-                sc.weights = {k: round(v / total, 6) for k, v in sc.weights.items()}
 
-        # Caps adjustment when tolerance changes
-        if sc.name == "capped" and new_profile.requested_idea:
-            ticker = new_profile.requested_idea["ticker"]
-            cap = SINGLE_STOCK_CAPS.get(new_profile.risk_tolerance, 0.05)
-            target_w = min(new_profile.requested_idea["weight"], cap)
-            if ticker in sc.weights and sc.weights[ticker] != target_w:
-                rest = [t for t in sc.weights if t != ticker]
-                if rest:
-                    rem = 1.0 - target_w
-                    sc.weights = {t: round(rem / len(rest), 6) for t in rest} | {ticker: target_w}
-
-    return new_state
+def rerun(
+    state: GraphState,
+    change: dict[str, Any] | tuple[str, Any],
+    thread_id: str | None = None,
+) -> GraphState:
+    """Rerun the graph with the modified profile, entering at screening (skipping Agent 1)."""
+    inputs = prepare_whatif_inputs(state, change)
+    return run(
+        persona=inputs["persona"],
+        request_text=inputs["request_text"],
+        as_of_date=inputs["as_of_date"],
+        profile=inputs["profile"],
+        thread_id=thread_id,
+    )
 
 
 def _get_metric_num(ev: Evidence | None) -> float | None:
