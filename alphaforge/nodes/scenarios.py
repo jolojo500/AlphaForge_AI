@@ -697,13 +697,14 @@ def scenarios_node(state: GraphState) -> dict:
         }
 
     # Pass 1: standard risk metrics (EP2..EP7, EP8..EP13, EP14..EP19)
+    price_source = getattr(provider, "evidence_source", SOURCE)
     base_metrics = [m for m in SCENARIO_METRICS if m not in ("tax_drag", "fee_drag")]
     for name in SCENARIO_NAMES:
         values = all_values[name]
         for m in base_metrics:
             scenario_ids[name][m] = reg.add(
                 {"metric": m, "scenario": name, "value": values[m], "unit": "ratio"},
-                source=SOURCE,
+                source=price_source,
                 date=end,
                 method=f"{METHODS[m]}, historical backtest of fictional weights, {window}",
                 confidence="fact" if values[m] is not None else "assumption",
@@ -896,7 +897,7 @@ def scenarios_node(state: GraphState) -> dict:
                         "unit": "ratio",
                         "disclaimer": "historique, pas une prévision",
                     },
-                    source=SOURCE,
+                    source=price_source,
                     date=end,
                     method=f"Rolling 1-year historical window ({stats_1y['windows_count']} windows), CAD. Historique, pas une prévision.",
                     confidence="fact",
@@ -912,7 +913,7 @@ def scenarios_node(state: GraphState) -> dict:
                         "unit": "ratio",
                         "disclaimer": "historique, pas une prévision",
                     },
-                    source=SOURCE,
+                    source=price_source,
                     date=end,
                     method=f"Rolling 3-year historical window ({stats_3y['windows_count']} windows), CAD. Historique, pas une prévision.",
                     confidence="fact",

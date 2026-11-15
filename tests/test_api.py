@@ -37,7 +37,11 @@ def test_health():
     client = TestClient(app)
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert data["data_provider"] == "csv"
+    assert data["data_as_of"] == "2026-11-12"
+    assert data["fallback"] is False
 
 
 def test_personas():

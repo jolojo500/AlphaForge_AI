@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
+from alphaforge import config
 from alphaforge.auth import (
     User,
     authenticate_user,
@@ -31,6 +32,7 @@ from alphaforge.auth import (
     register_user,
     require_advisor,
 )
+from alphaforge.data.provider import get_provider
 from alphaforge.graph import (
     _cfg,
     get_graph,
@@ -434,6 +436,18 @@ async def lifespan(_: FastAPI):
             pull_caches(bucket_name=bucket)
         except Exception:
             logging.exception("Failed to pull caches from S3 bucket %s", bucket)
+
+    def _warm_provider_cache() -> None:
+        try:
+            provider = get_provider()
+            if hasattr(provider, "warm_cache"):
+                provider.warm_cache()
+        except Exception:
+            logging.exception("Failed to warm data provider cache")
+
+    threading.Thread(
+        target=_warm_provider_cache, daemon=True, name="af-cache-warm"
+    ).start()
     yield
 
 
@@ -555,8 +569,21 @@ def _custom_persona(data: dict[str, Any], request_text: str) -> dict[str, Any]:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, Any]:
+    provider = get_provider()
+    provider_name = getattr(provider, "name", "csv")
+    fallback = getattr(provider, "fallback", False)
+    data_as_of = getattr(provider, "data_as_of", config.DEFAULT_AS_OF)
+    if isinstance(data_as_of, dt.date):
+        as_of_str = data_as_of.isoformat()
+    else:
+        as_of_str = str(data_as_of)
+    return {
+        "status": "ok",
+        "data_provider": provider_name,
+        "data_as_of": as_of_str,
+        "fallback": fallback,
+    }
 
 
 @app.get("/personas")
@@ -778,10 +805,13 @@ def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
         raise HTTPException(status_code=400, detail="request_text is limited to 4000 characters")
     _rate_limit(request)
     owner = _owner(request)
+    as_of = req.as_of_date or getattr(
+        get_provider(), "default_as_of", config.DEFAULT_AS_OF
+    )
     run = store.create(
         persona=persona,
         request_text=req.request_text,
-        as_of_date=req.as_of_date,
+        as_of_date=as_of,
     )
     run.owner = owner
     start_run_thread(

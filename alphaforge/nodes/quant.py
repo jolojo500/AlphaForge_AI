@@ -197,11 +197,12 @@ def quant_node(state: GraphState) -> dict:
         return {"evidence": reg.items(), "summary": "Aucun actif à analyser."}
 
     prices = provider.prices_cad(tickers, as_of)
+    price_source = getattr(provider, "evidence_source", SOURCE)
     if len(prices) < MIN_OBS + 1:
         reg.add(
             f"Historique trop court au {as_of} ({len(prices)} jours de cotation) : "
             "statistiques de risque non calculées.",
-            source=SOURCE,
+            source=price_source,
             date=as_of,
             method=f"minimum {MIN_OBS} daily returns required",
             confidence="assumption",
@@ -215,7 +216,7 @@ def quant_node(state: GraphState) -> dict:
     def add(metric: str, key: str, subject, val: float, method: str) -> None:
         reg.add(
             {"metric": metric, key: subject, "value": _r4(val), "unit": "ratio"},
-            source=SOURCE,
+            source=price_source,
             date=end,
             method=method,
         )
