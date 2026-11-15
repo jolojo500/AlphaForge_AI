@@ -7,10 +7,13 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
+import os
 import sys
 import uuid
 from collections.abc import Iterator
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
@@ -77,7 +80,8 @@ def build_graph(checkpointer=None):
     g.add_conditional_edges("red_team", _after_red_team, ["scenarios", "explain"])
     g.add_edge("explain", "verifier")
     g.add_conditional_edges("verifier", _after_verifier, ["explain", END])
-    return g.compile(checkpointer=checkpointer or MemorySaver(serde=_serde()))
+    cp = checkpointer if checkpointer is not None else get_checkpointer()
+    return g.compile(checkpointer=cp)
 
 
 def _serde() -> JsonPlusSerializer:
@@ -86,14 +90,79 @@ def _serde() -> JsonPlusSerializer:
     return JsonPlusSerializer(allowed_msgpack_modules=models)
 
 
+def ensure_checkpoints_table(table_name: str, region_name: str = "us-east-1") -> None:
+    """Ensure the DynamoDB checkpoints table exists with PK (HASH) and SK (RANGE)."""
+    import boto3
+    from botocore.exceptions import ClientError
+
+    try:
+        client = boto3.client("dynamodb", region_name=region_name)
+        client.describe_table(TableName=table_name)
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ResourceNotFoundException":
+            client.create_table(
+                TableName=table_name,
+                KeySchema=[
+                    {"AttributeName": "PK", "KeyType": "HASH"},
+                    {"AttributeName": "SK", "KeyType": "RANGE"},
+                ],
+                AttributeDefinitions=[
+                    {"AttributeName": "PK", "AttributeType": "S"},
+                    {"AttributeName": "SK", "AttributeType": "S"},
+                ],
+                BillingMode="PAY_PER_REQUEST",
+            )
+            waiter = client.get_waiter("table_exists")
+            waiter.wait(TableName=table_name)
+        else:
+            raise
+
+
+def get_checkpointer(backend: str | None = None) -> BaseCheckpointSaver:
+    """Return configured checkpointer.
+
+    Selected by AF_CHECKPOINTER=dynamodb (its own switch, independent of the trace store,
+    so it can be turned off on its own); MemorySaver by default, for local runs and tests.
+    """
+    selected_backend = (backend or os.getenv("AF_CHECKPOINTER", "memory")).lower()
+    if selected_backend == "dynamodb":
+        import boto3
+        from langgraph_checkpoint_aws import DynamoDBSaver
+        from langgraph_checkpoint_aws.checkpoint.dynamodb.serialization import (
+            CheckpointSerializer,
+        )
+
+        table_name = os.getenv("AF_CHECKPOINTS_TABLE", "alphaforge-checkpoints")
+        region_name = os.getenv("AWS_REGION", "us-east-1")
+        try:
+            ensure_checkpoints_table(table_name, region_name=region_name)
+        except Exception:  # noqa: BLE001
+            logging.warning("Could not verify or create checkpoints table %s", table_name)
+
+        session = boto3.Session(region_name=region_name)
+        saver = DynamoDBSaver(table_name=table_name, session=session)
+        serde = _serde()
+        saver.serde = serde
+        saver.serializer = CheckpointSerializer(serde, False)
+        saver.repo.serializer = saver.serializer
+        return saver
+
+    return MemorySaver(serde=_serde())
+
+
 _GRAPH = None
 
 
-def get_graph():
+def get_graph(checkpointer=None, force_rebuild: bool = False):
     global _GRAPH
-    if _GRAPH is None:
-        _GRAPH = build_graph()
+    if _GRAPH is None or force_rebuild or checkpointer is not None:
+        _GRAPH = build_graph(checkpointer=checkpointer)
     return _GRAPH
+
+
+def set_graph(graph=None) -> None:
+    global _GRAPH
+    _GRAPH = graph
 
 
 def initial_state(

@@ -20,6 +20,7 @@ dependencies = [
     { name = "httpx" },
     { name = "langchain-aws" },
     { name = "langgraph" },
+    { name = "langgraph-checkpoint-aws" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "pydantic" },
@@ -42,6 +43,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "langchain-aws", specifier = ">=0.2.10" },
     { name = "langgraph", specifier = ">=0.2.60" },
+    { name = "langgraph-checkpoint-aws", specifier = ">=1.2.7" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pandas", specifier = ">=2.2" },
     { name = "pydantic", specifier = ">=2.7" },
@@ -642,6 +644,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/27/1e/8c885180ba6a57bff177b9ecb2e273aa32d9d29a093ba0a5214ef8f5136f/langgraph_checkpoint-4.3.2.tar.gz", hash = "sha256:fcab8468c7e965d7055e2a35c253d73a145624ef4728b150ca7c361f4afca286", size = 185401, upload-time = "2026-11-14T01:31:05.25Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d5/f1/c84ac1431857640bfb9ea811a58ab5b9c040da3842fd1bcf080655184db0/langgraph_checkpoint-4.3.2-py3-none-any.whl", hash = "sha256:60e02eb2c2eefc4c22fb1549f1c90b85ce9617377604596c5f34fbd6af0bd6e9", size = 58321, upload-time = "2026-11-14T01:31:03.733Z" },
+]
+
+[[package]]
+name = "langgraph-checkpoint-aws"
+version = "1.2.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "boto3" },
+    { name = "langgraph" },
+    { name = "langgraph-checkpoint" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/3c/ce4a34f1aa26fed623576b75529b878881410f83abeda639c16e8c8db713/langgraph_checkpoint_aws-1.2.7.tar.gz", hash = "sha256:d46cbf1541c49fe0f5e06b8b281b8ad4a3d5df5c0e5d05d1ee4f5c5ac9f1c63e", size = 371137, upload-time = "2026-11-06T00:23:08.538Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/ce/fa7f413fbece727470ad0a919c4dfdbd18fcfb191137e978fefe97acd58c/langgraph_checkpoint_aws-1.2.7-py3-none-any.whl", hash = "sha256:8f348a0be4076cd55b12db8f9baf8f5cc3cc3d11cb06c3186eb7d0d149e40063", size = 192663, upload-time = "2026-11-06T00:23:07.214Z" },
 ]
 
 [[package]]
