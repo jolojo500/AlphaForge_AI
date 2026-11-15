@@ -290,10 +290,15 @@ def register_user(username: str, password: str, email: str | None = None) -> dic
         logger.warning("Cognito sign_up failed: %s", e)
         raise HTTPException(status_code=503, detail="La création de compte est indisponible pour le moment.") from e
     if not resp.get("UserConfirmed"):
-        raise HTTPException(
-            status_code=403,
-            detail="Compte créé, mais il doit être confirmé avant la première connexion.",
-        )
+        # Demo pool: the email is optional and unverified, so the server confirms the account.
+        try:
+            client.admin_confirm_sign_up(UserPoolId=COGNITO_USER_POOL_ID, Username=username)
+        except Exception as e:
+            logger.warning("Cognito admin_confirm_sign_up failed: %s", e)
+            raise HTTPException(
+                status_code=403,
+                detail="Compte créé, mais il doit être confirmé avant la première connexion.",
+            ) from e
     return authenticate_user(username, password)
 
 
