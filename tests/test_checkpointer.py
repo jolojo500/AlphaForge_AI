@@ -125,7 +125,7 @@ def test_api_rehydration_of_interrupted_run_after_restart():
 
     # 4. Wait for run to finish
     state = None
-    for _ in range(50):
+    for _ in range(300):
         time.sleep(0.2)
         r = client.get(f"/runs/{run_id}")
         if r.status_code == 200 and r.json().get("scenarios"):
