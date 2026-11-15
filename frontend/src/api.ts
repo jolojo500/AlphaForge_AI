@@ -79,7 +79,7 @@ function clientId(): string {
   }
 }
 
-function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+export function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set('X-Client-Id', clientId());
   const token = getAuthToken();
