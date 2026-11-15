@@ -27,11 +27,21 @@ from alphaforge.costs import (
     fx_conversion_cost,
     fx_conversion_evidence,
 )
+from alphaforge.data.index_history import (
+    SOURCE_URL as INDEX_SOURCE_URL,
+)
+from alphaforge.data.index_history import (
+    load_index_history,
+    proxy_drawdown,
+    proxy_label,
+    proxy_shares,
+    proxy_stress,
+)
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.nodes.quant import (
+    OTHER_SECTOR,
     concentration,
-    effective_sectors,
     max_drawdown,
     stress_2022,
     usd_exposure,
@@ -97,17 +107,40 @@ METHODS = {
     "max_drawdown": "largest peak-to-trough fall of the scenario value, CAD",
     "stress_2022": "total return of the scenario in CAD over 2022-01-03..2022-12-30",
     "top_weight": "largest single weight in the scenario",
-    "sector_concentration_hhi": "Herfindahl index of the weights by universe sector label",
-    "us_exposure": "weight in US-listed assets (crypto not counted)",
+    "sector_concentration_hhi": "Herfindahl index of the sector weights after looking through ETF holdings "
+    "(SPY, QQQ, ESGV, XIU.TO replaced by their cached holdings; a holding outside the universe counts "
+    f"as '{OTHER_SECTOR}'); decimal, effective sectors = 1 / HHI",
+    "us_exposure": "look-through weight in US-listed names, ETF holdings included (crypto not counted)",
     "tax_drag": "estimated annual tax drag based on historical dividend/interest yields and account tax rules",
     "fee_drag": "weighted average management expense ratio (MER) across holdings",
     "esg_proxy_share": "part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect)",
     "currency_usd_exposure": "share of the weights in assets priced in USD (BTC-USD and ETH-USD count as USD)",
-    "effective_sectors": "1 / Herfindahl index of the weights by universe sector label",
-    "all_in_cost": "fee drag + one-time FX conversion cost on the USD-priced share + estimated annual tax drag",
+    "effective_sectors": "1 / Herfindahl index of the sector weights after looking through ETF holdings "
+    "(≈ N secteurs effectifs)",
+    "all_in_cost": "annual ratio: fee drag + estimated annual tax drag + the one-time FX conversion cost on "
+    "the USD-priced share amortised over the profile horizon (min 1 year)",
+    "canada_exposure": "look-through weight in TSX-listed names, ETF holdings included",
+    "top_name_exposure": "largest look-through exposure to a single name: held directly plus via ETF holdings",
+    "max_drawdown_long_proxy": "largest peak-to-trough fall of a monthly-rebalanced proxy portfolio built "
+    "from long index histories mapped from the scenario's US-equity / Canadian-equity / bond shares",
+    "stress_2000_02_proxy": "total return of the index-proxy portfolio over the dot-com bear market, "
+    "month-ends 2000-03-31..2002-09-30",
+    "stress_2008_proxy": "total return of the index-proxy portfolio over the 2008 financial crisis, "
+    "month-ends 2007-10-31..2009-02-28",
 }
-EXTRA_METRICS: tuple[str, ...] = ("currency_usd_exposure", "effective_sectors", "all_in_cost")
-EXTRA_UNITS = {"currency_usd_exposure": "ratio", "effective_sectors": "count", "all_in_cost": "ratio"}
+EXTRA_METRICS: tuple[str, ...] = (
+    "currency_usd_exposure", "effective_sectors", "all_in_cost", "canada_exposure", "top_name_exposure",
+)
+EXTRA_UNITS = {
+    "currency_usd_exposure": "ratio", "effective_sectors": "count", "all_in_cost": "ratio",
+    "canada_exposure": "ratio", "top_name_exposure": "ratio",
+}
+PROXY_METRICS: tuple[str, ...] = ("max_drawdown_long_proxy", "stress_2000_02_proxy", "stress_2008_proxy")
+SURVIVORSHIP_NOTE_FR = (
+    "Biais du survivant : l'univers ne contient que des actifs encore cotés aujourd'hui et l'historique "
+    "de prix commence en 2021-11 ; les rendements historiques glissants et les pertes maximales ci-contre "
+    "peuvent paraître meilleurs que ce qu'un investisseur aurait vécu (historique, pas une prévision)."
+)
 
 
 # --- caps ---------------------------------------------------------------------------------
@@ -274,6 +307,9 @@ def limit_lines(
     A minimum-variance scenario starts from the lines already at `min_line` or more and adds
     the next largest one until the caps can be met; otherwise `max_lines` lines are kept. A pinned line (`fixed`, the requested idea) keeps its weight even
     when it is under `min_line`. Returns `w` unchanged if no subset satisfies the caps.
+    Not applied to `capital_preservation` profiles (see `build_scenarios`): their `capped`
+    and `profile_baseline` keep every line of the optimiser, including lines under
+    `min_line`, because the optimiser spreads the bond sleeve on purpose (#186 item 8).
     """
     fixed = {t: v for t, v in (fixed or {}).items() if t in w.index and v > 1e-6}
     free = w.drop(labels=list(fixed))
@@ -712,12 +748,17 @@ def scenario_metrics(
     account_type: str = "non_registered",
     as_of: dt.date | None = None,
     holdings_dir: Path | str | dt.date | None = None,
+    horizon_years: float | None = 1,
 ) -> dict:
-    """The fixed metric values (PRD 3.3, Issue #118, #119), computed with quant, tax and cost functions."""
+    """The fixed metric values (PRD 3.3, Issue #118, #119), computed with quant, tax and cost functions.
+
+    Sector, country and single-name exposure look through ETF holdings (#173); the FX
+    conversion cost is amortised over `horizon_years` in `all_in_cost` (#186 item 7).
+    """
     w = weights.to_dict()
-    conc = concentration(w, info)
+    conc = concentration(w, info, holdings_dir, as_of)
     usd_exp = usd_exposure(w, info)
-    eff_sec = effective_sectors(w, info)
+    eff_sec = conc["effective_sectors"]
     stress = stress_2022(prices, w)
     tax_date = as_of or (prices.index[-1].date() if len(prices) else dt.date.today())
     tax_d = scenario_tax_drag(weights, account_type, tax_date, info)
@@ -736,12 +777,35 @@ def scenario_metrics(
         "esg_proxy_share": esg_s,
         "currency_usd_exposure": usd_exp,
         "effective_sectors": eff_sec,
+        "canada_exposure": conc["canada_exposure"],
+        "top_name_exposure": conc["top_name_exposure"],
+        "top_name": conc["top_name"],
+        "other_sector_share": conc["other_sector_share"],
         "fx_conversion_cost": fx_c,
-        "all_in_cost": all_in_cost(fee_d, fx_c, tax_d)["value"],
+        "all_in_cost": all_in_cost(fee_d, fx_c, tax_d, horizon_years)["value"],
     }
 
 
 # --- node helpers -------------------------------------------------------------------------
+
+
+def hhi_label(hhi: float | None, effective: float | None) -> str:
+    """'0,38 ≈ 3 secteurs effectifs' (#173)."""
+    if hhi is None or effective is None or not math.isfinite(effective):
+        return "n.d."
+    return f"{hhi:.2f}".replace(".", ",") + f" ≈ {max(1, round(effective))} secteurs effectifs"
+
+
+def _metric_value(metric: str, scenario: str, values: dict) -> dict:
+    """The evidence value dict of a scenario metric; HHI carries its effective-sector reading."""
+    val: dict = {"metric": metric, "scenario": scenario, "value": values.get(metric), "unit": "ratio"}
+    if metric == "sector_concentration_hhi":
+        eff = values.get("effective_sectors")
+        val["effective_sectors"] = eff
+        val["label"] = hhi_label(values.get(metric), eff)
+        val["other_sector_share"] = values.get("other_sector_share")
+        val["look_through"] = True
+    return val
 
 
 def _r4(x) -> float | None:
@@ -840,6 +904,10 @@ def _template_notes(
             f"Annualized volatility {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
             f"historical maximum loss {_pct(values['max_drawdown'])} ({ids['max_drawdown']})."
         )
+        if "sector_concentration_hhi" in ids and values.get("sector_concentration_hhi") is not None:
+            label = hhi_label(values["sector_concentration_hhi"], values.get("effective_sectors"))
+            label = label.replace(",", ".").replace("secteurs effectifs", "effective sectors")
+            risk += f" Sector concentration HHI {label}, looking through ETF holdings ({ids['sector_concentration_hhi']})."
         if "tax_drag" in ids and values.get("tax_drag") is not None:
             risk += f" Estimated annual tax drag {_pct(values['tax_drag'])} ({ids['tax_drag']})."
         if "esg_proxy_share" in ids and values.get("esg_proxy_share") is not None:
@@ -878,6 +946,9 @@ def _template_notes(
             f"Volatilité annualisée {_pct(values['volatility_ann'])} ({ids['volatility_ann']}), "
             f"perte maximale historique {_pct(values['max_drawdown'])} ({ids['max_drawdown']})."
         )
+        if "sector_concentration_hhi" in ids and values.get("sector_concentration_hhi") is not None:
+            label = hhi_label(values["sector_concentration_hhi"], values.get("effective_sectors"))
+            risk += f" Concentration sectorielle HHI {label}, en transparence des FNB ({ids['sector_concentration_hhi']})."
         if "tax_drag" in ids and values.get("tax_drag") is not None:
             risk += f" Friction fiscale annuelle estimée {_pct(values['tax_drag'])} ({ids['tax_drag']})."
         if "esg_proxy_share" in ids and values.get("esg_proxy_share") is not None:
@@ -1049,9 +1120,10 @@ def scenarios_node(state: GraphState) -> dict:
     for name in SCENARIO_NAMES:
         w = weights[name]
         all_values[name] = {
-            k: _r4(v)
+            k: _r4(v) if not isinstance(v, str) else v
             for k, v in scenario_metrics(
-                w, prices, info, account_type=profile.account_type, as_of=as_of
+                w, prices, info, account_type=profile.account_type, as_of=as_of,
+                horizon_years=profile.horizon_years,
             ).items()
         }
 
@@ -1062,7 +1134,7 @@ def scenarios_node(state: GraphState) -> dict:
         values = all_values[name]
         for m in base_metrics:
             scenario_ids[name][m] = reg.add(
-                {"metric": m, "scenario": name, "value": values[m], "unit": "ratio"},
+                _metric_value(m, name, values),
                 source=price_source,
                 date=end,
                 method=f"{METHODS[m]}, historical backtest of fictional weights, {window}",
@@ -1214,6 +1286,79 @@ def scenarios_node(state: GraphState) -> dict:
 
     from alphaforge.nodes.quant import rolling_returns_stats
 
+    # Survivorship warning registered here so it can be cited next to the historical returns (#176)
+    survivorship_eid = reg.add(
+        SURVIVORSHIP_NOTE_FR,
+        source="assets_universe.csv + prices_daily.csv",
+        date=as_of,
+        method="known limitation of the starter dataset: survivors only, prices from 2021-11",
+        confidence="assumption",
+    )
+    index_hist = load_index_history(as_of)
+
+    def add_long_proxy(sc_name: str, w: pd.Series, outcomes: dict) -> dict[str, str]:
+        """Drawdown and stress companions on long index proxies (2000-02, 2008); ids by metric."""
+        shares = proxy_shares(w.to_dict(), info)
+        label = proxy_label(shares)
+        ids_p: dict[str, str] = {}
+        if index_hist.empty:
+            return ids_p
+        hist_window = f"{index_hist.index[0].date()}..{index_hist.index[-1].date()}"
+        s_2000 = proxy_stress(index_hist, shares, "stress_2000_02")
+        s_2008 = proxy_stress(index_hist, shares, "stress_2008")
+        results = {
+            "max_drawdown_long_proxy": (proxy_drawdown(index_hist, shares), None),
+            "stress_2000_02_proxy": (s_2000["return"], s_2000["drawdown"]) if s_2000 else (None, None),
+            "stress_2008_proxy": (s_2008["return"], s_2008["drawdown"]) if s_2008 else (None, None),
+        }
+        proxy_out: dict = {"shares": shares, "label": label, "window": hist_window}
+        for m, (val, dd) in results.items():
+            value: dict = {
+                "metric": m, "scenario": sc_name, "value": _r4(val), "unit": "ratio",
+                "proxy": label, "window": hist_window, "survivorship_note": survivorship_eid,
+            }
+            if dd is not None:
+                value["drawdown"] = _r4(dd)
+            ids_p[m] = reg.add(
+                value,
+                source="index_history/index_monthly.csv (Yahoo Finance, monthly closes)",
+                url=INDEX_SOURCE_URL,
+                date=index_hist.index[-1].date(),
+                method=f"{METHODS[m]}; monthly closes, local currency (USD indexes, CAD for S&P/TSX), "
+                f"AGG flat before 2003-09; rows <= {as_of} only; proxy = {label}",
+                confidence="fact" if val is not None else "assumption",
+            )
+            proxy_out[m] = _r4(val)
+            if dd is not None:
+                proxy_out[f"{m}_drawdown"] = _r4(dd)
+        outcomes["long_proxy"] = proxy_out
+        outcomes["survivorship_evidence"] = survivorship_eid
+        return ids_p
+
+    def long_proxy_note(ids_p: dict[str, str], outcomes: dict, en: bool) -> str | None:
+        lp = outcomes.get("long_proxy")
+        if not lp or lp.get("max_drawdown_long_proxy") is None:
+            return None
+        if en:
+            txt = (
+                f"On long index proxies ({lp['label']}; {lp['window']}): largest historical loss "
+                f"{_pct(lp['max_drawdown_long_proxy'])} ({ids_p['max_drawdown_long_proxy']})"
+            )
+            if lp.get("stress_2000_02_proxy") is not None:
+                txt += f", 2000-02 episode {_pct(lp['stress_2000_02_proxy'])} ({ids_p['stress_2000_02_proxy']})"
+            if lp.get("stress_2008_proxy") is not None:
+                txt += f", 2008 episode {_pct(lp['stress_2008_proxy'])} ({ids_p['stress_2008_proxy']})"
+            return txt + f". Survivorship caveat: {survivorship_eid} (historical, not a forecast)."
+        txt = (
+            f"Sur des indices de référence à long historique ({lp['label']} ; {lp['window']}) : perte "
+            f"maximale historique {_pct(lp['max_drawdown_long_proxy'])} ({ids_p['max_drawdown_long_proxy']})"
+        )
+        if lp.get("stress_2000_02_proxy") is not None:
+            txt += f", épisode 2000-02 {_pct(lp['stress_2000_02_proxy'])} ({ids_p['stress_2000_02_proxy']})"
+        if lp.get("stress_2008_proxy") is not None:
+            txt += f", épisode 2008 {_pct(lp['stress_2008_proxy'])} ({ids_p['stress_2008_proxy']})"
+        return txt + f". Biais du survivant : {survivorship_eid} (historique, pas une prévision)."
+
     asked_text = None
     if request and request["kind"] == "allocation" and request["groups"]:
         asked_text = ", ".join(f"{wt:.0%} {label}" for label, _, wt in request["groups"])
@@ -1257,6 +1402,7 @@ def scenarios_node(state: GraphState) -> dict:
                         "value": _r4(stats_1y[metric_k]),
                         "unit": "ratio",
                         "disclaimer": "historique, pas une prévision",
+                        "survivorship_note": survivorship_eid,
                     },
                     source=price_source,
                     date=end,
@@ -1273,6 +1419,7 @@ def scenarios_node(state: GraphState) -> dict:
                         "value": _r4(stats_3y[metric_k]),
                         "unit": "ratio",
                         "disclaimer": "historique, pas une prévision",
+                        "survivorship_note": survivorship_eid,
                     },
                     source=price_source,
                     date=end,
@@ -1297,24 +1444,32 @@ def scenarios_node(state: GraphState) -> dict:
             notes.append(
                 f"Rolling 1-year historical returns (historical, not a forecast): "
                 f"worst {_pct(stats_1y['worst'])}, median {_pct(stats_1y['median'])}, "
-                f"best {_pct(stats_1y['best'])}, loss periods share {_pct(stats_1y['loss_share'])}."
+                f"best {_pct(stats_1y['best'])}, loss periods share {_pct(stats_1y['loss_share'])}. "
+                f"Survivorship caveat: {survivorship_eid}."
                 if lang == "en"
                 else
                 f"Rendements historiques glissants sur 1 an (historique, pas une prévision) : "
                 f"pire {_pct(stats_1y['worst'])}, médiane {_pct(stats_1y['median'])}, "
-                f"meilleur {_pct(stats_1y['best'])}, part des périodes en perte {_pct(stats_1y['loss_share'])}."
+                f"meilleur {_pct(stats_1y['best'])}, part des périodes en perte {_pct(stats_1y['loss_share'])}. "
+                f"Biais du survivant : {survivorship_eid}."
             )
         if stats_3y:
             notes.append(
                 f"Rolling 3-year historical returns (historical, not a forecast): "
                 f"worst {_pct(stats_3y['worst'])}, median {_pct(stats_3y['median'])}, "
-                f"best {_pct(stats_3y['best'])}, loss periods share {_pct(stats_3y['loss_share'])}."
+                f"best {_pct(stats_3y['best'])}, loss periods share {_pct(stats_3y['loss_share'])}. "
+                f"Survivorship caveat: {survivorship_eid}."
                 if lang == "en"
                 else
                 f"Rendements historiques glissants sur 3 ans (historique, pas une prévision) : "
                 f"pire {_pct(stats_3y['worst'])}, médiane {_pct(stats_3y['median'])}, "
-                f"meilleur {_pct(stats_3y['best'])}, part des périodes en perte {_pct(stats_3y['loss_share'])}."
+                f"meilleur {_pct(stats_3y['best'])}, part des périodes en perte {_pct(stats_3y['loss_share'])}. "
+                f"Biais du survivant : {survivorship_eid}."
             )
+        proxy_ids = add_long_proxy(name, w, outcomes)
+        proxy_note = long_proxy_note(proxy_ids, outcomes, lang == "en")
+        if proxy_note:
+            notes.append(proxy_note)
         if profile.horizon_years > 3:
             notes.append(
                 f"Available historical window (5 years) covers 1-year and 3-year windows; "
@@ -1346,9 +1501,10 @@ def scenarios_node(state: GraphState) -> dict:
             "portfolio, taken as 100 %)" if partial else ""
         )
         values_curr = {
-            k: _r4(v)
+            k: _r4(v) if not isinstance(v, str) else v
             for k, v in scenario_metrics(
-                w_part, prices, info, account_type=profile.account_type, as_of=as_of
+                w_part, prices, info, account_type=profile.account_type, as_of=as_of,
+                horizon_years=profile.horizon_years,
             ).items()
         }
         ids_curr = {}
@@ -1384,7 +1540,7 @@ def scenarios_node(state: GraphState) -> dict:
                 )
             else:
                 ids_curr[m] = reg.add(
-                    {"metric": m, "scenario": "current", "value": values_curr[m], "unit": "ratio"},
+                    _metric_value(m, "current", values_curr),
                     source=SOURCE,
                     date=end,
                     method=f"{METHODS[m]}, historical backtest of client's current holdings, {window}{part_note}",
@@ -1415,6 +1571,7 @@ def scenarios_node(state: GraphState) -> dict:
             outcomes_curr["1y"] = stats_1y_curr
         if stats_3y_curr:
             outcomes_curr["3y"] = stats_3y_curr
+        proxy_ids_curr = add_long_proxy("current", w_part, outcomes_curr)
 
         en = lang == "en"
         notes_curr = [
@@ -1449,6 +1606,9 @@ def scenarios_node(state: GraphState) -> dict:
                 if en
                 else f"Reste non déclaré traité comme des liquidités : {_pct(cash_share)}."
             )
+        proxy_note_curr = long_proxy_note(proxy_ids_curr, outcomes_curr, en)
+        if proxy_note_curr:
+            notes_curr.append(proxy_note_curr)
         sc_curr = Scenario(
             name="current",
             weights=w_curr.to_dict(),
@@ -1466,13 +1626,21 @@ def scenarios_node(state: GraphState) -> dict:
             val: dict = {"metric": m, "scenario": sc.name, "value": values.get(m), "unit": EXTRA_UNITS[m]}
             if m == "all_in_cost":
                 val["components"] = all_in_cost(
-                    values.get("fee_drag"), values.get("fx_conversion_cost"), values.get("tax_drag")
+                    values.get("fee_drag"), values.get("fx_conversion_cost"), values.get("tax_drag"),
+                    profile.horizon_years,
                 )["components"]
+            elif m == "top_name_exposure":
+                val["name"] = values.get("top_name")
+            elif m == "effective_sectors":
+                val["label"] = hhi_label(values.get("sector_concentration_hhi"), values.get(m))
+            method = METHODS[m]
+            if m == "all_in_cost":
+                method += f"; FX cost / {max(float(profile.horizon_years or 1), 1.0):.0f} years"
             ids_x[m] = reg.add(
                 val,
                 source=price_source if m != "all_in_cost" else "RFG des émetteurs, grille de change des courtiers, règles fiscales ARC",
                 date=end,
-                method=f"{METHODS[m]}{note}",
+                method=f"{method}{note}",
                 confidence="assumption" if m == "all_in_cost" or values.get(m) is None else "fact",
             )
         # Evidence items for extra metrics are registered in evidence registry;
@@ -1529,11 +1697,21 @@ def scenarios_node(state: GraphState) -> dict:
             method="baseline calibration for a high-risk growth profile (middle of the equity band)",
             confidence="assumption",
         )
-    reg.add(
+    lines_rule = (
         f"Lignes des scénarios plafonné et de référence : au plus {MAX_LINES} lignes et aucune sous "
-        f"{MIN_LINE:.0%} (sauf l'idée demandée, gardée à son poids plafonné).",
+        f"{MIN_LINE:.0%} (sauf l'idée demandée, gardée à son poids plafonné)."
+    )
+    if profile.objective == "capital_preservation":
+        lines_rule += (
+            " Cette règle n'est pas appliquée aux profils de préservation du capital : leurs scénarios "
+            "gardent toutes les lignes de l'optimisation, y compris celles sous "
+            f"{MIN_LINE:.0%}, pour ne pas concentrer le volet obligataire."
+        )
+    reg.add(
+        lines_rule,
         source="règle de construction AlphaForge", date=as_of,
-        method="largest lines kept, then closest portfolio under the same caps with a minimum line size",
+        method="largest lines kept, then closest portfolio under the same caps with a minimum line size"
+        + ("; rule skipped for capital_preservation" if profile.objective == "capital_preservation" else ""),
         confidence="assumption",
     )
     if current_weights is not None:

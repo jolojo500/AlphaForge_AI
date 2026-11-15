@@ -183,14 +183,29 @@ def fx_conversion_evidence(as_of: dt.date, usd_share: float, scenario: str) -> d
     }
 
 
-def all_in_cost(fee_drag: float | None, fx_cost: float | None, tax_drag: float | None) -> dict:
-    """Fees + FX conversion cost + tax drag, with the components (ratios of the portfolio)."""
+def all_in_cost(
+    fee_drag: float | None,
+    fx_cost: float | None,
+    tax_drag: float | None,
+    horizon_years: float | None = 1,
+) -> dict:
+    """Annual all-in cost: fee drag + tax drag + the one-time FX cost amortised over the horizon.
+
+    `fee_drag` and `tax_drag` are annual ratios; `fx_cost` is paid once, so it is spread over
+    `horizon_years` (at least 1) before being added (#186 item 7). The components keep the
+    one-time FX cost and its annualised share.
+    """
+    years = max(float(horizon_years or 1), 1.0)
+    fx_once = round(float(fx_cost or 0.0), 4)
     parts = {
         "fee_drag": round(float(fee_drag or 0.0), 4),
-        "fx_conversion_cost": round(float(fx_cost or 0.0), 4),
+        "fx_conversion_cost": fx_once,
+        "fx_annualised": round(fx_once / years, 4),
         "tax_drag": round(float(tax_drag or 0.0), 4),
+        "horizon_years": years,
     }
-    return {"value": round(sum(parts.values()), 4), "components": parts}
+    annual = parts["fee_drag"] + parts["fx_annualised"] + parts["tax_drag"]
+    return {"value": round(annual, 4), "components": parts}
 
 
 def capital_preservation_foreign_bond_evidence(as_of: dt.date) -> dict:

@@ -141,15 +141,29 @@ def test_all_in_cost_calculation():
     assert fx_conversion_cost(0.0) == 0.0
     assert fx_conversion_cost(-0.1) == 0.0
 
-    res = all_in_cost(0.0015, 0.0060, 0.0025)
+    res = all_in_cost(0.0015, 0.0060, 0.0025)  # horizon 1 year: the FX cost counts in full
     assert res["value"] == 0.0100
     assert res["components"] == {
         "fee_drag": 0.0015,
         "fx_conversion_cost": 0.0060,
+        "fx_annualised": 0.0060,
         "tax_drag": 0.0025,
+        "horizon_years": 1.0,
     }
 
     res_none = all_in_cost(None, 0.0060, None)
     assert res_none["value"] == 0.0060
     assert res_none["components"]["fee_drag"] == 0.0
+
+
+def test_all_in_cost_amortises_the_one_time_fx_cost_over_the_horizon():
+    """#186 item 7: the FX conversion is paid once, so it is spread over the horizon (min 1 year)."""
+    from alphaforge.costs import all_in_cost
+
+    res = all_in_cost(0.0015, 0.0060, 0.0025, horizon_years=4)
+    assert res["components"]["fx_conversion_cost"] == 0.0060  # one-time cost kept as such
+    assert res["components"]["fx_annualised"] == 0.0015
+    assert res["value"] == pytest.approx(0.0015 + 0.0015 + 0.0025)
+    assert all_in_cost(0.0, 0.0060, 0.0, horizon_years=0)["value"] == 0.0060  # min 1 year
+    assert all_in_cost(0.0, 0.0060, 0.0, horizon_years=None)["value"] == 0.0060
 
