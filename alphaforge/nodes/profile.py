@@ -9,16 +9,16 @@ it falls back to the persona table plus a regex read of the request.
 """
 from __future__ import annotations
 
-import csv
 import datetime as dt
 import re
-from functools import lru_cache
 from typing import Any, Literal
 
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
-from alphaforge import config, llm
+from alphaforge import llm
+from alphaforge.data.dynamic_ingestion import ensure_requested_asset
+from alphaforge.data.market_db import get_merged_universe_dict
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.i18n import detect_language
 from alphaforge.nodes.scenarios import CAPS
@@ -125,14 +125,12 @@ SYSTEM = (
 )
 
 
-@lru_cache(maxsize=1)
 def _universe() -> dict[str, dict]:
-    with open(config.STARTER_DIR / "assets_universe.csv", newline="") as f:
-        return {r["ticker"]: r for r in csv.DictReader(f)}
+    return get_merged_universe_dict()
 
 
 def _resolve_ticker(raw: str | None) -> str | None:
-    """Map a model or regex ticker to a ticker of the 31-asset universe, else None."""
+    """Map a model or regex ticker to a ticker of the starter universe or DB, else None."""
     if not raw:
         return None
     universe = _universe()
@@ -144,6 +142,16 @@ def _resolve_ticker(raw: str | None) -> str | None:
         return "BTC-USD"
     if key in ("ETHER", "ETHEREUM", "ETH"):
         return "ETH-USD"
+    if key in ("DOGECOIN", "DOGE"):
+        return "DOGE-USD"
+    if key in ("SOLANA", "SOL"):
+        return "SOL-USD"
+    if key in ("RIPPLE", "XRP"):
+        return "XRP-USD"
+    if key in ("CARDANO", "ADA"):
+        return "ADA-USD"
+    if key in ("PALANTIR", "PLTR"):
+        return "PLTR"
     if key in ("SP500", "S&P 500", "S&P500", "SNP500", "S&P", "SPY"):
         return "SPY"
     if key in ("NASDAQ", "NAS100", "QQQ"):
@@ -180,6 +188,12 @@ def _regex_extract(text: str) -> Extraction:
             ticker = "ETH-USD"
         elif re.search(r"\b(?:bitcoin|btc)\b", lowered):
             ticker = "BTC-USD"
+        elif re.search(r"\b(?:dogecoin|doge)\b", lowered):
+            ticker = "DOGE-USD"
+        elif re.search(r"\b(?:solana|sol)\b", lowered):
+            ticker = "SOL-USD"
+        elif re.search(r"\b(?:palantir|pltr)\b", lowered):
+            ticker = "PLTR"
         elif re.search(r"\b(?:sp500|s&p\s*500|snp500|s&p)\b", lowered):
             ticker = "SPY"
         elif re.search(r"\b(?:nasdaq|nas100)\b", lowered):
@@ -993,6 +1007,8 @@ def is_contradictory_profile(
 def profile_node(state: GraphState) -> dict:
     lang: Literal["fr", "en"] = getattr(state, "language", None) or detect_language(state.request_text)
     text = state.request_text.strip()
+    # Ingest dynamically requested asset if not in base universe or DB
+    ensure_requested_asset(text)
     update: dict = {"language": lang}
     kyc_answers: dict[str, Any] = {}
     clarified_count = state.retries.get("clarify", 0)

@@ -222,8 +222,10 @@ def apply_constraints(
 @traced("screening")
 def screening_node(state: GraphState) -> dict:
     reg = EvidenceRegistry("ES")
-    universe = get_provider().universe().sort_values("ticker", ignore_index=True)
     profile = state.profile
+    requested = (profile.requested_idea or {}).get("ticker") if profile else None
+    asked = ({requested} if requested else set()) | set(profile.requested_allocation or {} if profile else {})
+    universe = get_provider().universe(include_custom=asked).sort_values("ticker", ignore_index=True)
     if profile is None:
         return {
             "eligible_universe": list(universe["ticker"]),

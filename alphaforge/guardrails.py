@@ -20,10 +20,7 @@ Each entry:
 
 from __future__ import annotations
 
-import csv
-from functools import lru_cache
-
-from alphaforge import config
+from alphaforge.data.market_db import get_merged_universe_dict
 from alphaforge.state import Evidence, Profile, Scenario, effective_risk
 from alphaforge.tax import (
     ACCOUNT_LABEL_EN,
@@ -57,10 +54,8 @@ VERSION_EN = {
 }
 
 
-@lru_cache(maxsize=1)
 def _universe() -> dict[str, dict]:
-    with open(config.STARTER_DIR / "assets_universe.csv", newline="") as f:
-        return {r["ticker"]: r for r in csv.DictReader(f)}
+    return get_merged_universe_dict()
 
 
 def fr_pct(x: float, decimals: int = 1) -> str:

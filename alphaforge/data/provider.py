@@ -45,7 +45,7 @@ class DataProvider(ABC):
     # --- raw access, implemented by each provider ---------------------------------------
 
     @abstractmethod
-    def universe(self) -> pd.DataFrame:
+    def universe(self, include_custom: Iterable[str] | None = None) -> pd.DataFrame:
         """One row per asset: asset_id, ticker, name, asset_class, market, currency, sector."""
 
     @abstractmethod
@@ -74,9 +74,9 @@ class DataProvider(ABC):
 
     # --- shared, as-of-safe helpers -----------------------------------------------------
 
-    def asset_info(self) -> pd.DataFrame:
+    def asset_info(self, include_custom: Iterable[str] | None = None) -> pd.DataFrame:
         """The universe indexed by ticker."""
-        return self.universe().set_index("ticker")
+        return self.universe(include_custom=include_custom).set_index("ticker")
 
     def trading_calendar(
         self, as_of: DateLike, start: DateLike | None = None, calendar: Calendar = "common"
@@ -121,7 +121,7 @@ class DataProvider(ABC):
           re-applied (the CNQ.TO pseudo-split of 2022-08-22 is already in it)
         """
         tickers = sorted(set(tickers))
-        info = self.asset_info()
+        info = self.asset_info(include_custom=tickers)
         unknown = [t for t in tickers if t not in info.index]
         if unknown:
             raise ValueError(f"unknown tickers: {unknown}")

@@ -459,7 +459,12 @@ def translate_request(profile: Profile, info: pd.DataFrame) -> dict | None:
         groups = [(t, [t], wt) for t, wt in sorted(explicit.items())]
         blocked = set(explicit)
         for code, wt in sorted(classes.items()):
-            in_class = [t for t in info.index if info.at[t, "asset_class"] in REQUEST_CLASSES[code]]
+            in_class = [
+                t
+                for t in info.index
+                if info.at[t, "asset_class"] in REQUEST_CLASSES[code]
+                and not str(info.at[t, "asset_id"] if "asset_id" in info.columns else "").startswith("DYN_")
+            ]
             blocked.update(in_class)
             members = sorted(t for t in in_class if t not in explicit)
             if not members:
