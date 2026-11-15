@@ -43,7 +43,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'query.sugg_3': 'Ajouter 10 % de BTC-USD pour dynamiser le rendement de mon portefeuille.',
 
     // Scenarios Section
-    'scenarios.section_title': '3. Comparaison des scénarios simulés',
+    'scenarios.section_title': 'Comparaison quantitative des scénarios simulés',
     'scenarios.most_consistent': 'Plus cohérent',
     'scenarios.weights_title': 'Répartition des actifs',
     'scenarios.metrics_title': 'Indicateurs clés de risque',
@@ -67,7 +67,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'metric.tax_drag': 'Friction fiscale estimée',
 
     // Explanation Section
-    'explain.title': '4. Explication et synthèse pédagogique (Les 4 questions BNCD)',
+    'explain.title': 'Explicabilité & Gouvernance (Les 4 piliers BNCD)',
     'explain.subtitle': 'Réponses aux quatre questions de gouvernance BNCD, justifiées par les preuves chiffrées.',
     'explain.what_data': '1. Quelles données avons-nous utilisées ?',
     'explain.what_data_sub': 'Séries de prix historiques ajustées, macroéconomie et actualités datées.',
@@ -174,7 +174,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'query.sugg_3': 'Add 10% BTC-USD to boost overall portfolio return.',
 
     // Scenarios Section
-    'scenarios.section_title': '3. Comparison of Simulated Scenarios',
+    'scenarios.section_title': 'Quantitative Comparison of Simulated Scenarios',
     'scenarios.most_consistent': 'Most consistent',
     'scenarios.weights_title': 'Asset Allocation',
     'scenarios.metrics_title': 'Key Risk Indicators',
@@ -198,7 +198,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'metric.tax_drag': 'Estimated Tax Drag',
 
     // Explanation Section
-    'explain.title': '4. Pedagogical Explanation & Synthesis (BNCD 4 Governance Questions)',
+    'explain.title': 'Decision Explainability & Governance (BNCD 4 Pillars)',
     'explain.subtitle': 'Answers to the four BNCD governance questions, grounded in auditable numerical evidence.',
     'explain.what_data': '1. What data did we use?',
     'explain.what_data_sub': 'Adjusted historical price series, macro indicators, and dated news.',

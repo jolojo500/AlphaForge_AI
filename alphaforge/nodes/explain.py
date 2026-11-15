@@ -15,14 +15,17 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from alphaforge import llm
+from alphaforge.data.provider import get_provider
 from alphaforge.evidence import numeric
 from alphaforge.nodes.profile import TOLERANCE_EN, TOLERANCE_FR
-from alphaforge.state import Evidence, GraphState, Scenario
+from alphaforge.nodes.scenarios import CAPS
+from alphaforge.state import Evidence, GraphState, Scenario, effective_risk
 from alphaforge.tracing import traced
 
 DISCLAIMER = "Simulation éducative. Aucun conseil personnalisé."
 DISCLAIMER_EN = "Educational simulation. No personalized advice."
 MAX_EVIDENCE_LINES = 100
+SCENARIO_NAMES = ("as_requested", "capped", "profile_baseline")
 
 class Claim(BaseModel):
     claim: str
@@ -40,65 +43,43 @@ class Explanation(BaseModel):
     avertissement: str = DISCLAIMER
 
 
-SYSTEM = """Tu es l'agent d'explicabilité d'un outil éducatif de simulation financière.
-Tu expliques la COMPARAISON de trois scénarios fictifs pour un profil d'investisseur, en français.
-Tu réponds aux quatre questions de l'atelier BNCD : quelles données, pourquoi ce choix, quelles limites,
-qu'est-ce qui changerait la réponse. Tu distingues tolérance au risque (ce que la personne accepte)
-et capacité (ce que sa situation peut absorber). Les risques se nomment parmi : marché, crédit,
-liquidité, taux et inflation, devise, concentration.
+SYSTEM = """Tu es l'agent d'explicabilité d'un outil éducatif de simulation financière d'aide à la décision.
+Tu évalues directement l'idée d'investissement demandée, quelle que soit sa classe (action, FNB/indice, cryptoactif, or ou autre actif de l'univers), selon le profil déclaré et les preuves disponibles. Parle clairement et simplement.
+Tu réponds aux quatre questions de gouvernance de l'atelier BNCD : quelles données, pourquoi ce choix, quelles limites, qu'est-ce qui changerait la réponse.
+Tu distingues tolérance au risque (ce que la personne accepte) et capacité (ce que sa situation peut absorber).
+Les risques se nomment parmi : marché, crédit, liquidité, taux et inflation, devise, concentration.
 
 Règles strictes :
-- Réponds avec les clés exactes du schéma. Chaque affirmation (claim) cite des identifiants de preuve
-  (champ evidence) pris UNIQUEMENT dans la liste fournie. N'invente aucun identifiant.
-- Tout nombre que tu écris doit venir d'une preuve citée dans la même affirmation, recopié exactement
-  comme il est imprimé après « = » (par exemple « 38,0 % »). N'écris aucun autre nombre chiffré
-  (sauf ceux de la demande de l'utilisateur), pas d'années de calcul inventées.
-- Langage de cohérence, jamais de conseil : dis quel scénario est « le plus cohérent avec le profil
-  déclaré », sans dire d'acheter, de vendre ou d'investir. Aucune prévision de rendement futur,
-  aucune promesse. Les statistiques sont historiques.
-  N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » :
-  utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
-- Concision stricte : 1 à 2 affirmations (claims) par section, environ 25 à 30 mots par affirmation.
-  Va droit au but, sans répétition. Le résumé doit comporter 1 à 2 phrases directes (environ 30 mots).
-- Le résumé et l'incertitude sont vérifiés comme les affirmations : n'y écris un nombre que s'il est
-  suivi de son identifiant entre crochets dans le texte (par exemple « 23,2 % [EP3] »). Sinon,
-  formule-les sans chiffres.
-- Ne remplace pas les trois scénarios par un seul : compare-les, puis indique le plus cohérent.
-- Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives
-  (« fictional »). Si une preuve est fictive ou une hypothèse, dis-le dans les limites.
-- quelles_donnees : quelles données ont été utilisées. pourquoi_ce_choix : pourquoi ce scénario est
-  le plus cohérent. limites : ce qui limite l'analyse. ce_qui_changerait_la_reponse : ce qui
-  changerait la comparaison (horizon, tolérance, budget, exclusion, date).
-- Si le profil contient des tensions (conflicts) ou si des objections existent, explique-les.
+- Réponds avec les clés exactes du schéma : resume, quelles_donnees, pourquoi_ce_choix, limites, ce_qui_changerait_la_reponse, incertitude, scenario_le_plus_coherent, avertissement.
+- Le champ resume est la réponse principale, directe et brève (2 paragraphes) : dis clairement si l'idée est cohérente, partiellement cohérente ou peu cohérente avec la tolérance ET la capacité, l'objectif et l'horizon. Si elle est peu cohérente, dis-le sans ambiguïté et explique le risque déterminant, sans dramatiser. Ne dis jamais que tu connais le portefeuille si ses positions n'ont pas été fournies. Dans ce cas, précise que le poids demandé est évalué sur un portefeuille hypothétique et que son impact réel dépend des avoirs actuels, inconnus.
+- Sois concis : le résumé tient en 1 à 2 phrases directes réparties sur deux courts paragraphes; limite chaque autre section à 1 ou 2 affirmations brèves.
+- Adapte l'analyse à l'actif demandé : action (risque d'entreprise et concentration), FNB/indice (expositions sous-jacentes et chevauchements disponibles), cryptoactif (volatilité et risque de marché), or (matière première, devise et taux), autres actifs selon les données disponibles. Ne transpose pas un raisonnement propre à une classe d'actifs à une autre.
+- Justifie le constat par les preuves spécifiques à l'actif (historique, risque, liquidité si disponible), les actualités et les indicateurs macro effectivement fournis. N'invente ni cycle de marché, ni valorisation, ni capitalisation boursière, ni volume. Indique clairement dans les limites les facteurs importants absents des données; ne présente pas le contexte macro comme une conclusion sur l'actif si le lien n'est pas étayé.
+- Chiffres dans le résumé : Tu peux reprendre uniquement les chiffres présents dans la demande de l'utilisateur. Tout autre nombre doit être immédiatement suivi de son identifiant de preuve entre crochets (ex. « 23,2 % [EP3] »).
+- Chaque affirmation (claim) dans les 4 sections cite des identifiants de preuve (champ evidence) pris UNIQUEMENT dans la liste fournie. Tout nombre dans une affirmation doit venir d'une preuve citée dans la même affirmation.
+- Langage de cohérence, jamais de conseil réglementé : dis quel scénario est « le plus cohérent avec le profil déclaré », sans dire d'acheter, de vendre ou d'investir. Aucune prévision de rendement futur, aucune promesse. Les statistiques sont historiques.
+  N'utilise JAMAIS les racines « recommand* » ou « conseill* » (même « recommandé par le profil » : utilise « plafond de référence » ou « le plus cohérent avec le profil déclaré »).
+- Distingue les faits (preuves « fact »), les hypothèses (« assumption ») et les données fictives (« fictional »). Si une preuve est fictive ou une hypothèse, mentionne-le dans les limites.
 - Pas de raisonnement interne : seulement des constats observables.
 - avertissement : « Simulation éducative. Aucun conseil personnalisé. »"""
 
-SYSTEM_EN = """You are the explainability agent for an educational financial simulation tool.
-You explain the COMPARISON of three simulated scenarios for an investor profile, in English.
-You answer the four BNCD workshop questions: which data, why this choice, which limits,
-what would change the answer. You distinguish risk tolerance (what the person says they accept)
-and risk capacity (what their situation can absorb). Named risk types are: market, credit,
-liquidity, interest rate and inflation, currency, concentration.
+SYSTEM_EN = """You are the explainability agent for an educational financial simulation decision-aid tool.
+You directly evaluate the requested investment idea, whatever its asset class (stock, ETF/index, crypto, gold, or another asset in the universe), against the stated profile and available evidence. Be clear and plain-spoken.
+You answer the four BNCD governance questions: which data, why this choice, which limits, what would change the answer.
+You distinguish risk tolerance (what the person says they accept) and risk capacity (what their situation can absorb).
+Named risk types are: market, credit, liquidity, interest rate and inflation, currency, concentration.
 
 Strict rules:
-- Respond using the exact schema keys (quelles_donnees, pourquoi_ce_choix, limites,
-  ce_qui_changerait_la_reponse, resume, incertitude, scenario_le_plus_coherent, avertissement).
-- Every claim must cite evidence ids (evidence field) taken ONLY from the provided list. Do not invent any id.
-- Every number you write must come from an evidence item cited in the same claim, copied exactly as printed after '='
-  (e.g. '38.0%'). Do not write any other number (except those from the user request), no invented years.
-- Consistency language, never advice: state which scenario is 'most consistent with the stated profile',
-  without telling to buy, sell, or invest. No return forecast, no promise. Statistics are historical.
+- Respond using the exact schema keys: resume, quelles_donnees, pourquoi_ce_choix, limites, ce_qui_changerait_la_reponse, incertitude, scenario_le_plus_coherent, avertissement.
+- The resume is the direct, concise primary answer (2 paragraphs): clearly state whether the idea is consistent, partly consistent, or poorly consistent with risk tolerance AND capacity, objective, and horizon. If poorly consistent, say so plainly and explain the key risk without alarmism. Never imply knowledge of a portfolio whose holdings were not provided. In that case, state that the requested weight is evaluated against a hypothetical portfolio and its real impact depends on unknown current holdings.
+- Be concise: keep the resume to 1 or 2 direct sentences across two short paragraphs, and limit every other section to 1 or 2 brief claims.
+- Adapt the analysis to the requested asset (stock: company and concentration risk; ETF/index: underlying exposures and available overlaps; crypto: volatility and market risk; gold: commodity, currency and rates; others based on available data). Do not apply one asset class's reasoning to another.
+- Ground the assessment in asset-specific evidence (history, risk, available liquidity), actual news, and macro indicators actually provided. Never invent market cycles, valuation, market capitalization, or volume. State important missing data in the limitations; do not imply macro conditions have a proven asset-specific effect unless evidence supports it.
+- Numbers in the summary: You may reuse only numbers present in the user's request. Any other number must immediately include its evidence id in brackets (e.g. '23.2% [EP3]').
+- Every claim in the 4 sections must cite evidence ids (evidence field) taken ONLY from the provided list. Every number in a claim must come from an evidence item cited in the same claim.
+- Consistency language, never advice: state which scenario is 'most consistent with the stated profile', without telling to buy, sell, or invest. No return forecast, no promise.
   NEVER use the roots 'recommend*' or 'advise*'.
-- Strict conciseness: 1 to 2 claims per section, ~25 to 30 words per claim. The summary must be 1 to 2 direct sentences (~30 words).
-- The summary and uncertainty are checked like claims: do not write a number unless followed by its id in brackets
-  (e.g. '23.2% [EP3]'). Otherwise write without figures.
-- Do not replace the three scenarios with a single one: compare them, then indicate the most consistent.
 - Distinguish facts ('fact' evidence), assumptions ('assumption'), and fictional data ('fictional').
-  If an evidence item is fictional or an assumption, state it in the limits.
-- quelles_donnees: what data was used. pourquoi_ce_choix: why this scenario is most consistent.
-  limites: what limits the analysis. ce_qui_changerait_la_reponse: what would change the comparison (horizon, tolerance, budget, exclusion, date).
-- If the profile has conflicts or if objections exist, explain them.
-- No internal reasoning: only observable observations.
 - avertissement: 'Educational simulation. No personalized advice.'"""
 
 
@@ -108,6 +89,12 @@ _PERCENT_UNITS = {"ratio", "%", "pct", "percent"}
 
 def _fr(x: float, digits: int) -> str:
     return f"{x:.{digits}f}".replace(".", ",")
+
+
+def _weight_text(weight_pct: float, language: str) -> str:
+    precision = 2 if abs(weight_pct) < 1 else 1
+    text = f"{weight_pct:.{precision}f}".rstrip("0").rstrip(".")
+    return text.replace(".", ",") if language == "fr" else text
 
 
 def printable(ev: Evidence) -> str:
@@ -156,8 +143,27 @@ def _select_evidence(state: GraphState) -> list[Evidence]:
     cited_ids = metric_ids | {x.get("evidence_id") for x in state.exclusions if x.get("evidence_id")}
     cited_ids |= {e.get("evidence_id") for e in state.events if e.get("evidence_id")}
 
+    requested_ticker = (
+        state.profile.requested_idea.get("ticker")
+        if state.profile and state.profile.requested_idea
+        else None
+    )
     ordered: list[Evidence] = []
-    for eid, ev in sorted(state.evidence.items(), key=lambda kv: (kv[0][:2], int(kv[0][2:]))):
+    evidence_items = sorted(
+        state.evidence.items(),
+        key=lambda kv: (
+            kv[0][:2] != "EQ"
+            and kv[0][:2] not in ("EP", "EM", "ES", "EN"),
+            not (
+                kv[0][:2] == "EQ"
+                and isinstance(kv[1].value, dict)
+                and kv[1].value.get("ticker") == requested_ticker
+            ),
+            kv[0][:2],
+            int(kv[0][2:]),
+        ),
+    )
+    for eid, ev in evidence_items:
         prefix = eid[:2]
         # Include scenario metrics, macro, exclusions, events, and explicitly cited items
         if prefix in ("EP", "EM", "ES", "EN") or eid in cited_ids:
@@ -180,14 +186,85 @@ def _select_evidence(state: GraphState) -> list[Evidence]:
 
 
 def _scenario_block(sc: Scenario, evidence: dict[str, Evidence]) -> str:
-    top = sorted(sc.weights.items(), key=lambda kv: -kv[1])[:8]
-    weights = ", ".join(f"{t} {_fr(w * 100, 1)} %" for t, w in top)
-    lines = [f"- {sc.name} : positions principales [{weights}]"]
+    portfolio_label = (
+        "portefeuille actuel fourni"
+        if sc.name == "current"
+        else "portefeuille simulé"
+    )
+    lines = [f"- {sc.name} : indicateurs historiques du {portfolio_label}"]
     for m, eid in sc.metrics.items():
         ev = evidence.get(eid)
         if ev is not None:
             lines.append(f"    {m} : {eid} = {printable(ev)} ({ev.method}, {ev.confidence})")
     return "\n".join(lines)
+
+
+def _decision_context(state: GraphState) -> list[str]:
+    profile = state.profile
+    idea = profile.requested_idea if profile else None
+    if not idea:
+        return []
+
+    ticker = idea.get("ticker")
+    info = get_provider().asset_info()
+    if ticker not in info.index:
+        return [f"Actif demandé : {ticker}; métadonnées et historique indisponibles."]
+
+    asset = info.loc[ticker]
+    lines = [
+        f"Actif demandé : {ticker}, classe={asset['asset_class']}, secteur={asset['sector']}."
+    ]
+    metric_names = {
+        "volatility_ann",
+        "max_drawdown",
+        "stress_2022",
+        "correlation",
+        "etf_overlap",
+        "avg_daily_traded_value_20d_cad",
+    }
+    for ev in _select_evidence(state):
+        value = ev.value
+        if not isinstance(value, dict) or value.get("ticker") != ticker:
+            continue
+        metric = value.get("metric")
+        if metric in metric_names:
+            lines.append(describe_evidence(ev))
+
+    related_events = [event for event in state.events if event.get("ticker") == ticker]
+    if related_events:
+        lines.append(
+            "Actualités datées retenues pour l'actif : "
+            + "; ".join(
+                f"{event['headline']} [{event['evidence_id']}]"
+                for event in related_events
+            )
+        )
+    elif any(
+        isinstance(ev.value, dict)
+        and ev.value.get("metric") == "news_items_retained"
+        for ev in state.evidence.values()
+    ):
+        lines.append("Aucune actualité datée n'a été retenue pour cet actif.")
+
+    macro = [
+        ev for ev in _select_evidence(state)
+        if isinstance(ev.value, dict)
+        and str(ev.value.get("metric", "")).startswith(
+            ("policy_rate_", "yield_", "cpi_", "unemployment_")
+        )
+    ]
+    if macro:
+        lines.append("Indicateurs macro disponibles : " + "; ".join(map(describe_evidence, macro)))
+    lines.append(
+        "Capitalisation boursière, valorisation fondamentale et phase de cycle : "
+        "non disponibles dans les données de cette analyse; ne pas les inférer."
+    )
+    if profile and not profile.current_holdings:
+        lines.append(
+            "Portefeuille actuel non fourni : les poids du scénario demandé hors actif ciblé "
+            "sont une hypothèse de simulation, pas les avoirs du client."
+        )
+    return lines
 
 
 def build_prompt(state: GraphState) -> str:
@@ -203,6 +280,8 @@ def build_prompt(state: GraphState) -> str:
                 f"preferences={p.preferences}, type={p.request_type}, idea={p.requested_idea}"
             ),
             f"Detected conflicts: {p.conflicts or 'none'}",
+            "",
+            *_decision_context(state),
             "",
             "Simulated scenarios:",
             *(_scenario_block(s, state.evidence) for s in state.scenarios),
@@ -235,6 +314,8 @@ def build_prompt(state: GraphState) -> str:
         ),
         f"Tensions détectées : {p.conflicts or 'aucune'}",
         "",
+        *_decision_context(state),
+        "",
         "Scénarios fictifs :",
         *(_scenario_block(s, state.evidence) for s in state.scenarios),
         "",
@@ -263,15 +344,146 @@ def _metric_value(state: GraphState, sc: Scenario, metric: str) -> float | None:
     return numeric(ev) if ev else None
 
 
+def _best_scenario(state: GraphState) -> Scenario:
+    candidates = [sc for sc in state.scenarios if sc.name in SCENARIO_NAMES]
+    if not candidates:
+        raise ValueError("No comparable scenario is available for the explanation.")
+    profile = state.profile
+    level = (
+        effective_risk(profile.risk_tolerance, profile.risk_capacity)
+        if profile
+        else "moderate"
+    )
+    name = (
+        "profile_baseline"
+        if level in ("low", "low_moderate")
+        or (profile and profile.objective == "capital_preservation")
+        else "capped"
+    )
+    selected = next((sc for sc in candidates if sc.name == name), None)
+    if selected:
+        return selected
+    return min(
+        candidates,
+        key=lambda sc: abs(_metric_value(state, sc, "max_drawdown") or 0),
+    )
+
+
+def _requested_assessment(state: GraphState) -> tuple[str | None, float | None, bool]:
+    profile = state.profile
+    idea = profile.requested_idea if profile else None
+    if not idea:
+        return None, None, False
+
+    ticker = idea.get("ticker")
+    weight = idea.get("weight")
+    weight_pct = round(float(weight) * 100, 2) if weight is not None else None
+    info = get_provider().asset_info()
+    if ticker not in info.index or weight is None:
+        return ticker, weight_pct, bool(profile.conflicts)
+
+    risk_level = effective_risk(profile.risk_tolerance, profile.risk_capacity)
+    caps = CAPS.get(risk_level, CAPS["moderate"])
+    asset_class = info.at[ticker, "asset_class"]
+    cap_key = (
+        "single_stock"
+        if asset_class == "equity"
+        else "crypto_total"
+        if asset_class == "crypto"
+        else "etf"
+    )
+    incompatible = bool(profile.conflicts) or float(weight) > caps[cap_key]
+    return ticker, weight_pct, incompatible
+
+
+def _market_summary(state: GraphState, ticker: str | None, language: str) -> str:
+    if not ticker:
+        return (
+            "The available evidence compares simulated portfolio risk; no specific asset was "
+            "requested."
+            if language == "en"
+            else "Les preuves disponibles comparent le risque des portefeuilles simulés; aucun actif précis n'a été demandé."
+        )
+
+    metrics = {}
+    for ev in state.evidence.values():
+        value = ev.value
+        if isinstance(value, dict) and value.get("ticker") == ticker:
+            metrics[value.get("metric")] = ev
+    details = []
+    for metric, label in (
+        ("volatility_ann", "volatilité annualisée historique" if language == "fr" else "historical annualized volatility"),
+        ("max_drawdown", "perte maximale historique" if language == "fr" else "historical maximum loss"),
+        ("stress_2022", "rendement pendant le choc de marché de 2022" if language == "fr" else "return during the 2022 market stress"),
+        ("avg_daily_traded_value_20d_cad", "valeur quotidienne moyenne échangée en CAD" if language == "fr" else "average daily traded value in CAD"),
+    ):
+        ev = metrics.get(metric)
+        if ev:
+            details.append(f"{label} : {printable(ev)} [{ev.id}]")
+
+    events = [event for event in state.events if event.get("ticker") == ticker]
+    if events:
+        details.append(
+            ("Actualités : " if language == "fr" else "News: ")
+            + (
+                "des éléments datés relatifs à cet actif ont été retenus "
+                if language == "fr"
+                else "dated items related to this asset were retained "
+            )
+            + " ".join(f"[{event['evidence_id']}]" for event in events)
+        )
+    macro = [
+        ev for ev in state.evidence.values()
+        if isinstance(ev.value, dict)
+        and ev.value.get("metric") in {
+            "policy_rate_ca", "policy_rate_us", "cpi_yoy_ca", "cpi_yoy_us"
+        }
+    ]
+    if macro:
+        details.append(
+            (
+                "Contexte macro (taux directeurs et inflation) : "
+                if language == "fr"
+                else "Macro context (policy rates and inflation): "
+            )
+            + "; ".join(
+                f"{ev.value['metric']} : {printable(ev)} [{ev.id}]"
+                for ev in macro
+            )
+            + (
+                "; contexte général, sans prédire la trajectoire de l'actif"
+                if language == "fr"
+                else "; general context, not a prediction of the asset's path"
+            )
+            if language == "fr"
+            else "Observed macro context includes rates and inflation, but cannot by itself predict this asset's path."
+        )
+    else:
+        details.append(
+            "Aucun indicateur macro exploitable n'est disponible."
+            if language == "fr"
+            else "No usable macro indicator is available."
+        )
+    if not metrics:
+        details.insert(
+            0,
+            "No asset-specific historical metrics are available."
+            if language == "en"
+            else "Aucun indicateur historique propre à cet actif n'est disponible."
+        )
+    details.append(
+        "Market capitalization, fundamental valuation, and an economic-cycle assessment are not available."
+        if language == "en"
+        else "Capitalisation boursière, valorisation fondamentale et phase du cycle économique ne sont pas disponibles"
+    )
+    return "; ".join(details) + "."
+
+
 def template_explanation(state: GraphState) -> dict:
     """Explanation built from the evidence without a model (used when the LLM fails)."""
     lang = getattr(state.profile, "language", None) or getattr(state, "language", "fr")
 
-    def risk(sc: Scenario) -> float:
-        v = _metric_value(state, sc, "max_drawdown")
-        return abs(v) if v is not None else 9.0
-
-    best = min(state.scenarios, key=risk)
+    best = _best_scenario(state)
     donnees, pourquoi = [], []
     for sc in state.scenarios:
         ids = [sc.metrics[m] for m in ("volatility_ann", "max_drawdown") if m in sc.metrics]
@@ -300,6 +512,10 @@ def template_explanation(state: GraphState) -> dict:
                 )
     bm = _metric_value(state, best, "max_drawdown")
     if bm is not None:
+        caps_evidence = [
+            eid for eid, ev in state.evidence.items()
+            if isinstance(ev.value, dict) and ev.value.get("metric") == "caps"
+        ]
         if lang == "en":
             tol_str = (
                 TOLERANCE_EN.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
@@ -309,11 +525,11 @@ def template_explanation(state: GraphState) -> dict:
             pourquoi.append(
                 {
                     "claim": (
-                        f"The {best.name} scenario shows the lowest historical maximum loss "
-                        f"({_fr(abs(bm) * 100, 1)} %) among the three, which is most consistent with a "
-                        f"'{tol_str}' risk tolerance."
+                        f"The {best.name} scenario respects the profile's risk limits and has a "
+                        f"historical maximum loss of {_fr(abs(bm) * 100, 1)} %, making it the "
+                        f"most consistent with a '{tol_str}' risk tolerance."
                     ),
-                    "evidence": [best.metrics["max_drawdown"]],
+                    "evidence": [best.metrics["max_drawdown"], *caps_evidence],
                 }
             )
         else:
@@ -325,26 +541,23 @@ def template_explanation(state: GraphState) -> dict:
             pourquoi.append(
                 {
                     "claim": (
-                        f"Le scénario {best.name} présente la plus faible perte maximale historique "
-                        f"({_fr(abs(bm) * 100, 1)} %) parmi les trois, ce qui est le plus cohérent avec une "
-                        f"tolérance au risque « {tol_str} »."
+                        f"Le scénario {best.name} respecte les limites de risque du profil et affiche "
+                        f"une perte maximale historique de {_fr(abs(bm) * 100, 1)} %, ce qui le rend "
+                        f"le plus cohérent avec une tolérance au risque « {tol_str} »."
                     ),
-                    "evidence": [best.metrics["max_drawdown"]],
+                    "evidence": [best.metrics["max_drawdown"], *caps_evidence],
                 }
             )
-    req_idea = getattr(state.profile, "requested_idea", None) if state.profile else None
-    if isinstance(req_idea, dict):
-        ticker = req_idea.get("ticker")
-        w_val = req_idea.get("weight")
-    elif req_idea is not None:
-        ticker = getattr(req_idea, "ticker", None)
-        w_val = getattr(req_idea, "weight", None)
-    else:
-        ticker = None
-        w_val = None
-    weight_pct = int(round(w_val * 100)) if w_val is not None else None
+    ticker, weight_pct, incompatible = _requested_assessment(state)
     horizon = getattr(state.profile, "horizon_years", 5) if state.profile else 5
-    scenario_label = "le scénario ajusté" if best.name == "capped" else ("le scénario de votre demande" if best.name == "as_requested" else "le profil de base")
+    scenario_label = "le scénario ajusté" if best.name == "capped" else "le profil de référence"
+
+    capacity = state.profile.risk_capacity if state.profile else "moderate"
+    capacity_label = (
+        {"low": "faible", "moderate": "modérée", "high": "élevée"}.get(capacity, capacity)
+        if lang != "en"
+        else {"low": "low", "moderate": "moderate", "high": "high"}.get(capacity, capacity)
+    )
 
     if lang == "en":
         tol_str = (
@@ -352,21 +565,34 @@ def template_explanation(state: GraphState) -> dict:
             if state.profile
             else "moderate"
         )
-        if ticker and weight_pct:
-            resume = (
-                f"Your request to allocate {weight_pct} % to {ticker} has been analyzed across three scenarios against your {tol_str} risk profile (horizon {horizon} years). "
-                f"The {best.name.replace('_', ' ')} scenario is the most consistent with your financial capacity and objectives."
+        if ticker and weight_pct is not None:
+            verdict = "poorly consistent" if incompatible else "within the profile's exposure limit"
+            p1 = (
+                f"Your request to allocate {_weight_text(weight_pct, 'en')} % to {ticker} is {verdict} with your "
+                f"{tol_str} risk tolerance, {capacity_label} capacity, and {horizon}-year horizon"
             )
+            if incompatible:
+                p1 += "; it conflicts with your profile's risk limits"
+            p1 += f"; the {best.name.replace('_', ' ')} scenario is the most consistent."
         elif ticker:
-            resume = (
-                f"An allocation to {ticker} has been analyzed across three scenarios against your {tol_str} risk profile (horizon {horizon} years). "
-                f"The {best.name.replace('_', ' ')} scenario is the most consistent with your risk profile."
+            p1 = (
+                f"Your proposed exposure to {ticker} is "
+                f"{'poorly consistent' if incompatible else 'within the profile limits'} with "
+                f"your {tol_str} risk tolerance, {capacity_label} capacity, and {horizon}-year horizon."
             )
         else:
-            resume = (
-                f"Three simulated allocation scenarios were evaluated against your {tol_str} risk profile (horizon {horizon} years). "
-                f"The {best.name.replace('_', ' ')} scenario is the most consistent with your declared objectives."
+            p1 = (
+                f"Your asset allocation request was evaluated for a {horizon}-year horizon with a {tol_str} risk profile. "
+                f"The {best.name.replace('_', ' ')} scenario emerges as the most consistent structure with your wealth objectives."
             )
+
+        p2 = _market_summary(state, ticker, "en")
+        if state.profile and not state.profile.current_holdings:
+            p2 += (
+                " Current holdings were not provided, so the simulated remainder is hypothetical "
+                "and does not describe your portfolio."
+            )
+        resume = f"{p1}\n\n{p2}"
 
         if not donnees:
             donnees = [{"claim": "No numerical metrics available.", "evidence": []}]
@@ -375,10 +601,15 @@ def template_explanation(state: GraphState) -> dict:
         limites = [
             {"claim": "This explanation was generated from a template, without a language model.", "evidence": []},
             {"claim": "Historical statistics do not describe the future.", "evidence": []},
+            {"claim": "Market capitalization, fundamental valuation, and a reliable market-cycle assessment are not available in this dataset.", "evidence": []},
         ]
         if state.profile and state.profile.conflicts:
             limites.append(
                 {"claim": "The profile has contradictions with the formulated request.", "evidence": []}
+            )
+        if state.profile and not state.profile.current_holdings:
+            limites.append(
+                {"claim": "Current holdings were not provided; the remaining simulated allocation is hypothetical.", "evidence": []}
             )
         return {
             "resume": resume,
@@ -398,21 +629,35 @@ def template_explanation(state: GraphState) -> dict:
         if state.profile
         else "modéré"
     )
-    if ticker and weight_pct:
-        resume = (
-            f"Votre souhait d'investir {weight_pct} % sur {ticker} a été analysé à travers trois scénarios face à votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
-            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec votre capacité financière et vos objectifs."
+    if ticker and weight_pct is not None:
+        verdict = "peu cohérente" if incompatible else "compatible avec la limite d'exposition du profil"
+        p1 = (
+            f"Consacrer {_weight_text(weight_pct, 'fr')} % à {ticker} est {verdict}, au regard de votre tolérance "
+            f"au risque {tol_str}, de votre capacité {capacity_label} et de votre horizon de {horizon} ans"
         )
+        if incompatible:
+            p1 += "; cette part dépasse le cadre de risque du profil"
+        p1 += f"; le scénario {best.name.replace('_', ' ')} est le plus cohérent."
     elif ticker:
-        resume = (
-            f"L'exposition à {ticker} a été analysée à travers trois scénarios face à votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
-            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec votre profil de risque."
+        p1 = (
+            f"L'exposition proposée à {ticker} est "
+            f"{'peu cohérente' if incompatible else 'compatible avec les limites du profil'}, "
+            f"au regard de votre tolérance au risque {tol_str}, de votre capacité {capacity_label} "
+            f"et de votre horizon de {horizon} ans."
         )
     else:
-        resume = (
-            f"Trois scénarios d'allocation ont été simulés pour votre tolérance au risque {tol_str} (horizon de {horizon} ans). "
-            f"{scenario_label.capitalize()} ressort comme le plus cohérent avec le profil déclaré."
+        p1 = (
+            f"Votre demande d'allocation a été évaluée pour un horizon de {horizon} ans avec une tolérance au risque {tol_str}. "
+            f"{scenario_label.capitalize()} ressort comme la structure la plus cohérente avec vos objectifs patrimoniaux."
         )
+
+    p2 = _market_summary(state, ticker, "fr")
+    if state.profile and not state.profile.current_holdings:
+        p2 += (
+            " Vos avoirs ne sont pas fournis; le reste simulé est hypothétique et ne décrit "
+            "pas votre portefeuille."
+        )
+    resume = f"{p1}\n\n{p2}"
 
     if not donnees:
         donnees = [{"claim": "Aucun indicateur chiffré n'est disponible.", "evidence": []}]
@@ -421,10 +666,15 @@ def template_explanation(state: GraphState) -> dict:
     limites = [
         {"claim": "Cette explication a été produite par un gabarit, sans modèle de langage.", "evidence": []},
         {"claim": "Les statistiques sont historiques et ne décrivent pas l'avenir.", "evidence": []},
+        {"claim": "La capitalisation boursière, la valorisation fondamentale et une analyse fiable du cycle de marché ne sont pas disponibles dans ces données.", "evidence": []},
     ]
     if state.profile and state.profile.conflicts:
         limites.append(
             {"claim": "Le profil comporte des tensions avec la demande formulée.", "evidence": []}
+        )
+    if state.profile and not state.profile.current_holdings:
+        limites.append(
+            {"claim": "Les avoirs actuels ne sont pas fournis; la répartition simulée restante est hypothétique.", "evidence": []}
         )
     return {
         "resume": resume,

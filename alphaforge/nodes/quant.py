@@ -240,6 +240,33 @@ def quant_node(state: GraphState) -> dict:
                 "max drawdown in CAD within 2022-01-03..2022-12-30",
             )
 
+    if focus in tickers:
+        traded_prices = provider.prices_cad([focus], as_of, field="close")[focus]
+        volume = (
+            provider.prices([focus], end=as_of)
+            .set_index("date")["volume"]
+            .reindex(traded_prices.index)
+        )
+        traded_value = (traded_prices * volume).replace([np.inf, -np.inf], np.nan)
+        traded_value = traded_value[traded_value > 0].dropna().tail(20)
+        if not traded_value.empty:
+            reg.add(
+                {
+                    "metric": "avg_daily_traded_value_20d_cad",
+                    "ticker": focus,
+                    "value": _r4(traded_value.mean()),
+                    "unit": "CAD/day",
+                    "observations": len(traded_value),
+                },
+                source=SOURCE,
+                date=traded_value.index[-1].date(),
+                method=(
+                    "average close price times reported volume on the latest available "
+                    f"{len(traded_value)} common trading days, converted to CAD; "
+                    "historical liquidity proxy, not an executable quote"
+                ),
+            )
+
     corr = prices.pct_change(fill_method=None).dropna().corr()
     for a, b in combinations(tickers, 2):
         c = corr.at[a, b]
