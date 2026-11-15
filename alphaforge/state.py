@@ -65,6 +65,10 @@ def _merge(left: dict, right: dict) -> dict:
 class GraphState(BaseModel):
     as_of_date: dt.date
     persona: PersonaId
+    # Questionnaire profiles travel in the state instead of the global persona table (#113).
+    persona_data: dict | None = None
+    # Opaque id of the browser session that started the run; used for access control (#111).
+    owner: str | None = None
     request_text: str = ""
     profile: Profile | None = None
     eligible_universe: list[str] = Field(default_factory=list)

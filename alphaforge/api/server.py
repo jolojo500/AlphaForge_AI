@@ -9,12 +9,15 @@ import json
 import logging
 import os
 import threading
+import time
 import uuid
+from collections import defaultdict, deque
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -58,6 +61,7 @@ class Run:
         self.question: str | None = None
         self.error: str | None = None
         self.parent_run_id: str | None = None
+        self.owner: str | None = None
         self.change: dict[str, Any] | None = None
         self.subscribers: set[tuple[asyncio.Queue, asyncio.AbstractEventLoop]] = set()
         self._lock = threading.Lock()
@@ -109,11 +113,33 @@ class BaseRunStore(abc.ABC):
     def save(self, run: Run) -> None:
         pass
 
+    def list_owned(self, owner: str) -> list[Run]:
+        return []
+
+
+MAX_RUNS_IN_MEMORY = int(os.getenv("AF_MAX_RUNS_IN_MEMORY", "200"))
+
 
 class InMemoryRunStore(BaseRunStore):
-    def __init__(self) -> None:
+    """Keeps the most recent runs only (#113); older ones stay readable from the trace store."""
+
+    def __init__(self, max_runs: int = MAX_RUNS_IN_MEMORY) -> None:
         self._runs: dict[str, Run] = {}
         self._lock = threading.Lock()
+        self._max = max_runs
+
+    def _evict(self) -> None:
+        while len(self._runs) > self._max:
+            oldest = next(
+                (k for k, r in self._runs.items() if r.status in ("completed", "error")),
+                next(iter(self._runs)),
+            )
+            del self._runs[oldest]
+
+    def list_owned(self, owner: str) -> list[Run]:
+        with self._lock:
+            runs = [r for r in self._runs.values() if r.owner == owner]
+        return sorted(runs, key=lambda r: r.created_at, reverse=True)
 
     def create(
         self, persona: str, request_text: str, as_of_date: dt.date | None = None
@@ -127,6 +153,7 @@ class InMemoryRunStore(BaseRunStore):
         )
         with self._lock:
             self._runs[run_id] = run
+            self._evict()
         return run
 
     def get(self, run_id: str) -> Run | None:
@@ -182,6 +209,7 @@ def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
             )
             run.status = run_data.get("status", "completed")
             run.state = graph_state
+            run.owner = graph_state.owner if graph_state is not None else None
             if run.status == "completed":
                 run.record_event({"type": "final", "run_id": run.run_id})
 
@@ -212,6 +240,7 @@ def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
                 request_text=checkpoint_values.get("request_text", ""),
                 as_of_date=as_of_date,
             )
+            run.owner = checkpoint_values.get("owner")
             if thread_state.tasks and any(t.interrupts for t in thread_state.tasks):
                 run.status = "interrupted"
                 for t in thread_state.tasks:
@@ -269,14 +298,78 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
         run.record_event({"type": "error", "error": str(exc), "message": str(exc)})
 
 
-def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> threading.Thread:
-    thread = threading.Thread(
-        target=_run_worker,
-        args=(run, gen_fn, *args),
-        daemon=True,
-    )
-    thread.start()
-    return thread
+MAX_CONCURRENT_RUNS = int(os.getenv("AF_MAX_CONCURRENT_RUNS", "3"))
+MAX_QUEUED_RUNS = int(os.getenv("AF_MAX_QUEUED_RUNS", "12"))
+_executor = ThreadPoolExecutor(max_workers=MAX_CONCURRENT_RUNS, thread_name_prefix="run")
+_pending = threading.BoundedSemaphore(MAX_CONCURRENT_RUNS + MAX_QUEUED_RUNS)
+
+
+def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> Future:
+    """Queue a run on the bounded worker pool (#113). 429 when the queue is full."""
+    if not _pending.acquire(blocking=False):
+        raise HTTPException(
+            status_code=429,
+            detail="Le serveur traite déjà le maximum d'analyses. Réessayez dans une minute.",
+        )
+
+    def _job() -> None:
+        try:
+            _run_worker(run, gen_fn, *args)
+        finally:
+            _pending.release()
+
+    return _executor.submit(_job)
+
+
+# --- access control and rate limiting (#111) ---------------------------------------
+
+RATE_LIMIT_RUNS = int(os.getenv("AF_RATE_LIMIT_RUNS", "8"))
+RATE_LIMIT_WINDOW_S = int(os.getenv("AF_RATE_LIMIT_WINDOW_S", "600"))
+_rate: dict[str, deque] = defaultdict(deque)
+_rate_lock = threading.Lock()
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "?")
+
+
+def _owner(request: Request) -> str:
+    """Opaque browser-session id (header, or query param for EventSource); IP otherwise."""
+    cid = request.headers.get("x-client-id") or request.query_params.get("client") or ""
+    cid = cid.strip()[:64]
+    return f"c:{cid}" if cid else f"ip:{_client_ip(request)}"
+
+
+def _rate_limit(request: Request) -> None:
+    """At most RATE_LIMIT_RUNS model-backed runs per client IP per window."""
+    key = _client_ip(request)
+    now = time.monotonic()
+    with _rate_lock:
+        q = _rate[key]
+        while q and now - q[0] > RATE_LIMIT_WINDOW_S:
+            q.popleft()
+        if len(q) >= RATE_LIMIT_RUNS:
+            raise HTTPException(
+                status_code=429,
+                detail="Trop d'analyses lancées depuis cette adresse. Réessayez dans quelques minutes.",
+            )
+        q.append(now)
+
+
+def _is_golden(run: Run) -> bool:
+    return run.run_id.startswith("golden_")
+
+
+def _authorize(run: Run | None, request: Request, *, write: bool = False) -> Run:
+    """404 unless the caller owns the run. Golden demo runs are readable by everyone."""
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if _is_golden(run) and not write:
+        return run
+    if run.owner is None or run.owner != _owner(request):
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
 
 
 @asynccontextmanager
@@ -292,7 +385,13 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="AlphaForge AI API", lifespan=lifespan)
+app = FastAPI(
+    title="AlphaForge AI API",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -370,43 +469,70 @@ def get_personas() -> dict[str, dict[str, Any]]:
 
 
 @app.get("/runs")
-def list_runs(persona: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
-    ts = get_trace_store()
-    return ts.list_runs(limit=limit, persona=persona, include_golden=True)
+def list_runs(request: Request, persona: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    """Golden demo runs plus the caller's own runs; never other people's requests (#111)."""
+    limit = max(1, min(limit, 100))
+    golden = get_trace_store().list_runs(limit=limit, persona=persona, include_golden=True)
+    out = [r for r in golden if r.get("is_golden")]
+    me = _owner(request)
+    for run in store.list_owned(me):
+        if persona and run.persona != persona:
+            continue
+        v = run.state.verification if run.state is not None else None
+        out.append(
+            {
+                "run_id": run.run_id,
+                "persona": run.persona,
+                "as_of_date": str(run.as_of_date or ""),
+                "request_text": run.request_text,
+                "created_at": run.created_at.isoformat(),
+                "status": run.status,
+                "verification_passed": bool(v and v.get("passed")),
+                "is_golden": False,
+            }
+        )
+    return out[:limit]
 
 
 @app.post("/runs")
-def create_run(req: RunCreateRequest) -> dict[str, str]:
-    persona = req.persona
+def create_run(req: RunCreateRequest, request: Request) -> dict[str, str]:
+    persona, persona_data = req.persona, None
     if req.profile_data:
-        # A questionnaire profile is registered under its own key for this run only,
-        # so concurrent users never overwrite each other and the demo personas stay intact.
-        persona = f"custom_{uuid.uuid4().hex[:12]}"
-        PERSONAS[persona] = _custom_persona(req.profile_data, req.request_text)
+        # A questionnaire profile travels in the run's own state, never in a global (#113).
+        persona, persona_data = "custom", _custom_persona(req.profile_data, req.request_text)
     elif persona not in DEMO_PERSONAS:
         raise HTTPException(
             status_code=400,
             detail=f"Unknown persona '{persona}'. Allowed: {list(DEMO_PERSONAS)}",
         )
+    if len(req.request_text) > 4000:
+        raise HTTPException(status_code=400, detail="request_text is limited to 4000 characters")
+    _rate_limit(request)
+    owner = _owner(request)
     run = store.create(
         persona=persona,
         request_text=req.request_text,
         as_of_date=req.as_of_date,
     )
+    run.owner = owner
     start_run_thread(
         run,
         stream_run,
-        initial_state(run.persona, run.request_text, run.as_of_date),
+        initial_state(
+            run.persona,
+            run.request_text,
+            run.as_of_date,
+            persona_data=persona_data,
+            owner=owner,
+        ),
         run.run_id,
     )
     return {"run_id": run.run_id}
 
 
 @app.get("/runs/{run_id}/events")
-async def stream_run_events(run_id: str) -> EventSourceResponse:
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+async def stream_run_events(run_id: str, request: Request) -> EventSourceResponse:
+    run = _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
 
     loop = asyncio.get_running_loop()
 
@@ -431,10 +557,8 @@ class WhatIfRequest(BaseModel):
 
 
 @app.post("/runs/{run_id}/whatif")
-def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
-    parent = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if parent is None:
-        raise HTTPException(status_code=404, detail="Parent run not found")
+def whatif_run(run_id: str, req: WhatIfRequest, request: Request) -> dict[str, str]:
+    parent = _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
 
     parent_state = parent.state
     if parent_state is None:
@@ -455,11 +579,14 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
+    _rate_limit(request)
     child_run = store.create(
         persona=inputs["persona"],
         request_text=inputs["request_text"],
         as_of_date=inputs["as_of_date"],
     )
+    child_run.owner = _owner(request)
+    inputs["owner"] = child_run.owner
     child_run.parent_run_id = parent.run_id
     child_run.change = {"field": req.field, "value": req.value}
 
@@ -474,9 +601,9 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
 
 
 @app.get("/runs/{run_id}/diff")
-def get_run_diff(run_id: str) -> dict[str, Any]:
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None or run.parent_run_id is None:
+def get_run_diff(run_id: str, request: Request) -> dict[str, Any]:
+    run = _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
+    if run.parent_run_id is None:
         raise HTTPException(status_code=404, detail="What-if run with parent not found")
 
     parent = store.get(run.parent_run_id) or _rehydrate_run_from_trace_store(run.parent_run_id)
@@ -494,12 +621,10 @@ def get_run_diff(run_id: str) -> dict[str, Any]:
 
 
 @app.get("/runs/compare")
-def compare_runs(run_a: str, run_b: str) -> dict[str, Any]:
+def compare_runs(run_a: str, run_b: str, request: Request) -> dict[str, Any]:
     """Compare two completed runs using diff_scenarios (PRD 7, C-9)."""
-    r_a = store.get(run_a)
-    r_b = store.get(run_b)
-    if r_a is None or r_b is None:
-        raise HTTPException(status_code=404, detail="One or both runs not found")
+    r_a = _authorize(store.get(run_a) or _rehydrate_run_from_trace_store(run_a), request)
+    r_b = _authorize(store.get(run_b) or _rehydrate_run_from_trace_store(run_b), request)
     if r_a.state is None or r_b.state is None:
         raise HTTPException(status_code=400, detail="Both runs must be completed to compare")
     diff = diff_scenarios(r_a.state, r_b.state)
@@ -509,10 +634,10 @@ def compare_runs(run_a: str, run_b: str) -> dict[str, Any]:
 
 
 @app.post("/runs/{run_id}/answer")
-def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+def answer_run(run_id: str, req: AnswerRequest, request: Request) -> dict[str, str]:
+    run = _authorize(
+        store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request, write=True
+    )
 
     with run._lock:
         if run.status != "interrupted":
@@ -532,10 +657,8 @@ def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
 
 
 @app.get("/runs/{run_id}")
-def get_run_state(run_id: str):
-    run = store.get(run_id) or _rehydrate_run_from_trace_store(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="Run not found")
+def get_run_state(run_id: str, request: Request):
+    run = _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
 
     if run.state is not None:
         data = run.state.model_dump(mode="json")

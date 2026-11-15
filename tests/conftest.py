@@ -6,6 +6,10 @@ import pytest
 if not any(arg == "--live" for arg in os.sys.argv):
     os.environ.setdefault("AF_LLM_OFFLINE", "1")
 
+# The API rate limit and queue are exercised by dedicated tests; keep them out of the way here.
+os.environ.setdefault("AF_RATE_LIMIT_RUNS", "100000")
+os.environ.setdefault("AF_MAX_QUEUED_RUNS", "200")
+
 
 def pytest_addoption(parser):
     parser.addoption("--live", action="store_true", help="run tests that need AWS / network")
