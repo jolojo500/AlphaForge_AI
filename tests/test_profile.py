@@ -139,13 +139,13 @@ def test_one_question_then_profile_through_graph(use_llm):
     tid = uuid.uuid4().hex
     events = list(stream_run(initial_state("robert", "Je pense à Tesla."), tid))
     assert events[-1]["type"] == "interrupt" and "TSLA" in events[-1]["question"]
+    assert fake.calls == 0  # the model is only called once the question is answered
     events = list(resume_run("25 %", tid))
     assert events[-1]["type"] == "final"
     final = events[-1]["state"]
     assert final.profile.requested_idea == {"ticker": "TSLA", "weight": 0.25}
     assert final.retries["clarify"] == 1
     assert "25 %" in final.request_text
-    assert fake.calls == 1  # the model is only called once the question is answered
 
 
 def test_at_most_one_question(use_llm):
