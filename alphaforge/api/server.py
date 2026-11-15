@@ -63,6 +63,7 @@ class Run:
         self.parent_run_id: str | None = None
         self.owner: str | None = None
         self.change: dict[str, Any] | None = None
+        self.cost: dict[str, Any] | None = None
         self.subscribers: set[tuple[asyncio.Queue, asyncio.AbstractEventLoop]] = set()
         self._lock = threading.Lock()
 
@@ -209,6 +210,7 @@ def _rehydrate_run_from_trace_store(run_id: str) -> Run | None:
             )
             run.status = run_data.get("status", "completed")
             run.state = graph_state
+            run.cost = run_data.get("cost")
             run.owner = graph_state.owner if graph_state is not None else None
             if run.status == "completed":
                 run.record_event({"type": "final", "run_id": run.run_id})
@@ -273,6 +275,10 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
             if t == "final":
                 run.state = item.get("state")
                 run.status = "completed"
+                if run.state and hasattr(run.state, "trace"):
+                    from alphaforge.tracing import calculate_run_cost
+
+                    run.cost = calculate_run_cost(run.state.trace)
                 run.record_event({"type": "final", "run_id": run.run_id})
                 try:
                     ts = get_trace_store()
@@ -709,6 +715,7 @@ def answer_run(run_id: str, req: AnswerRequest, request: Request) -> dict[str, s
 @app.get("/runs/{run_id}")
 def get_run_state(run_id: str, request: Request):
     run = _authorize(store.get(run_id) or _rehydrate_run_from_trace_store(run_id), request)
+    from alphaforge.tracing import calculate_run_cost
 
     if run.state is not None:
         data = run.state.model_dump(mode="json")
@@ -716,6 +723,7 @@ def get_run_state(run_id: str, request: Request):
         if run.parent_run_id:
             data["parent_run_id"] = run.parent_run_id
             data["change"] = run.change
+        data["cost"] = run.cost or calculate_run_cost(data.get("trace"))
         return data
 
     try:
@@ -725,6 +733,7 @@ def get_run_state(run_id: str, request: Request):
         if run.parent_run_id:
             data["parent_run_id"] = run.parent_run_id
             data["change"] = run.change
+        data["cost"] = run.cost or calculate_run_cost(data.get("trace"))
         return data
     except Exception:  # noqa: BLE001
         if run.status == "error":

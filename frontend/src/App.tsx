@@ -526,6 +526,7 @@ export const AppContent: React.FC = () => {
           <NodeTrace
             trace={activeTrace.length > 0 ? activeTrace : (runState?.trace || [])}
             isRunning={isRunning || isWhatIfRunning}
+            cost={runState?.cost}
           />
         )}
 

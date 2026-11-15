@@ -77,6 +77,9 @@ class CaseResult:
     whatif_coherence: str
     verifier_status: str
     interrupted_resolved: bool
+    cost_cad: float = 0.0
+    latency_ms: int = 0
+    total_tokens: int = 0
 
 
 CASES = [
@@ -282,6 +285,13 @@ def evaluate_all() -> list[CaseResult]:
 
         # Run 1
         s1, intr1 = execute_run(c["persona"], c["request_text"])
+        from alphaforge.tracing import calculate_run_cost
+
+        cost_info = calculate_run_cost(s1.trace)
+        cost_cad = cost_info.get("cost_cad", 0.0)
+        latency_ms = cost_info.get("total_latency_ms", 0)
+        tokens = cost_info.get("total_tokens", 0)
+
         # Run 2 for stability check
         s2, _ = execute_run(c["persona"], c["request_text"])
 
@@ -311,11 +321,50 @@ def evaluate_all() -> list[CaseResult]:
             whatif_coherence=whatif_str,
             verifier_status=verifier_str,
             interrupted_resolved=intr1,
+            cost_cad=cost_cad,
+            latency_ms=latency_ms,
+            total_tokens=tokens,
         )
         results.append(res)
         print("OK")
 
     return results
+
+
+def compute_persona_metrics(results: list[CaseResult]) -> dict[str, dict[str, float]]:
+    """Compute mean cost (CAD), latency (ms), and tokens per persona."""
+    by_persona: dict[str, list[CaseResult]] = {}
+    for r in results:
+        by_persona.setdefault(r.persona, []).append(r)
+
+    metrics: dict[str, dict[str, float]] = {}
+    for persona, cases in sorted(by_persona.items()):
+        n = len(cases)
+        mean_cost = sum(c.cost_cad for c in cases) / n if n else 0.0
+        mean_lat = sum(c.latency_ms for c in cases) / n if n else 0.0
+        mean_tok = sum(c.total_tokens for c in cases) / n if n else 0.0
+        metrics[persona] = {
+            "mean_cost_cad": round(mean_cost, 6),
+            "mean_latency_ms": round(mean_lat, 1),
+            "mean_tokens": round(mean_tok, 1),
+            "runs_count": n,
+        }
+    return metrics
+
+
+def format_persona_cost_table(metrics: dict[str, dict[str, float]]) -> str:
+    """Format per-persona mean cost and latency into a Markdown table."""
+    lines = [
+        "| Persona | Coût moyen estimé (CAD) | Latence moyenne LLM | Jetons moyens (tokens) | Échantillon |",
+        "|---|---|---|---|---|",
+    ]
+    for persona, m in metrics.items():
+        p_name = persona.capitalize()
+        cost_str = f"{m['mean_cost_cad']:.4f} $ CAD"
+        lat_str = f"{m['mean_latency_ms']:.0f} ms"
+        tok_str = f"{m['mean_tokens']:.0f}"
+        lines.append(f"| **{p_name}** | {cost_str} | {lat_str} | {tok_str} | {m['runs_count']} exécutions |")
+    return "\n".join(lines)
 
 
 def format_markdown_table(results: list[CaseResult]) -> str:
@@ -335,6 +384,8 @@ def format_markdown_table(results: list[CaseResult]) -> str:
 def format_markdown_section(results: list[CaseResult]) -> str:
     """Format full Markdown section to be appended to docs/TECHNICAL.md section 10."""
     table = format_markdown_table(results)
+    persona_metrics = compute_persona_metrics(results)
+    cost_table = format_persona_cost_table(persona_metrics)
     tot_cases = len(results)
     passed_cases = sum(1 for r in results if r.verifier_status == "Conforme")
     total_violations = sum(r.constraint_violations for r in results)
@@ -351,6 +402,11 @@ def format_markdown_section(results: list[CaseResult]) -> str:
 Une campagne d'évaluation systématique et automatisée a été menée pour valider l'intégrité déterministe de la plateforme sur **{tot_cases} cas critiques**, englobant les 3 profils canoniques et 4 cas adverses (surpondération unitaire, spéculation crypto excessive, contournement des critères ESG, contradictions horizon/actif) :
 
 {table}
+
+#### Coût et latence par persona (estimations Bedrock)
+Source tarifaire : AWS Bedrock List Prices (2026-11-12, https://aws.amazon.com/bedrock/pricing/, 1 USD = 1.40 CAD)
+
+{cost_table}
 
 #### Synthèse des métriques d'évaluation
 - **Taux de succès du vérificateur** : **{passed_cases}/{tot_cases} ({passed_cases/tot_cases*100:.0f} %)** des cas atteignent le statut conforme du premier coup.
@@ -414,9 +470,13 @@ def main() -> int:
     args = parser.parse_args()
 
     results = evaluate_all()
+    persona_metrics = compute_persona_metrics(results)
 
     if args.json:
-        data = [asdict(r) for r in results]
+        data = {
+            "cases": [asdict(r) for r in results],
+            "persona_metrics": persona_metrics,
+        }
         print(json.dumps(data, indent=2, ensure_ascii=False))
         return 0
 
@@ -424,6 +484,10 @@ def main() -> int:
     print("RÉSULTATS DE L'ÉVALUATION")
     print("=" * 80 + "\n")
     print(format_markdown_table(results))
+    print()
+    print("COÛT ET LATENCE PAR PERSONA (Bedrock list prices CAD)")
+    print("-" * 80)
+    print(format_persona_cost_table(persona_metrics))
     print()
 
     if args.update_doc:

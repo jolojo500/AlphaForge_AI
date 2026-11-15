@@ -17,6 +17,7 @@ import re
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -35,6 +36,27 @@ Override = Callable[[Messages, str], str]
 MAX_OUTPUT_TOKENS = 4096
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
 _override: Override | None = None
+
+# ContextVar accumulator for LLM node token usage, calls and latency tracking (PRD 2, O-6)
+_usage_accumulator: ContextVar[list[dict[str, Any]] | None] = ContextVar(
+    "usage_accumulator", default=None
+)
+
+
+def get_llm_accumulator() -> list[dict[str, Any]] | None:
+    """Return the current context accumulator if active."""
+    return _usage_accumulator.get()
+
+
+@contextmanager
+def track_llm_usage() -> Iterator[list[dict[str, Any]]]:
+    """Context manager to record LLM calls within a scope (e.g. inside @traced node)."""
+    acc: list[dict[str, Any]] = []
+    token = _usage_accumulator.set(acc)
+    try:
+        yield acc
+    finally:
+        _usage_accumulator.reset(token)
 
 
 class LLMError(RuntimeError):
@@ -113,12 +135,22 @@ def schema_hint(schema: type[BaseModel]) -> str:
     return json.dumps(schema.model_json_schema(), ensure_ascii=False)
 
 
-def _invoke(llm: Any, messages: Messages, kind: str) -> str:
-    """One model call. Logs model id, latency and token usage, never the prompt content."""
+def _call(llm: Any, messages: Messages, kind: str) -> str:
+    """One model call. Logs model id, latency and token usage, and feeds the accumulator."""
+    acc = _usage_accumulator.get()
     if llm is None and _override is not None:
         started = time.perf_counter()
         text = _override(messages, kind)
-        log.info("llm override kind=%s latency_ms=%d", kind, (time.perf_counter() - started) * 1000)
+        latency_ms = max(0, int(round((time.perf_counter() - started) * 1000)))
+        log.info("llm override kind=%s latency_ms=%d", kind, latency_ms)
+        if acc is not None:
+            acc.append({
+                "model": model_id(kind),
+                "calls": 1,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "latency_ms": latency_ms,
+            })
         return text
     if llm is None:
         if os.getenv("AF_LLM_OFFLINE") == "1":
@@ -126,16 +158,31 @@ def _invoke(llm: Any, messages: Messages, kind: str) -> str:
         llm = get_llm(kind)  # type: ignore[arg-type]
     started = time.perf_counter()
     msg = llm.invoke(messages)
+    latency_ms = max(0, int(round((time.perf_counter() - started) * 1000)))
     usage = getattr(msg, "usage_metadata", None) or {}
+    in_tok = int(usage.get("input_tokens", 0) or 0)
+    out_tok = int(usage.get("output_tokens", 0) or 0)
+    mid = getattr(llm, "model_id", None) or getattr(llm, "model", None) or model_id(kind)
     log.info(
         "llm call model=%s kind=%s latency_ms=%d input_tokens=%s output_tokens=%s",
-        getattr(llm, "model_id", None) or getattr(llm, "model", None) or "injected",
+        mid,
         kind,
-        (time.perf_counter() - started) * 1000,
+        latency_ms,
         usage.get("input_tokens", "?"),
         usage.get("output_tokens", "?"),
     )
+    if acc is not None:
+        acc.append({
+            "model": str(mid),
+            "calls": 1,
+            "input_tokens": in_tok,
+            "output_tokens": out_tok,
+            "latency_ms": latency_ms,
+        })
     return _text_of(msg)
+
+
+_invoke = _call
 
 
 def call_json[T: BaseModel](
@@ -163,7 +210,7 @@ def call_json[T: BaseModel](
     error = ""
     for attempt in range(2):
         try:
-            reply = _invoke(llm, messages, kind)
+            reply = _call(llm, messages, kind)
         except LLMError:
             raise
         except Exception as exc:  # network, throttling, ExpiredToken, access denied

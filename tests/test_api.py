@@ -93,6 +93,11 @@ def test_full_run_streaming_and_get_state():
     assert state["profile"]["persona"] == "robert"
     assert [s["name"] for s in state["scenarios"]] == list(SCENARIO_NAMES)
     assert state["verification"]["passed"] is True
+    assert "cost" in state
+    assert "cost_cad" in state["cost"]
+    assert state["cost"]["is_estimate"] is True
+    assert state["cost"]["pricing_source"] == "https://aws.amazon.com/bedrock/pricing/"
+    assert state["cost"]["confidence"] == "assumption"
 
 
 def test_interrupt_and_resume_flow():

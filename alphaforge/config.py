@@ -29,3 +29,27 @@ MAX_RED_TEAM_LOOPS = 2
 RED_TEAM_ENABLED = os.getenv("AF_RED_TEAM", "on").lower() not in ("off", "0", "false")
 RED_TEAM_RECHECK = os.getenv("AF_RED_TEAM_RECHECK", "off").lower() in ("on", "1", "true")
 MAX_EXPLAIN_RETRIES = 1
+
+# AWS Bedrock List Pricing (USD per 1,000,000 tokens) as of November 2026.
+# Documented pricing assumption with official source URL (PRD 2, O-6):
+# Source: https://aws.amazon.com/bedrock/pricing/
+# Exchange rate assumption: 1 USD = 1.40 CAD (Bank of Canada reference rate assumption).
+BEDROCK_PRICE_SOURCE_URL = "https://aws.amazon.com/bedrock/pricing/"
+BEDROCK_PRICE_DATE = "2026-11-12"
+USD_TO_CAD_RATE = 1.40
+
+BEDROCK_PRICING: dict[str, dict[str, float]] = {
+    "global.anthropic.claude-sonnet-5-5": {
+        "input_usd_per_1m": 3.00,
+        "output_usd_per_1m": 15.00,
+    },
+    "global.anthropic.claude-haiku-5-5": {
+        "input_usd_per_1m": 0.80,
+        "output_usd_per_1m": 4.00,
+    },
+    "global.anthropic.claude-opus-5-5": {
+        "input_usd_per_1m": 15.00,
+        "output_usd_per_1m": 75.00,
+    },
+}
+
