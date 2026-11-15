@@ -6,6 +6,7 @@ import abc
 import asyncio
 import datetime as dt
 import json
+import logging
 import os
 import threading
 import uuid
@@ -165,8 +166,8 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
                         if hasattr(run.state, "verification")
                         else None,
                     )
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception:
+                    logging.exception("Failed to persist trace for run %s", run.run_id)
             elif t == "interrupt":
                 run.status = "interrupted"
                 run.question = item.get("question")
@@ -191,13 +192,14 @@ def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> threading.Thread:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if os.getenv("AF_S3_BUCKET"):
+    bucket = os.getenv("AF_S3_BUCKET")
+    if bucket:
         try:
             from infra.sync_s3 import pull_caches
 
-            pull_caches()
-        except Exception:  # noqa: BLE001
-            pass
+            pull_caches(bucket_name=bucket)
+        except Exception:
+            logging.exception("Failed to pull caches from S3 bucket %s", bucket)
     yield
 
 
