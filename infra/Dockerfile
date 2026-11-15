@@ -30,6 +30,7 @@ COPY alphaforge /app/alphaforge
 COPY infra /app/infra
 COPY Datathon2026 /app/Datathon2026
 COPY data /app/data
+COPY tests/fixtures /app/tests/fixtures
 
 # Copy built frontend distribution
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist

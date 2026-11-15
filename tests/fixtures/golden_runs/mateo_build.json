@@ -1,0 +1,3062 @@
+{
+  "run_id": "golden_mateo_build",
+  "persona": "mateo",
+  "as_of_date": "2026-11-12",
+  "request_text": "Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées.",
+  "created_at": "2026-11-15T03:47:51.920244+00:00",
+  "status": "completed",
+  "verification": {
+    "passed": true,
+    "errors": []
+  },
+  "trace": [
+    {
+      "node": "profile",
+      "started_at": "2026-11-15T03:46:58.274+00:00",
+      "ended_at": "2026-11-15T03:46:59.149+00:00",
+      "summary": "Profil compris : construction d'une allocation."
+    },
+    {
+      "node": "screening",
+      "started_at": "2026-11-15T03:46:59.150+00:00",
+      "ended_at": "2026-11-15T03:46:59.154+00:00",
+      "summary": "26 actifs admissibles, 5 exclus."
+    },
+    {
+      "node": "events",
+      "started_at": "2026-11-15T03:46:59.156+00:00",
+      "ended_at": "2026-11-15T03:46:59.230+00:00",
+      "summary": "12 actualité(s) retenue(s) sur 21 lue(s), 6 appel(s) d'outil."
+    },
+    {
+      "node": "macro",
+      "started_at": "2026-11-15T03:46:59.156+00:00",
+      "ended_at": "2026-11-15T03:46:59.261+00:00",
+      "summary": "Contexte macro connu au 2026-11-12 : 11 indicateurs, délais de publication appliqués."
+    },
+    {
+      "node": "quant",
+      "started_at": "2026-11-15T03:46:59.157+00:00",
+      "ended_at": "2026-11-15T03:46:59.357+00:00",
+      "summary": "Statistiques de risque calculées pour 26 actifs (2021-11-12 au 2026-11-12)."
+    },
+    {
+      "node": "scenarios",
+      "started_at": "2026-11-15T03:46:59.358+00:00",
+      "ended_at": "2026-11-15T03:47:13.310+00:00",
+      "summary": "Trois scénarios construits : demandé, plafonné, référence."
+    },
+    {
+      "node": "red_team",
+      "started_at": "2026-11-15T03:47:13.312+00:00",
+      "ended_at": "2026-11-15T03:47:29.996+00:00",
+      "summary": "2 objection(s) signalée(s), aucune bloquante."
+    },
+    {
+      "node": "explain",
+      "started_at": "2026-11-15T03:47:29.997+00:00",
+      "ended_at": "2026-11-15T03:47:51.912+00:00",
+      "summary": "Explication rédigée en quatre questions."
+    },
+    {
+      "node": "verifier",
+      "started_at": "2026-11-15T03:47:51.914+00:00",
+      "ended_at": "2026-11-15T03:47:51.915+00:00",
+      "summary": "Vérification réussie : preuves, nombres, formulations et sections conformes."
+    }
+  ],
+  "final_state": {
+    "as_of_date": "2026-11-12",
+    "persona": "mateo",
+    "request_text": "Je veux un portefeuille équilibré et responsable sur environ 10 ans, sans entreprises controversées.",
+    "profile": {
+      "persona": "mateo",
+      "objective": "balanced",
+      "horizon_years": 10,
+      "risk_tolerance": "moderate",
+      "risk_capacity": "moderate",
+      "constraints": [
+        "no_crypto",
+        "esg_only",
+        "no_controversies"
+      ],
+      "preferences": [
+        "wants_balance"
+      ],
+      "budget_cad": null,
+      "request_type": "build",
+      "requested_idea": null,
+      "excluded_tickers": [],
+      "conflicts": [],
+      "clarification_needed": null
+    },
+    "eligible_universe": [
+      "AAPL",
+      "AGG",
+      "AMZN",
+      "ATD.TO",
+      "CNR.TO",
+      "CSU.TO",
+      "ESGV",
+      "FTS.TO",
+      "GLD",
+      "GOOGL",
+      "JNJ",
+      "JPM",
+      "MFC.TO",
+      "MSFT",
+      "NVDA",
+      "PG",
+      "QQQ",
+      "RY.TO",
+      "SHOP.TO",
+      "SPY",
+      "TD.TO",
+      "TLT",
+      "TSLA",
+      "XBB.TO",
+      "XIU.TO",
+      "ZST.TO"
+    ],
+    "exclusions": [
+      {
+        "ticker": "BTC-USD",
+        "reason": "Cryptoactif exclu par les contraintes du profil.",
+        "evidence_id": "ES4"
+      },
+      {
+        "ticker": "CNQ.TO",
+        "reason": "Secteur de l'énergie exclu par le critère ESG du profil.",
+        "evidence_id": "ES5"
+      },
+      {
+        "ticker": "ENB.TO",
+        "reason": "Secteur de l'énergie exclu par le critère ESG du profil.",
+        "evidence_id": "ES6"
+      },
+      {
+        "ticker": "ETH-USD",
+        "reason": "Cryptoactif exclu par les contraintes du profil.",
+        "evidence_id": "ES7"
+      },
+      {
+        "ticker": "XOM",
+        "reason": "Secteur de l'énergie exclu par le critère ESG du profil.",
+        "evidence_id": "ES8"
+      }
+    ],
+    "evidence": {
+      "ES1": {
+        "id": "ES1",
+        "value": "Seules les principales positions d'ESGV sont publiées (25 sur 1220, au 2026-09-30) : JNJ n'y figurent pas, sans que leur absence du fonds soit établie. Ils ne sont donc pas exclus pour ce motif.",
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "screening coverage note",
+        "confidence": "assumption"
+      },
+      "ES2": {
+        "id": "ES2",
+        "value": "Les actions canadiennes ne font pas partie de l'univers américain d'ESGV : elles ne sont pas exclues pour cette absence, seul le filtre sectoriel s'applique.",
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "screening coverage note",
+        "confidence": "assumption"
+      },
+      "ES3": {
+        "id": "ES3",
+        "value": "Les FNB larges (SPY, QQQ, XIU.TO) ne sont pas filtrés : ils peuvent contenir des sociétés que le critère ESG exclurait.",
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "screening coverage note",
+        "confidence": "assumption"
+      },
+      "ES4": {
+        "id": "ES4",
+        "value": {
+          "metric": "exclusion",
+          "ticker": "BTC-USD",
+          "value": "Cryptoactif exclu par les contraintes du profil."
+        },
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "constraint no_crypto on asset_class/market",
+        "confidence": "fact"
+      },
+      "ES5": {
+        "id": "ES5",
+        "value": {
+          "metric": "exclusion",
+          "ticker": "CNQ.TO",
+          "value": "Secteur de l'énergie exclu par le critère ESG du profil."
+        },
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "esg_only: energy sector excluded (fossil-fuel exposure)",
+        "confidence": "assumption"
+      },
+      "ES6": {
+        "id": "ES6",
+        "value": {
+          "metric": "exclusion",
+          "ticker": "ENB.TO",
+          "value": "Secteur de l'énergie exclu par le critère ESG du profil."
+        },
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "esg_only: energy sector excluded (fossil-fuel exposure)",
+        "confidence": "assumption"
+      },
+      "ES7": {
+        "id": "ES7",
+        "value": {
+          "metric": "exclusion",
+          "ticker": "ETH-USD",
+          "value": "Cryptoactif exclu par les contraintes du profil."
+        },
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "constraint no_crypto on asset_class/market",
+        "confidence": "fact"
+      },
+      "ES8": {
+        "id": "ES8",
+        "value": {
+          "metric": "exclusion",
+          "ticker": "XOM",
+          "value": "Secteur de l'énergie exclu par le critère ESG du profil."
+        },
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "esg_only: energy sector excluded (fossil-fuel exposure)",
+        "confidence": "assumption"
+      },
+      "EN1": {
+        "id": "EN1",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 8-K/A, items 5.02 Departure or Appointment of Directors or Officers",
+          "kind": "fact",
+          "risk_type": "market",
+          "material": true
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-06",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926123587/tm2629103d1_8ka.htm",
+        "method": "classified by keyword rules: fact, market, material=True",
+        "confidence": "fact"
+      },
+      "EN2": {
+        "id": "EN2",
+        "value": {
+          "metric": "news",
+          "ticker": "XOM",
+          "value": "Exxon Mobil: Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 2.01 Completion of Acquisition or Disposition of Assets; 3.01 Notice of Delisting or Failure to Satisfy a Listing Rule; 3.03 Material Modification to Rights of Security Holders; 5.02 Departure or Appointment of Directors or Officers; 5.03 Amendments to Articles of Incorporation or Bylaws; 9.01 Financial Statements and Exhibits",
+          "kind": "fact",
+          "risk_type": "liquidity",
+          "material": true
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-07-01",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/34088/000119312526291986/d70995d8k.htm",
+        "method": "classified by keyword rules: fact, liquidity, material=True",
+        "confidence": "fact"
+      },
+      "EN3": {
+        "id": "EN3",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+          "kind": "fact",
+          "risk_type": "market",
+          "material": true
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-06",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526450711/enb-20261106.htm",
+        "method": "classified by keyword rules: fact, market, material=True",
+        "confidence": "fact"
+      },
+      "EN4": {
+        "id": "EN4",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+          "kind": "fact",
+          "risk_type": "market",
+          "material": true
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-09-08",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926105899/tm2624881d2_8k.htm",
+        "method": "classified by keyword rules: fact, market, material=True",
+        "confidence": "fact"
+      },
+      "EN5": {
+        "id": "EN5",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+          "kind": "fact",
+          "risk_type": "market",
+          "material": true
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-07-31",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526326744/enb-20260731.htm",
+        "method": "classified by keyword rules: fact, market, material=True",
+        "confidence": "fact"
+      },
+      "EN6": {
+        "id": "EN6",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+          "kind": "fact",
+          "risk_type": "credit",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-12",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926126215/tm2626007d9_424b5.htm",
+        "method": "classified by keyword rules: fact, credit, material=False",
+        "confidence": "fact"
+      },
+      "EN7": {
+        "id": "EN7",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+          "kind": "fact",
+          "risk_type": "credit",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-12",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926126219/tm2626007d10_424b5.htm",
+        "method": "classified by keyword rules: fact, credit, material=False",
+        "confidence": "fact"
+      },
+      "EN8": {
+        "id": "EN8",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+          "kind": "fact",
+          "risk_type": "credit",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-09",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926124202/tm2626007d5_424b5.htm",
+        "method": "classified by keyword rules: fact, credit, material=False",
+        "confidence": "fact"
+      },
+      "EN9": {
+        "id": "EN9",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+          "kind": "fact",
+          "risk_type": "credit",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-09",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926124204/tm2626007d1_424b5.htm",
+        "method": "classified by keyword rules: fact, credit, material=False",
+        "confidence": "fact"
+      },
+      "EN10": {
+        "id": "EN10",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form 10-Q, quarterly report",
+          "kind": "fact",
+          "risk_type": "market",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-11-06",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526450714/enb-20260930.htm",
+        "method": "classified by keyword rules: fact, market, material=False",
+        "confidence": "fact"
+      },
+      "EN11": {
+        "id": "EN11",
+        "value": {
+          "metric": "news",
+          "ticker": "XOM",
+          "value": "Exxon Mobil: Form 424B2, prospectus supplement for a debt or securities offering",
+          "kind": "fact",
+          "risk_type": "credit",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-09-25",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/34088/000119312526401391/d137820d424b2.htm",
+        "method": "classified by keyword rules: fact, credit, material=False",
+        "confidence": "fact"
+      },
+      "EN12": {
+        "id": "EN12",
+        "value": {
+          "metric": "news",
+          "ticker": "ENB.TO",
+          "value": "Enbridge: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+          "kind": "fact",
+          "risk_type": "controversy",
+          "material": false
+        },
+        "source": "SEC EDGAR (sec_edgar)",
+        "date": "2026-09-23",
+        "date_kind": "publication",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526398771/enb-20251231.htm",
+        "method": "classified by keyword rules: fact, controversy, material=False",
+        "confidence": "fact"
+      },
+      "EN13": {
+        "id": "EN13",
+        "value": {
+          "metric": "news_items_retained",
+          "value": 12,
+          "note": "21 élément(s) lus, 12 retenu(s) ; outils : news(XOM) -> 5; search('Exxon Mobil ESG controversy') -> 0; news(ENB.TO) -> 16; search('Enbridge ESG controversy') -> 0; news(CNQ.TO) -> 0; search('Canadian Natural Resources ESG controversy') -> 0."
+        },
+        "source": "data/cache/news",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "count of news items kept after the as-of filter and classification",
+        "confidence": "fact"
+      },
+      "EM1": {
+        "id": "EM1",
+        "value": {
+          "metric": "policy_rate_ca",
+          "value": 2.5,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (Bank of Canada Valet API)",
+        "date": "2026-11-11",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Bank of Canada target for the overnight rate [V39079]; observation 2026-11-11, assumed published 2026-11-12 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM2": {
+        "id": "EM2",
+        "value": {
+          "metric": "yield_2y_ca",
+          "value": 3.25,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (Bank of Canada Valet API)",
+        "date": "2026-11-10",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Government of Canada benchmark bond yield, 2-year [BD.CDN.2YR.DQ.YLD]; observation 2026-11-10, assumed published 2026-11-11 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM3": {
+        "id": "EM3",
+        "value": {
+          "metric": "yield_10y_ca",
+          "value": 3.72,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (Bank of Canada Valet API)",
+        "date": "2026-11-10",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Government of Canada benchmark bond yield, 10-year [BD.CDN.10YR.DQ.YLD]; observation 2026-11-10, assumed published 2026-11-11 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM4": {
+        "id": "EM4",
+        "value": {
+          "metric": "curve_slope_ca",
+          "value": 0.47,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (Bank of Canada Valet API)",
+        "date": "2026-11-10",
+        "date_kind": "observation",
+        "url": null,
+        "method": "10-year minus 2-year government yield (CA) [BD.CDN.10YR.DQ.YLD - BD.CDN.2YR.DQ.YLD]; observation 2026-11-10, assumed published 2026-11-11 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM5": {
+        "id": "EM5",
+        "value": {
+          "metric": "cpi_yoy_ca",
+          "value": 3.1,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (Bank of Canada Valet API)",
+        "date": "2026-09-01",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Canada total CPI, % change y/y (unadjusted) [STATIC_TOTALCPICHANGE]; observation 2026-09-01, assumed published 2026-10-20 (day 20 of the month after the reference month); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM6": {
+        "id": "EM6",
+        "value": {
+          "metric": "policy_rate_us",
+          "value": 3.88,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (FRED, Federal Reserve Bank of St. Louis)",
+        "date": "2026-11-11",
+        "date_kind": "observation",
+        "url": null,
+        "method": "U.S. effective federal funds rate [DFF]; observation 2026-11-11, assumed published 2026-11-12 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM7": {
+        "id": "EM7",
+        "value": {
+          "metric": "yield_2y_us",
+          "value": 4.73,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (FRED, Federal Reserve Bank of St. Louis)",
+        "date": "2026-11-10",
+        "date_kind": "observation",
+        "url": null,
+        "method": "U.S. Treasury constant maturity yield, 2-year [DGS2]; observation 2026-11-10, assumed published 2026-11-11 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM8": {
+        "id": "EM8",
+        "value": {
+          "metric": "yield_10y_us",
+          "value": 4.98,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (FRED, Federal Reserve Bank of St. Louis)",
+        "date": "2026-11-10",
+        "date_kind": "observation",
+        "url": null,
+        "method": "U.S. Treasury constant maturity yield, 10-year [DGS10]; observation 2026-11-10, assumed published 2026-11-11 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM9": {
+        "id": "EM9",
+        "value": {
+          "metric": "curve_slope_us",
+          "value": 0.25,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (FRED, Federal Reserve Bank of St. Louis)",
+        "date": "2026-11-10",
+        "date_kind": "observation",
+        "url": null,
+        "method": "10-year minus 2-year government yield (US) [DGS10 - DGS2]; observation 2026-11-10, assumed published 2026-11-11 (1 business day after the observation); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM10": {
+        "id": "EM10",
+        "value": {
+          "metric": "cpi_yoy_us",
+          "value": 3.7173,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (FRED, Federal Reserve Bank of St. Louis)",
+        "date": "2026-09-01",
+        "date_kind": "observation",
+        "url": null,
+        "method": "U.S. CPI, % change y/y (computed from the SA index) [CPIAUCSL]; observation 2026-09-01, assumed published 2026-10-15 (day 15 of the month after the reference month); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM11": {
+        "id": "EM11",
+        "value": {
+          "metric": "unemployment_us",
+          "value": 4.1,
+          "unit": "%"
+        },
+        "source": "macro_rates.csv (FRED, Federal Reserve Bank of St. Louis)",
+        "date": "2026-10-01",
+        "date_kind": "observation",
+        "url": null,
+        "method": "U.S. unemployment rate (SA) [UNRATE]; observation 2026-10-01, assumed published 2026-11-07 (day 7 of the month after the reference month); latest value known on 2026-11-12",
+        "confidence": "fact"
+      },
+      "EM12": {
+        "id": "EM12",
+        "value": "Le taux de chômage canadien ne fait pas partie des données fournies.",
+        "source": "macro_rates.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "coverage of the starter dataset",
+        "confidence": "assumption"
+      },
+      "EQ1": {
+        "id": "EQ1",
+        "value": "Univers limité aux 31 actifs fournis, tous encore cotés aujourd'hui : biais du survivant, les statistiques historiques peuvent paraître meilleures que la réalité.",
+        "source": "assets_universe.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "known limitation of the starter dataset",
+        "confidence": "assumption"
+      },
+      "EQ2": {
+        "id": "EQ2",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "AAPL",
+          "value": 0.2784,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ3": {
+        "id": "EQ3",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "AAPL",
+          "value": -0.3403,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ4": {
+        "id": "EQ4",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "AAPL",
+          "value": -0.2249,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ5": {
+        "id": "EQ5",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "AAPL",
+          "value": -0.2617,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ6": {
+        "id": "EQ6",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "AGG",
+          "value": 0.0736,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ7": {
+        "id": "EQ7",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "AGG",
+          "value": -0.1275,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ8": {
+        "id": "EQ8",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "AGG",
+          "value": -0.0665,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ9": {
+        "id": "EQ9",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "AGG",
+          "value": -0.1033,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ10": {
+        "id": "EQ10",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "AMZN",
+          "value": 0.3623,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ11": {
+        "id": "EQ11",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "AMZN",
+          "value": -0.5239,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ12": {
+        "id": "EQ12",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "AMZN",
+          "value": -0.4656,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ13": {
+        "id": "EQ13",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "AMZN",
+          "value": -0.4786,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ14": {
+        "id": "EQ14",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "ATD.TO",
+          "value": 0.2389,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ15": {
+        "id": "EQ15",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "ATD.TO",
+          "value": -0.2216,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ16": {
+        "id": "EQ16",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "ATD.TO",
+          "value": 0.1517,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ17": {
+        "id": "EQ17",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "ATD.TO",
+          "value": -0.1584,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ18": {
+        "id": "EQ18",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "CNR.TO",
+          "value": 0.1985,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ19": {
+        "id": "EQ19",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "CNR.TO",
+          "value": -0.2725,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ20": {
+        "id": "EQ20",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "CNR.TO",
+          "value": 0.0581,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ21": {
+        "id": "EQ21",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "CNR.TO",
+          "value": -0.181,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ22": {
+        "id": "EQ22",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "CSU.TO",
+          "value": 0.3038,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ23": {
+        "id": "EQ23",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "CSU.TO",
+          "value": -0.5638,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ24": {
+        "id": "EQ24",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "CSU.TO",
+          "value": -0.0899,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ25": {
+        "id": "EQ25",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "CSU.TO",
+          "value": -0.2196,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ26": {
+        "id": "EQ26",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "ESGV",
+          "value": 0.1799,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ27": {
+        "id": "EQ27",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "ESGV",
+          "value": -0.2673,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ28": {
+        "id": "EQ28",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "ESGV",
+          "value": -0.1907,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ29": {
+        "id": "EQ29",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "ESGV",
+          "value": -0.2581,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ30": {
+        "id": "EQ30",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "FTS.TO",
+          "value": 0.1465,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ31": {
+        "id": "EQ31",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "FTS.TO",
+          "value": -0.2401,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ32": {
+        "id": "EQ32",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "FTS.TO",
+          "value": -0.0703,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ33": {
+        "id": "EQ33",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "FTS.TO",
+          "value": -0.2401,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ34": {
+        "id": "EQ34",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "GLD",
+          "value": 0.1839,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ35": {
+        "id": "EQ35",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "GLD",
+          "value": -0.26,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ36": {
+        "id": "EQ36",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "GLD",
+          "value": 0.0662,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ37": {
+        "id": "EQ37",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "GLD",
+          "value": -0.1737,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ38": {
+        "id": "EQ38",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "GOOGL",
+          "value": 0.3223,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ39": {
+        "id": "EQ39",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "GOOGL",
+          "value": -0.3931,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ40": {
+        "id": "EQ40",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "GOOGL",
+          "value": -0.3488,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ41": {
+        "id": "EQ41",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "GOOGL",
+          "value": -0.3886,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ42": {
+        "id": "EQ42",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "JNJ",
+          "value": 0.1834,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ43": {
+        "id": "EQ43",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "JNJ",
+          "value": -0.1555,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ44": {
+        "id": "EQ44",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "JNJ",
+          "value": 0.1294,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ45": {
+        "id": "EQ45",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "JNJ",
+          "value": -0.1039,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ46": {
+        "id": "EQ46",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "JPM",
+          "value": 0.2379,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ47": {
+        "id": "EQ47",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "JPM",
+          "value": -0.3224,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ48": {
+        "id": "EQ48",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "JPM",
+          "value": -0.1215,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ49": {
+        "id": "EQ49",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "JPM",
+          "value": -0.3211,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ50": {
+        "id": "EQ50",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "MFC.TO",
+          "value": 0.2159,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ51": {
+        "id": "EQ51",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "MFC.TO",
+          "value": -0.2105,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ52": {
+        "id": "EQ52",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "MFC.TO",
+          "value": 0.0247,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ53": {
+        "id": "EQ53",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "MFC.TO",
+          "value": -0.2105,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ54": {
+        "id": "EQ54",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "MSFT",
+          "value": 0.2798,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ55": {
+        "id": "EQ55",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "MSFT",
+          "value": -0.3431,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ56": {
+        "id": "EQ56",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "MSFT",
+          "value": -0.2159,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ57": {
+        "id": "EQ57",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "MSFT",
+          "value": -0.2909,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ58": {
+        "id": "EQ58",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "NVDA",
+          "value": 0.5034,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ59": {
+        "id": "EQ59",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "NVDA",
+          "value": -0.6346,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ60": {
+        "id": "EQ60",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "NVDA",
+          "value": -0.4677,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ61": {
+        "id": "EQ61",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "NVDA",
+          "value": -0.5818,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ62": {
+        "id": "EQ62",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "PG",
+          "value": 0.1882,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ63": {
+        "id": "EQ63",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "PG",
+          "value": -0.2347,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ64": {
+        "id": "EQ64",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "PG",
+          "value": 0.0127,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ65": {
+        "id": "EQ65",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "PG",
+          "value": -0.1819,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ66": {
+        "id": "EQ66",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "QQQ",
+          "value": 0.2275,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ67": {
+        "id": "EQ67",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "QQQ",
+          "value": -0.3168,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ68": {
+        "id": "EQ68",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "QQQ",
+          "value": -0.2789,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ69": {
+        "id": "EQ69",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "QQQ",
+          "value": -0.3028,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ70": {
+        "id": "EQ70",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "RY.TO",
+          "value": 0.1543,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ71": {
+        "id": "EQ71",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "RY.TO",
+          "value": -0.2102,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ72": {
+        "id": "EQ72",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "RY.TO",
+          "value": -0.0338,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ73": {
+        "id": "EQ73",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "RY.TO",
+          "value": -0.1889,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ74": {
+        "id": "EQ74",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "SHOP.TO",
+          "value": 0.64,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ75": {
+        "id": "EQ75",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "SHOP.TO",
+          "value": -0.8347,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ76": {
+        "id": "EQ76",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "SHOP.TO",
+          "value": -0.6971,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ77": {
+        "id": "EQ77",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "SHOP.TO",
+          "value": -0.7721,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ78": {
+        "id": "EQ78",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "SPY",
+          "value": 0.1663,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ79": {
+        "id": "EQ79",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "SPY",
+          "value": -0.2223,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ80": {
+        "id": "EQ80",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "SPY",
+          "value": -0.1327,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ81": {
+        "id": "EQ81",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "SPY",
+          "value": -0.2165,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ82": {
+        "id": "EQ82",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "TD.TO",
+          "value": 0.1767,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ83": {
+        "id": "EQ83",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "TD.TO",
+          "value": -0.2606,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ84": {
+        "id": "EQ84",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "TD.TO",
+          "value": -0.0826,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ85": {
+        "id": "EQ85",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "TD.TO",
+          "value": -0.2606,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ86": {
+        "id": "EQ86",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "TLT",
+          "value": 0.1589,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ87": {
+        "id": "EQ87",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "TLT",
+          "value": -0.3973,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ88": {
+        "id": "EQ88",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "TLT",
+          "value": -0.2442,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ89": {
+        "id": "EQ89",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "TLT",
+          "value": -0.2987,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ90": {
+        "id": "EQ90",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "TSLA",
+          "value": 0.5845,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ91": {
+        "id": "EQ91",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "TSLA",
+          "value": -0.6981,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ92": {
+        "id": "EQ92",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "TSLA",
+          "value": -0.6574,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ93": {
+        "id": "EQ93",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "TSLA",
+          "value": -0.686,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ94": {
+        "id": "EQ94",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "XBB.TO",
+          "value": 0.0666,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ95": {
+        "id": "EQ95",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "XBB.TO",
+          "value": -0.1548,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ96": {
+        "id": "EQ96",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "XBB.TO",
+          "value": -0.1051,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ97": {
+        "id": "EQ97",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "XBB.TO",
+          "value": -0.1423,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ98": {
+        "id": "EQ98",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "XIU.TO",
+          "value": 0.1299,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ99": {
+        "id": "EQ99",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "XIU.TO",
+          "value": -0.1636,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ100": {
+        "id": "EQ100",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "XIU.TO",
+          "value": -0.0641,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ101": {
+        "id": "EQ101",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "XIU.TO",
+          "value": -0.1636,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ102": {
+        "id": "EQ102",
+        "value": {
+          "metric": "volatility_ann",
+          "ticker": "ZST.TO",
+          "value": 0.0055,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns, CAD, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12, 245 obs/year",
+        "confidence": "fact"
+      },
+      "EQ103": {
+        "id": "EQ103",
+        "value": {
+          "metric": "max_drawdown",
+          "ticker": "ZST.TO",
+          "value": -0.0043,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the CAD price, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ104": {
+        "id": "EQ104",
+        "value": {
+          "metric": "stress_2022",
+          "ticker": "ZST.TO",
+          "value": 0.0122,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return in CAD, 2022-01-03..2022-12-30 (2022 rate-hike episode)",
+        "confidence": "fact"
+      },
+      "EQ105": {
+        "id": "EQ105",
+        "value": {
+          "metric": "stress_2022_drawdown",
+          "ticker": "ZST.TO",
+          "value": -0.0043,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "max drawdown in CAD within 2022-01-03..2022-12-30",
+        "confidence": "fact"
+      },
+      "EQ106": {
+        "id": "EQ106",
+        "value": {
+          "metric": "correlation",
+          "tickers": [
+            "AGG",
+            "TLT"
+          ],
+          "value": 0.871,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "correlation of daily CAD returns, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ107": {
+        "id": "EQ107",
+        "value": {
+          "metric": "correlation",
+          "tickers": [
+            "ESGV",
+            "QQQ"
+          ],
+          "value": 0.962,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "correlation of daily CAD returns, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ108": {
+        "id": "EQ108",
+        "value": {
+          "metric": "correlation",
+          "tickers": [
+            "ESGV",
+            "SPY"
+          ],
+          "value": 0.9914,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "correlation of daily CAD returns, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ109": {
+        "id": "EQ109",
+        "value": {
+          "metric": "correlation",
+          "tickers": [
+            "QQQ",
+            "SPY"
+          ],
+          "value": 0.9475,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "correlation of daily CAD returns, common TSX/US trading days, crypto weekends dropped, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EQ110": {
+        "id": "EQ110",
+        "value": {
+          "metric": "etf_overlap",
+          "tickers": [
+            "ESGV",
+            "QQQ"
+          ],
+          "value": 0.4495,
+          "unit": "ratio"
+        },
+        "source": "ETF holdings: ESGV + QQQ",
+        "date": "2026-09-30",
+        "date_kind": "observation",
+        "url": "https://stockanalysis.com/etf/esgv/holdings/",
+        "method": "sum over shared holdings of min(weight in A, weight in B); ESGV stockanalysis.com, ESGV top holdings (top 25 of 1220), as of 2026-09-30 (top 25 of 1220); QQQ stockanalysis.com, QQQ top holdings (top 25 of 104), as of 2026-11-13 (top 25 of 104); a top-N list gives a lower bound",
+        "confidence": "fact"
+      },
+      "EQ111": {
+        "id": "EQ111",
+        "value": {
+          "metric": "etf_overlap",
+          "tickers": [
+            "ESGV",
+            "SPY"
+          ],
+          "value": 0.4842,
+          "unit": "ratio"
+        },
+        "source": "ETF holdings: ESGV + SPY",
+        "date": "2026-09-30",
+        "date_kind": "observation",
+        "url": "https://stockanalysis.com/etf/esgv/holdings/",
+        "method": "sum over shared holdings of min(weight in A, weight in B); ESGV stockanalysis.com, ESGV top holdings (top 25 of 1220), as of 2026-09-30 (top 25 of 1220); SPY State Street Global Advisors, SPY daily holdings, as of 2026-11-12 (full list); a top-N list gives a lower bound",
+        "confidence": "fact"
+      },
+      "EQ112": {
+        "id": "EQ112",
+        "value": {
+          "metric": "etf_overlap",
+          "tickers": [
+            "QQQ",
+            "SPY"
+          ],
+          "value": 0.4461,
+          "unit": "ratio"
+        },
+        "source": "ETF holdings: QQQ + SPY",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": "https://stockanalysis.com/etf/qqq/holdings/",
+        "method": "sum over shared holdings of min(weight in A, weight in B); QQQ stockanalysis.com, QQQ top holdings (top 25 of 104), as of 2026-11-13 (top 25 of 104); SPY State Street Global Advisors, SPY daily holdings, as of 2026-11-12 (full list); a top-N list gives a lower bound",
+        "confidence": "fact"
+      },
+      "EQ113": {
+        "id": "EQ113",
+        "value": "Les compositions de FNB utilisées sont postérieures à la date d'analyse (2026-11-12) : le chevauchement réel à cette date pouvait être différent.",
+        "source": "data/cache/holdings",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "holdings are a single recent snapshot, not point-in-time",
+        "confidence": "assumption"
+      },
+      "EP1": {
+        "id": "EP1",
+        "value": {
+          "metric": "caps",
+          "tolerance": "moderate",
+          "value": "Action individuelle ≤ 7%, FNB ≤ 25%, crypto ≤ 0%, actions entre 50% et 70%."
+        },
+        "source": "PRD 5.7 caps table",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "caps for risk tolerance moderate",
+        "confidence": "assumption"
+      },
+      "EP2": {
+        "id": "EP2",
+        "value": {
+          "metric": "volatility_ann",
+          "scenario": "as_requested",
+          "value": 0.1383,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns of the scenario rebalanced daily, CAD, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP3": {
+        "id": "EP3",
+        "value": {
+          "metric": "max_drawdown",
+          "scenario": "as_requested",
+          "value": -0.2118,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the scenario value, CAD, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP4": {
+        "id": "EP4",
+        "value": {
+          "metric": "stress_2022",
+          "scenario": "as_requested",
+          "value": -0.1636,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return of the scenario in CAD over 2022-01-03..2022-12-30, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP5": {
+        "id": "EP5",
+        "value": {
+          "metric": "top_weight",
+          "scenario": "as_requested",
+          "value": 0.0385,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest single weight in the scenario, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP6": {
+        "id": "EP6",
+        "value": {
+          "metric": "sector_concentration_hhi",
+          "scenario": "as_requested",
+          "value": 0.0917,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Herfindahl index of the weights by universe sector label, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP7": {
+        "id": "EP7",
+        "value": {
+          "metric": "us_exposure",
+          "scenario": "as_requested",
+          "value": 0.5769,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "weight in US-listed assets (crypto not counted), historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP8": {
+        "id": "EP8",
+        "value": {
+          "metric": "volatility_ann",
+          "scenario": "capped",
+          "value": 0.1224,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns of the scenario rebalanced daily, CAD, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP9": {
+        "id": "EP9",
+        "value": {
+          "metric": "max_drawdown",
+          "scenario": "capped",
+          "value": -0.1953,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the scenario value, CAD, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP10": {
+        "id": "EP10",
+        "value": {
+          "metric": "stress_2022",
+          "scenario": "capped",
+          "value": -0.1497,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return of the scenario in CAD over 2022-01-03..2022-12-30, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP11": {
+        "id": "EP11",
+        "value": {
+          "metric": "top_weight",
+          "scenario": "capped",
+          "value": 0.06,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest single weight in the scenario, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP12": {
+        "id": "EP12",
+        "value": {
+          "metric": "sector_concentration_hhi",
+          "scenario": "capped",
+          "value": 0.0813,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Herfindahl index of the weights by universe sector label, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP13": {
+        "id": "EP13",
+        "value": {
+          "metric": "us_exposure",
+          "scenario": "capped",
+          "value": 0.58,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "weight in US-listed assets (crypto not counted), historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP14": {
+        "id": "EP14",
+        "value": {
+          "metric": "volatility_ann",
+          "scenario": "profile_baseline",
+          "value": 0.0554,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "annualised std of daily log returns of the scenario rebalanced daily, CAD, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP15": {
+        "id": "EP15",
+        "value": {
+          "metric": "max_drawdown",
+          "scenario": "profile_baseline",
+          "value": -0.0762,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest peak-to-trough fall of the scenario value, CAD, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP16": {
+        "id": "EP16",
+        "value": {
+          "metric": "stress_2022",
+          "scenario": "profile_baseline",
+          "value": -0.0248,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "total return of the scenario in CAD over 2022-01-03..2022-12-30, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP17": {
+        "id": "EP17",
+        "value": {
+          "metric": "top_weight",
+          "scenario": "profile_baseline",
+          "value": 0.25,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "largest single weight in the scenario, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP18": {
+        "id": "EP18",
+        "value": {
+          "metric": "sector_concentration_hhi",
+          "scenario": "profile_baseline",
+          "value": 0.1725,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "Herfindahl index of the weights by universe sector label, historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      },
+      "EP19": {
+        "id": "EP19",
+        "value": {
+          "metric": "us_exposure",
+          "scenario": "profile_baseline",
+          "value": 0.3552,
+          "unit": "ratio"
+        },
+        "source": "prices_daily.csv + fx_usdcad_daily.csv",
+        "date": "2026-11-12",
+        "date_kind": "observation",
+        "url": null,
+        "method": "weight in US-listed assets (crypto not counted), historical backtest of fictional weights, 2021-11-12..2026-11-12",
+        "confidence": "fact"
+      }
+    },
+    "events": [
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 8-K/A, items 5.02 Departure or Appointment of Directors or Officers",
+        "published_at": "2026-11-06",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "market",
+        "material": true,
+        "evidence_id": "EN1",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926123587/tm2629103d1_8ka.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "XOM",
+        "headline": "Exxon Mobil: Form 8-K, items 1.01 Entry into a Material Definitive Agreement; 2.01 Completion of Acquisition or Disposition of Assets; 3.01 Notice of Delisting or Failure to Satisfy a Listing Rule; 3.03 Material Modification to Rights of Security Holders; 5.02 Departure or Appointment of Directors or Officers; 5.03 Amendments to Articles of Incorporation or Bylaws; 9.01 Financial Statements and Exhibits",
+        "published_at": "2026-07-01",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "liquidity",
+        "material": true,
+        "evidence_id": "EN2",
+        "url": "https://www.sec.gov/Archives/edgar/data/34088/000119312526291986/d70995d8k.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+        "published_at": "2026-11-06",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "market",
+        "material": true,
+        "evidence_id": "EN3",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526450711/enb-20261106.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 8-K, items 5.02 Departure or Appointment of Directors or Officers; 7.01 Regulation FD Disclosure; 9.01 Financial Statements and Exhibits",
+        "published_at": "2026-09-08",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "market",
+        "material": true,
+        "evidence_id": "EN4",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926105899/tm2624881d2_8k.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 8-K, items 2.02 Results of Operations and Financial Condition; 9.01 Financial Statements and Exhibits",
+        "published_at": "2026-07-31",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "market",
+        "material": true,
+        "evidence_id": "EN5",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526326744/enb-20260731.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+        "published_at": "2026-11-12",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "credit",
+        "material": false,
+        "evidence_id": "EN6",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926126215/tm2626007d9_424b5.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+        "published_at": "2026-11-12",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "credit",
+        "material": false,
+        "evidence_id": "EN7",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926126219/tm2626007d10_424b5.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+        "published_at": "2026-11-09",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "credit",
+        "material": false,
+        "evidence_id": "EN8",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926124202/tm2626007d5_424b5.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 424B5, prospectus supplement for a debt or securities offering",
+        "published_at": "2026-11-09",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "credit",
+        "material": false,
+        "evidence_id": "EN9",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000110465926124204/tm2626007d1_424b5.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form 10-Q, quarterly report",
+        "published_at": "2026-11-06",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "market",
+        "material": false,
+        "evidence_id": "EN10",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526450714/enb-20260930.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "XOM",
+        "headline": "Exxon Mobil: Form 424B2, prospectus supplement for a debt or securities offering",
+        "published_at": "2026-09-25",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "credit",
+        "material": false,
+        "evidence_id": "EN11",
+        "url": "https://www.sec.gov/Archives/edgar/data/34088/000119312526401391/d137820d424b2.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      },
+      {
+        "ticker": "ENB.TO",
+        "headline": "Enbridge: Form SD, specialized disclosure (conflict minerals or payments to governments)",
+        "published_at": "2026-09-23",
+        "relevant": true,
+        "kind": "fact",
+        "risk_type": "controversy",
+        "material": false,
+        "evidence_id": "EN12",
+        "url": "https://www.sec.gov/Archives/edgar/data/895728/000119312526398771/enb-20251231.htm",
+        "source": "SEC EDGAR",
+        "classifier": "rules"
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "as_requested",
+        "weights": {
+          "AAPL": 0.038461538461538464,
+          "AGG": 0.038461538461538464,
+          "AMZN": 0.038461538461538464,
+          "ATD.TO": 0.038461538461538464,
+          "CNR.TO": 0.038461538461538464,
+          "CSU.TO": 0.038461538461538464,
+          "ESGV": 0.038461538461538464,
+          "FTS.TO": 0.038461538461538464,
+          "GLD": 0.038461538461538464,
+          "GOOGL": 0.038461538461538464,
+          "JNJ": 0.038461538461538464,
+          "JPM": 0.038461538461538464,
+          "MFC.TO": 0.038461538461538464,
+          "MSFT": 0.038461538461538464,
+          "NVDA": 0.038461538461538464,
+          "PG": 0.038461538461538464,
+          "QQQ": 0.038461538461538464,
+          "RY.TO": 0.038461538461538464,
+          "SHOP.TO": 0.038461538461538464,
+          "SPY": 0.038461538461538464,
+          "TD.TO": 0.038461538461538464,
+          "TLT": 0.038461538461538464,
+          "TSLA": 0.038461538461538464,
+          "XBB.TO": 0.038461538461538464,
+          "XIU.TO": 0.038461538461538464,
+          "ZST.TO": 0.038461538461538464
+        },
+        "metrics": {
+          "volatility_ann": "EP2",
+          "max_drawdown": "EP3",
+          "stress_2022": "EP4",
+          "top_weight": "EP5",
+          "sector_concentration_hhi": "EP6",
+          "us_exposure": "EP7"
+        },
+        "notes": [
+          "Le scénario as_requested présente une baisse maximale historique de -21,2 %, et une exposition aux États-Unis de 57,7 %. [EP3, EP7]",
+          "La pondération maximale historique est de 3,9 % et l'indice de concentration sectorielle HHI vaut 0,09. [EP5, EP6]"
+        ]
+      },
+      {
+        "name": "capped",
+        "weights": {
+          "AAPL": 0.03333333333333334,
+          "AGG": 0.05999999999999999,
+          "AMZN": 0.03333333333333333,
+          "ATD.TO": 0.03333333333333334,
+          "CNR.TO": 0.03333333333333334,
+          "CSU.TO": 0.03333333333333335,
+          "ESGV": 0.03333333333333334,
+          "FTS.TO": 0.03333333333333333,
+          "GLD": 0.059999999999999984,
+          "GOOGL": 0.03333333333333334,
+          "JNJ": 0.03333333333333334,
+          "JPM": 0.03333333333333333,
+          "MFC.TO": 0.03333333333333334,
+          "MSFT": 0.03333333333333334,
+          "NVDA": 0.03333333333333333,
+          "PG": 0.03333333333333333,
+          "QQQ": 0.03333333333333334,
+          "RY.TO": 0.03333333333333333,
+          "SHOP.TO": 0.03333333333333333,
+          "SPY": 0.03333333333333333,
+          "TD.TO": 0.03333333333333334,
+          "TLT": 0.060000000000000005,
+          "TSLA": 0.03333333333333333,
+          "XBB.TO": 0.06,
+          "XIU.TO": 0.03333333333333333,
+          "ZST.TO": 0.060000000000000046
+        },
+        "metrics": {
+          "volatility_ann": "EP8",
+          "max_drawdown": "EP9",
+          "stress_2022": "EP10",
+          "top_weight": "EP11",
+          "sector_concentration_hhi": "EP12",
+          "us_exposure": "EP13"
+        },
+        "notes": [
+          "Sur la période historique, la baisse maximale observée atteint -19,5 % et la volatilité annualisée s'élève à 12,2 %, des indicateurs qui ne préjugent pas des rendements futurs. [EP8, EP9]",
+          "Le poids maximal par ligne est plafonné à 6,0 % (EP11) et l'indice HHI sectoriel est de 0,08 (EP12), tandis que l'exposition aux États-Unis atteint 58,0 % (EP13)."
+        ]
+      },
+      {
+        "name": "profile_baseline",
+        "weights": {
+          "AGG": 0.22458311454575933,
+          "ATD.TO": 0.0061923468715636655,
+          "CNR.TO": 0.0009471549573969501,
+          "FTS.TO": 0.06999999999999997,
+          "JNJ": 0.06999999999999992,
+          "MSFT": 0.01336130200715168,
+          "PG": 0.04730139721720953,
+          "RY.TO": 0.056252484343203187,
+          "TD.TO": 0.048638886700678785,
+          "XBB.TO": 0.025416885454240663,
+          "XIU.TO": 0.18730642790279628,
+          "ZST.TO": 0.25
+        },
+        "metrics": {
+          "volatility_ann": "EP14",
+          "max_drawdown": "EP15",
+          "stress_2022": "EP16",
+          "top_weight": "EP17",
+          "sector_concentration_hhi": "EP18",
+          "us_exposure": "EP19"
+        },
+        "notes": [
+          "Sur la période historique analysée, la volatilité annualisée s'établit à 5,5 % et la perte maximale observée (max drawdown) à -7,6 %. [EP14, EP15]",
+          "La plus forte pondération historique du portefeuille est de 25,0 % et l'exposition américaine atteint 35,5 %, ce qui décrit la composition passée sans préjuger des résultats futurs. [EP17, EP19]"
+        ]
+      }
+    ],
+    "objections": [
+      {
+        "scenario": "as_requested",
+        "objection": "Le scénario demandé encaisse un repli maximal de -21,2 % et un stress 2022 de -16,4 %, contre -7,6 % et -2,5 % pour le portefeuille de référence du profil. Pour une capacité modérée et le souhait d'équilibre, l'écart est important. Le scénario ne tient pas compte de cette capacité alors que le profil de référence montre qu'une perte bien plus faible est atteignable.",
+        "evidence": [
+          "EP3",
+          "EP4",
+          "EP15",
+          "EP16"
+        ],
+        "severity": "warning"
+      },
+      {
+        "scenario": "as_requested",
+        "objection": "La diversification est apparente : 26 lignes, un poids maximal de 3,9 % et une concentration sectorielle de 9,2 %. Pourtant l'exposition aux États-Unis atteint 57,7 %, contre 35,5 % pour le profil de référence. Le risque se concentre sur un marché, et l'absence de grosse ligne le masque.",
+        "evidence": [
+          "EP5",
+          "EP6",
+          "EP7",
+          "EP19"
+        ],
+        "severity": "warning"
+      }
+    ],
+    "explanation": {
+      "resume": "Des trois scénarios, le portefeuille de référence du profil est le plus cohérent avec le profil déclaré : sa baisse maximale historique est de -7,6 %, contre -21,2 % pour le scénario demandé. Simulation fictive, sans prévision.",
+      "quelles_donnees": [
+        {
+          "claim": "Les trois scénarios fictifs sont comparés par backtest historique en CAD : volatilité annualisée de 13,8 % (demandé), 12,2 % (plafonné) et 5,5 % (référence), avec baisse maximale, stress de hausse des taux et concentration.",
+          "evidence": [
+            "EP2",
+            "EP8",
+            "EP14"
+          ]
+        },
+        {
+          "claim": "Le profil exclut la crypto (contrainte) et l'énergie (critère ESG, hypothèse). Le contexte macro retenu est un taux directeur canadien de 2,50 % et une inflation de 3,10 %.",
+          "evidence": [
+            "ES4",
+            "ES6",
+            "EM1",
+            "EM5"
+          ]
+        }
+      ],
+      "pourquoi_ce_choix": [
+        {
+          "claim": "Le scénario de référence limite la baisse maximale à -7,6 % et le stress de hausse des taux à -2,5 %, contre -21,2 % et -16,4 % pour le scénario demandé : mieux adapté à une capacité modérée.",
+          "evidence": [
+            "EP15",
+            "EP16",
+            "EP3",
+            "EP4"
+          ]
+        },
+        {
+          "claim": "Le scénario plafonné limite chaque ligne à 6,0 % mais conserve une baisse maximale de -19,5 % et une exposition américaine de 58,0 %, contre 35,5 % pour la référence : risque de marché concentré.",
+          "evidence": [
+            "EP11",
+            "EP9",
+            "EP13",
+            "EP19"
+          ]
+        }
+      ],
+      "limites": [
+        {
+          "claim": "Le scénario de référence est moins diversifié : poids maximal de 25,0 % et HHI sectoriel de 0,17, contre 0,09 pour le scénario demandé. Le risque de concentration y est plus élevé.",
+          "evidence": [
+            "EP17",
+            "EP18",
+            "EP6"
+          ]
+        },
+        {
+          "claim": "Les FNB larges comme XIU.TO ne sont pas filtrés et peuvent contenir des sociétés que le critère ESG exclurait. L'univers limité aux actifs encore cotés crée aussi un biais du survivant (hypothèses).",
+          "evidence": [
+            "ES3",
+            "EQ1"
+          ]
+        }
+      ],
+      "ce_qui_changerait_la_reponse": [
+        {
+          "claim": "Une tolérance au risque plus élevée, un horizon différent ou d'autres plafonds changeraient la comparaison : les plafonds de référence (action individuelle, FNB, part d'actions) découlent d'une tolérance modérée, selon une hypothèse.",
+          "evidence": [
+            "EP1"
+          ]
+        },
+        {
+          "claim": "Une autre date d'analyse, de nouvelles exclusions ou un budget différent modifieraient les résultats. Le rendement du 10 ans canadien (3,72 %) et l'inflation (3,10 %) évoluent également.",
+          "evidence": [
+            "EM3",
+            "EM5"
+          ]
+        }
+      ],
+      "incertitude": "Les statistiques sont historiques, calculées sur des pondérations fictives, et ne préjugent pas des résultats futurs. Plafonds, filtres ESG et compositions de FNB reposent sur des hypothèses.",
+      "scenario_le_plus_coherent": "profile_baseline",
+      "avertissement": "Simulation éducative. Aucun conseil personnalisé."
+    },
+    "verification": {
+      "passed": true,
+      "errors": []
+    },
+    "retries": {
+      "red_team": 1
+    },
+    "trace": [
+      {
+        "node": "profile",
+        "started_at": "2026-11-15T03:46:58.274+00:00",
+        "ended_at": "2026-11-15T03:46:59.149+00:00",
+        "summary": "Profil compris : construction d'une allocation."
+      },
+      {
+        "node": "screening",
+        "started_at": "2026-11-15T03:46:59.150+00:00",
+        "ended_at": "2026-11-15T03:46:59.154+00:00",
+        "summary": "26 actifs admissibles, 5 exclus."
+      },
+      {
+        "node": "events",
+        "started_at": "2026-11-15T03:46:59.156+00:00",
+        "ended_at": "2026-11-15T03:46:59.230+00:00",
+        "summary": "12 actualité(s) retenue(s) sur 21 lue(s), 6 appel(s) d'outil."
+      },
+      {
+        "node": "macro",
+        "started_at": "2026-11-15T03:46:59.156+00:00",
+        "ended_at": "2026-11-15T03:46:59.261+00:00",
+        "summary": "Contexte macro connu au 2026-11-12 : 11 indicateurs, délais de publication appliqués."
+      },
+      {
+        "node": "quant",
+        "started_at": "2026-11-15T03:46:59.157+00:00",
+        "ended_at": "2026-11-15T03:46:59.357+00:00",
+        "summary": "Statistiques de risque calculées pour 26 actifs (2021-11-12 au 2026-11-12)."
+      },
+      {
+        "node": "scenarios",
+        "started_at": "2026-11-15T03:46:59.358+00:00",
+        "ended_at": "2026-11-15T03:47:13.310+00:00",
+        "summary": "Trois scénarios construits : demandé, plafonné, référence."
+      },
+      {
+        "node": "red_team",
+        "started_at": "2026-11-15T03:47:13.312+00:00",
+        "ended_at": "2026-11-15T03:47:29.996+00:00",
+        "summary": "2 objection(s) signalée(s), aucune bloquante."
+      },
+      {
+        "node": "explain",
+        "started_at": "2026-11-15T03:47:29.997+00:00",
+        "ended_at": "2026-11-15T03:47:51.912+00:00",
+        "summary": "Explication rédigée en quatre questions."
+      },
+      {
+        "node": "verifier",
+        "started_at": "2026-11-15T03:47:51.914+00:00",
+        "ended_at": "2026-11-15T03:47:51.915+00:00",
+        "summary": "Vérification réussie : preuves, nombres, formulations et sections conformes."
+      }
+    ]
+  }
+}
