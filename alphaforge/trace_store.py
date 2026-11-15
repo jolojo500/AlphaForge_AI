@@ -15,6 +15,12 @@ from alphaforge import config
 from alphaforge.state import GraphState
 
 
+def _golden_first(runs: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    """Golden demo runs always listed first, so the replay safety net is never cut off by `limit`."""
+    golden = [r for r in runs if r.get("is_golden")]
+    others = [r for r in runs if not r.get("is_golden")]
+    return golden + others[: max(0, limit - len(golden))]
+
 class TraceStore(abc.ABC):
     @abc.abstractmethod
     def save_run(
@@ -161,7 +167,6 @@ class LocalJsonTraceStore(TraceStore):
             except Exception:  # noqa: BLE001
                 pass
 
-        golden_runs: list[dict[str, Any]] = []
         if include_golden:
             for golden in load_golden_runs():
                 rid = golden.get("run_id")
@@ -171,7 +176,7 @@ class LocalJsonTraceStore(TraceStore):
                 if rid and rid not in seen:
                     seen.add(rid)
                     v = golden.get("verification") or {}
-                    golden_runs.append(
+                    runs.append(
                         {
                             "run_id": rid,
                             "persona": p,
@@ -184,7 +189,7 @@ class LocalJsonTraceStore(TraceStore):
                         }
                     )
 
-        return (golden_runs + runs)[:limit]
+        return _golden_first(runs, limit)
 
 
 class DynamoDBTraceStore(TraceStore):
@@ -351,7 +356,6 @@ class DynamoDBTraceStore(TraceStore):
         except Exception:  # noqa: BLE001
             pass
 
-        golden_runs: list[dict[str, Any]] = []
         if include_golden:
             for golden in load_golden_runs():
                 rid = golden.get("run_id")
@@ -361,7 +365,7 @@ class DynamoDBTraceStore(TraceStore):
                 if rid and rid not in seen:
                     seen.add(rid)
                     v = golden.get("verification") or {}
-                    golden_runs.append(
+                    items.append(
                         {
                             "run_id": rid,
                             "persona": p,
@@ -373,7 +377,7 @@ class DynamoDBTraceStore(TraceStore):
                             "is_golden": True,
                         }
                     )
-        return (golden_runs + items)[:limit]
+        return _golden_first(items, limit)
 
 
 def get_trace_store() -> TraceStore:
