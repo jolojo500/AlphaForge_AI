@@ -97,6 +97,17 @@ def verify_token(token: str) -> User:
     if not token:
         raise HTTPException(status_code=401, detail="Jeton d'authentification manquant")
 
+    # Demo session tokens for preconfigured demo personas
+    if token.startswith("demo-"):
+        demo_id = token[5:].strip().lower()
+        if demo_id in ("amira", "mateo", "robert"):
+            return User(
+                user_id=f"demo-{demo_id}",
+                username=demo_id.capitalize(),
+                email=f"{demo_id}@alphaforge.demo",
+                groups=[],
+            )
+
     # If auth is off or it's a dev token
     if not is_auth_enabled():
         try:

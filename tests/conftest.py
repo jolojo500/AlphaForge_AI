@@ -5,6 +5,7 @@ import pytest
 # Ensure offline deterministic fallback for all test fixtures unless --live is requested
 if not any(arg == "--live" for arg in os.sys.argv):
     os.environ.setdefault("AF_LLM_OFFLINE", "1")
+    os.environ.setdefault("AF_AUTH", "off")
 
 # The API rate limit and queue are exercised by dedicated tests; keep them out of the way here.
 os.environ.setdefault("AF_RATE_LIMIT_RUNS", "100000")

@@ -65,8 +65,21 @@ def init_market_db() -> None:
                 PRIMARY KEY (ticker, date)
             )
             """)
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                user_id TEXT PRIMARY KEY,
+                username TEXT,
+                email TEXT,
+                profile_json TEXT,
+                account_type TEXT,
+                current_holdings_json TEXT,
+                is_advisor INTEGER DEFAULT 0,
+                updated_at TEXT
+            )
+            """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_prices_ticker ON custom_prices(ticker)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_prices_date ON custom_prices(date)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON user_profiles(username)")
     finally:
         conn.close()
 
@@ -190,3 +203,80 @@ def get_merged_universe_dict() -> dict[str, dict[str, Any]]:
         out[row["ticker"]] = row.to_dict()
 
     return out
+
+
+def save_user_profile_db(
+    user_id: str,
+    profile: dict[str, Any],
+    username: str | None = None,
+    email: str | None = None,
+    account_type: str | None = None,
+    current_holdings: Any = None,
+    is_advisor: bool = False,
+    updated_at: str | None = None,
+) -> None:
+    """Persist user profile and metadata in SQLite database."""
+    import datetime as dt
+    import json
+
+    conn = _get_connection()
+    try:
+        with conn:
+            conn.execute(
+                """
+                INSERT INTO user_profiles (user_id, username, email, profile_json, account_type, current_holdings_json, is_advisor, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    username=excluded.username,
+                    email=excluded.email,
+                    profile_json=excluded.profile_json,
+                    account_type=excluded.account_type,
+                    current_holdings_json=excluded.current_holdings_json,
+                    is_advisor=excluded.is_advisor,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    user_id,
+                    username or user_id,
+                    email or f"{user_id}@alphaforge.demo",
+                    json.dumps(profile),
+                    account_type,
+                    json.dumps(current_holdings) if current_holdings is not None else None,
+                    1 if is_advisor else 0,
+                    updated_at or dt.datetime.now(dt.UTC).isoformat(),
+                ),
+            )
+    except Exception:
+        logger.exception("Failed to save user profile to SQLite for %s", user_id)
+    finally:
+        conn.close()
+
+
+def get_user_profile_db(user_id: str) -> dict[str, Any] | None:
+    """Retrieve user profile from SQLite database by user_id or username."""
+    import json
+
+    conn = _get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM user_profiles WHERE user_id = ? OR username = ? LIMIT 1",
+            (user_id, user_id),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "user_id": row["user_id"],
+            "username": row["username"],
+            "email": row["email"],
+            "profile": json.loads(row["profile_json"]) if row["profile_json"] else {},
+            "account_type": row["account_type"],
+            "current_holdings": json.loads(row["current_holdings_json"]) if row["current_holdings_json"] else None,
+            "is_advisor": bool(row["is_advisor"]),
+            "updated_at": row["updated_at"],
+        }
+    except Exception:
+        logger.exception("Failed to get user profile from SQLite for %s", user_id)
+        return None
+    finally:
+        conn.close()
+

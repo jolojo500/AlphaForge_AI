@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Logo } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageToggle } from './LanguageToggle';
 import { UserOnboardingProfile, AuthUser } from '../types';
-import { DEMO_PERSONAS } from '../lib/demoProfiles';
 import { useLanguage } from '@/context/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   User,
+  UserCog,
+  ChevronDown,
   History,
   LogIn,
   LogOut,
@@ -28,8 +29,7 @@ export interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
-  userProfile,
-  activePersonaId = 'custom',
+  onEditProfile,
   onOpenHistory,
   currentUser,
   onOpenAuth,
@@ -39,37 +39,28 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const { language } = useLanguage();
   const isEn = language === 'en';
 
-  const isDemo = activePersonaId !== 'custom' && activePersonaId in DEMO_PERSONAS;
-  const demoMeta = isDemo ? DEMO_PERSONAS[activePersonaId as 'robert' | 'amira' | 'mateo'] : null;
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   return (
     <header className="w-full max-w-5xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center px-4 py-3.5 mb-2 select-none gap-2">
-      {/* Left Column: Non-clickable Profile indicator & History Button */}
+      {/* Left Column: Simulation History Button only (Left profile badge removed) */}
       <div className="flex items-center gap-1.5 sm:gap-2 justify-start min-w-0">
-        {userProfile && (
-          <div
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-muted/30 text-foreground text-xs font-medium select-none shrink-0"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="truncate max-w-[100px] sm:max-w-[150px]">
-              {demoMeta ? (
-                <>
-                  <span className="font-semibold">{demoMeta.name}</span>
-                  <span className="text-muted-foreground ml-1 hidden sm:inline">· {demoMeta.badge}</span>
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold">{isEn ? 'My profile' : 'Mon profil'}</span>
-                  <span className="text-muted-foreground ml-1 hidden sm:inline">
-                    · {userProfile.simulatedCapitalFormatted}
-                  </span>
-                </>
-              )}
-            </span>
-          </div>
-        )}
-
-        {userProfile && onOpenHistory && (
+        {onOpenHistory && (
           <Button
             variant="outline"
             size="icon"
@@ -88,14 +79,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <Logo size="md" />
       </div>
 
-      {/* Right Column: Contextual Actions & User Auth & Toggles */}
+      {/* Right Column: Contextual Actions & User Dropdown Menu & Toggles */}
       <div className="flex items-center gap-1.5 sm:gap-2 justify-end min-w-0">
         {rightActions}
 
         {currentUser ? (
-          <div className="flex items-center gap-1.5">
-            <div
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-muted/40 text-foreground text-xs font-medium select-none"
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              aria-expanded={isMenuOpen}
+              aria-haspopup="true"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-input bg-muted/40 hover:bg-muted text-foreground text-xs font-medium cursor-pointer transition-colors shadow-xs"
+              title={isEn ? 'User menu' : 'Menu utilisateur'}
             >
               {currentUser.is_advisor ? (
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -108,18 +104,51 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   {isEn ? 'Advisor' : 'Conseiller'}
                 </Badge>
               )}
-            </div>
-            {onLogout && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onLogout}
-                title={isEn ? 'Log out and return to home' : "Déconnexion et retour à l'accueil"}
-                className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
+              <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform duration-150 ${isMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-1.5 w-52 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isEn ? 'Log out' : 'Déconnexion'}</span>
-              </Button>
+                <div className="px-2.5 py-1.5 text-xs border-b border-border/60 mb-1">
+                  <p className="font-semibold text-foreground truncate">{currentUser.username}</p>
+                  {currentUser.email && (
+                    <p className="text-[11px] text-muted-foreground truncate">{currentUser.email}</p>
+                  )}
+                </div>
+
+                {onEditProfile && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onEditProfile();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md text-foreground hover:bg-muted hover:text-foreground text-left cursor-pointer transition-colors"
+                  >
+                    <UserCog className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>{isEn ? 'Edit profile' : 'Modifier le profil'}</span>
+                  </button>
+                )}
+
+                {onLogout && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md text-destructive hover:bg-destructive/10 text-left cursor-pointer transition-colors mt-0.5"
+                  >
+                    <LogOut className="w-3.5 h-3.5 shrink-0" />
+                    <span>{isEn ? 'Log out' : 'Se déconnecter'}</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ) : (

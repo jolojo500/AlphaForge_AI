@@ -12,6 +12,7 @@ from typing import Any
 
 import boto3
 
+from alphaforge.data.market_db import get_user_profile_db, save_user_profile_db
 from alphaforge.personas import PERSONAS
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,11 @@ class LocalUserStore(UserStore):
         for u in self._users.values():
             if u.get("username") == user_id:
                 return json.loads(json.dumps(u))
+        # SQLite DB fallback
+        db_user = get_user_profile_db(user_id)
+        if db_user:
+            self._users[user_id] = db_user
+            return db_user
         # If demo persona
         if user_id in PERSONAS:
             return {
@@ -160,6 +166,16 @@ class LocalUserStore(UserStore):
         self._users[user_id] = item
         if username and username != user_id:
             self._users[username] = item
+        save_user_profile_db(
+            user_id=user_id,
+            profile=profile,
+            current_holdings=item["current_holdings"],
+            account_type=item["account_type"],
+            username=item["username"],
+            email=item["email"],
+            is_advisor=item["is_advisor"],
+            updated_at=now,
+        )
         return json.loads(json.dumps(item))
 
 
@@ -194,6 +210,11 @@ class DynamoDBUserStore(UserStore):
                 return _from_dynamodb_friendly(item)
         except Exception:
             logger.exception("Failed to get user %s from DynamoDB table %s", user_id, self.table_name)
+
+        # Fallback to SQLite DB
+        db_user = get_user_profile_db(user_id)
+        if db_user:
+            return db_user
 
         # Fallback to PERSONAS if matching demo account
         if user_id in PERSONAS:
@@ -240,6 +261,17 @@ class DynamoDBUserStore(UserStore):
         except Exception:
             logger.exception("Failed to save user %s to DynamoDB table %s", user_id, self.table_name)
             raise
+        finally:
+            save_user_profile_db(
+                user_id=user_id,
+                profile=profile,
+                current_holdings=item["current_holdings"],
+                account_type=item["account_type"],
+                username=item["username"],
+                email=item["email"],
+                is_advisor=item["is_advisor"],
+                updated_at=now,
+            )
         return item
 
 

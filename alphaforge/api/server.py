@@ -683,7 +683,7 @@ def update_user_profile_endpoint(
 ) -> dict[str, Any]:
     """Update profile, current holdings, and account type in the users store."""
     res = get_user_store().save_user_profile(
-        user_id=user.username,
+        user_id=user.user_id or user.username,
         profile=req.profile,
         current_holdings=req.current_holdings,
         account_type=req.account_type,

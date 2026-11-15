@@ -36,6 +36,10 @@ def test_dev_token_creation_and_verification():
     assert verified.email == "tester@alphaforge.demo"
     assert verified.is_advisor is True
 
+    demo_u = verify_token("demo-amira")
+    assert demo_u.username == "Amira"
+    assert demo_u.user_id == "demo-amira"
+
 
 def test_verify_empty_or_invalid_token():
     with pytest.raises(HTTPException) as exc:

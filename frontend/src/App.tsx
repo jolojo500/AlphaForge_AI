@@ -160,14 +160,28 @@ export const AppContent: React.FC = () => {
     }
     setCustomProfile(profile);
     setActivePersonaId('custom');
-    if (getAuthToken()) {
+
+    // Persist to database via backend PUT /user/profile
+    const token = getAuthToken();
+    if (token) {
       updateUserProfile({
         profile: {
           objective: profile.primaryObjective,
           horizon_years: parseInt(profile.firstWithdrawalHorizon.match(/\d+/)?.[0] || '10', 10),
           risk_tolerance: profile.riskTolerance,
           budget_cad: profile.simulatedCapital,
-          notes: profile.additionalNotes,
+          account_type: profile.accountType || null,
+          esg_importance: profile.esgImportance || null,
+          excluded_categories: profile.excludedCategories || [],
+          interested_sectors: profile.interestedSectors || [],
+          crypto_preference: profile.cryptoPreference || null,
+          investment_experience: profile.investmentExperience || null,
+          family_situation: profile.familySituation || null,
+          age_range: profile.ageRange || null,
+          withdrawal_method: profile.withdrawalMethod || null,
+          essential_expenses_impact: profile.essentialExpensesImpact || null,
+          max_loss_tolerance: profile.maxLossTolerance || null,
+          notes: profile.additionalNotes || '',
         },
         account_type: profile.accountType || null,
       }).catch((e) => console.warn('Server profile sync error:', e));
@@ -189,7 +203,7 @@ export const AppContent: React.FC = () => {
     };
     setCurrentUser(demoUser);
     setStoredUser(demoUser);
-    setAuthToken(null);
+    setAuthToken(`demo-${personaId}`);
 
     setView('query');
   };
@@ -384,6 +398,7 @@ export const AppContent: React.FC = () => {
           onOpenHistory={currentUser ? () => setIsReplayModalOpen(true) : undefined}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
+          onEditProfile={() => setView('onboarding')}
           onLogout={handleLogout}
         />
         <ReplayRunModal
@@ -407,9 +422,9 @@ export const AppContent: React.FC = () => {
   if (view === 'onboarding') {
     return (
       <OnboardingFlow
-        initialProfile={customProfile}
+        initialProfile={customProfile || activeProfile}
         onComplete={handleOnboardingComplete}
-        onCancel={customProfile ? () => setView('query') : () => setView('welcome')}
+        onCancel={customProfile || currentUser ? () => setView('query') : () => setView('welcome')}
       />
     );
   }
