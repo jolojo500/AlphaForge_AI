@@ -15,7 +15,8 @@ from alphaforge.state import GraphState, Profile
 def test_parse_holdings_dict():
     raw = {"XIU.TO": 50000, "ZST.TO": 50000}
     parsed = parse_holdings(raw)
-    assert parsed == {"XIU.TO": 50000.0, "ZST.TO": 50000.0}
+    assert parsed == {"XIU.TO": 0.5, "ZST.TO": 0.5}
+    assert parsed.total_amount == 100000.0
 
 
 def test_parse_holdings_csv():
@@ -25,12 +26,13 @@ def test_parse_holdings_csv():
     ZST.TO, 40%
     """
     parsed = parse_holdings(csv_text)
-    assert parsed == {"XIU.TO": 60.0, "ZST.TO": 40.0}
+    assert parsed == {"XIU.TO": 0.6, "ZST.TO": 0.4}
 
     # Delimiters with tabs and semicolons and currency signs
     csv_text2 = "AAPL; $50,000\nMSFT\t$30,000\nVCN.TO 20000"
     parsed2 = parse_holdings(csv_text2)
-    assert parsed2 == {"AAPL": 50000.0, "MSFT": 30000.0, "VCN.TO": 20000.0}
+    assert parsed2 == {"AAPL": 0.5, "MSFT": 0.3, "VCN.TO": 0.2}
+    assert parsed2.total_amount == 100000.0
 
 
 def test_resolve_holdings_proxies_and_not_analysed():
@@ -47,11 +49,11 @@ def test_resolve_holdings_proxies_and_not_analysed():
     assert proxies["CASH"] == "ZST.TO"
     assert not_analysed == ["UNKNOWN_CO"]
     assert unanalysed_share == pytest.approx(0.20)
-    # Analyzed portion is 80 (40+20 XIU.TO, 20 ZST.TO).
-    # XIU.TO is 60/80 = 75%, ZST.TO is 20/80 = 25%.
-    assert mapped_w["XIU.TO"] == pytest.approx(0.75, abs=1e-4)
-    assert mapped_w["ZST.TO"] == pytest.approx(0.25, abs=1e-4)
-    assert sum(mapped_w.values()) == pytest.approx(1.0, abs=1e-5)
+    # Never rescale: unanalysed portion keeps its share (20%).
+    # XIU.TO is (40+20)/100 = 60%, ZST.TO is 20/100 = 20%.
+    assert mapped_w["XIU.TO"] == pytest.approx(0.60, abs=1e-4)
+    assert mapped_w["ZST.TO"] == pytest.approx(0.20, abs=1e-4)
+    assert sum(mapped_w.values()) == pytest.approx(0.80, abs=1e-5)
 
 
 def test_build_as_requested_from_cash():
@@ -108,6 +110,26 @@ def test_calculate_trades_and_turnover():
     assert zst_trade["action"] == "Vente"
     assert zst_trade["change"] == pytest.approx(-0.25)
     assert zst_trade["amount_cad"] == pytest.approx(-25000.0)
+
+
+def test_calculate_trades_dollar_amounts_inferred():
+    # Inferred from DeclaredHoldings total_amount
+    curr = parse_holdings({"XIU.TO": 50000, "ZST.TO": 50000})
+    target = {"XIU.TO": 0.50, "ZST.TO": 0.25, "TSLA": 0.25}
+
+    trades, turnover = calculate_trades_and_turnover(curr, target)
+    assert turnover == pytest.approx(0.25)
+    tsla_trade = next(t for t in trades if t["ticker"] == "TSLA")
+    zst_trade = next(t for t in trades if t["ticker"] == "ZST.TO")
+    assert tsla_trade["amount_cad"] == pytest.approx(25000.0)
+    assert zst_trade["amount_cad"] == pytest.approx(-25000.0)
+
+    # Inferred from raw dollar amounts dict
+    curr_raw = {"XIU.TO": 50000.0, "ZST.TO": 50000.0}
+    trades2, turnover2 = calculate_trades_and_turnover(curr_raw, target)
+    assert turnover2 == pytest.approx(0.25)
+    tsla2 = next(t for t in trades2 if t["ticker"] == "TSLA")
+    assert tsla2["amount_cad"] == pytest.approx(25000.0)
 
 
 def test_scenarios_node_with_current_holdings():

@@ -126,3 +126,22 @@ def test_deterministic(no_holdings, monkeypatch):
     b = _run(_profile("mateo"), no_holdings, monkeypatch)
     assert a["exclusions"] == b["exclusions"]
     assert list(a["evidence"]) == list(b["evidence"])
+
+
+def test_account_eligibility_registered_accounts_exclude_spot_crypto(no_holdings, monkeypatch):
+    # Issue #166: CELI, REER, CELIAPP exclude spot crypto with account_eligibility rule
+    for acc in ("tfsa", "rrsp", "fhsa"):
+        p = _profile("amira", account_type=acc)
+        out = _run(p, no_holdings, monkeypatch)
+        assert not {"BTC-USD", "ETH-USD"} & set(out["eligible_universe"])
+        crypto_ex = [e for e in out["exclusions"] if e["ticker"] in ("BTC-USD", "ETH-USD")]
+        assert len(crypto_ex) == 2
+        for ex in crypto_ex:
+            assert ex.get("rule") == "account_eligibility"
+            assert "admissible" in ex["reason"].lower()
+
+    # Non-registered and mixed keep spot crypto
+    for acc in ("non_registered", "mixed"):
+        p = _profile("amira", account_type=acc)
+        out = _run(p, no_holdings, monkeypatch)
+        assert {"BTC-USD", "ETH-USD"} <= set(out["eligible_universe"])
