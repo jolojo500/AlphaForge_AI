@@ -9,6 +9,8 @@ if not any(arg == "--live" for arg in os.sys.argv):
 # The API rate limit and queue are exercised by dedicated tests; keep them out of the way here.
 os.environ.setdefault("AF_RATE_LIMIT_RUNS", "100000")
 os.environ.setdefault("AF_MAX_QUEUED_RUNS", "200")
+# Background runs from earlier tests must not starve later ones on the shared worker pool.
+os.environ.setdefault("AF_MAX_CONCURRENT_RUNS", "16")
 
 
 def pytest_addoption(parser):
