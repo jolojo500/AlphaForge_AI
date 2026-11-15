@@ -86,7 +86,7 @@ flowchart TD
     QA --> SB[Générateur de scénarios · Python + Notes LLM]
     MA --> SB
     EV --> SB
-    SB --> A3[Agent 3 : Red Team · En cours d'intégration]
+    SB --> A3[Agent 3 : Red Team · LLM Claude Sonnet 5.5]
     A3 -->|Objection bloquante, max 2x| SB
     A3 --> A4[Agent 4 : Explicabilité · LLM Claude Sonnet 5.5]
     A4 --> VER[Vérificateur déterministe · Python]
@@ -121,7 +121,7 @@ L'infrastructure cloud d'AlphaForge AI est hébergée sur **Amazon Web Services*
 
 | Service AWS | Rôle dans l'application | Justification technique |
 |---|---|---|
-| **Amazon Bedrock** | Inférence des modèles de fondation | Utilisation de Claude Sonnet 5.5 (`global.anthropic.claude-sonnet-5-5`) pour les agents d'extraction de profil (Agent 1) et de rédaction d'explication et de synthèse (Agent 4), et de Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`) pour la classification rapide d'actualités (Agent 2). L'Agent 3 (Red Team) est en cours d'intégration. |
+| **Amazon Bedrock** | Inférence des modèles de fondation | Utilisation de Claude Sonnet 5.5 (`global.anthropic.claude-sonnet-5-5`) pour les agents d'extraction de profil (Agent 1) et de rédaction d'explication et de synthèse (Agent 4), et de Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`) pour la classification rapide d'actualités (Agent 2). L'Agent 3 (Red Team) utilise aussi Claude Sonnet 5.5 pour la relecture critique des scénarios. |
 | **Amazon S3** (`alphaforge-data-908027403910`) | Stockage objet centralisé | Hébergement versionné des jeux de données d'origine (`starter/`), des caches JSON de détentions FNB et dépôts SEC (`cache/`), et délestage automatique des états complets de graphe (`runs/<run_id>.json`) dépassant le seuil de 400 Ko de DynamoDB. |
 | **Amazon DynamoDB** (`alphaforge-traces`) | Journal d'audit et persistance | Table NoSQL à la demande (*pay-per-request*) enregistrant les métadonnées de chaque exécution, les traces d'étapes horodatées et les statuts de validation pour une auditabilité totale. |
 | **Amazon EC2 & ECR** | Hébergement du conteneur applicatif | Instance `t3.medium` (`AlphaForge-Server`, ID `i-0ec3c5dff3ac51dc4`) exécutant l'image Docker multi-stage (FastAPI servant l'API REST, les flux SSE et les fichiers statiques de l'application React). Les images sont stockées sur Amazon ECR. |
