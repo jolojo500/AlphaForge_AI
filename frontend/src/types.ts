@@ -1,0 +1,139 @@
+/**
+ * Mirrors alphaforge/state.py and API contracts (PRD 3.3, 6).
+ */
+
+export type PersonaId = 'amira' | 'mateo' | 'robert';
+export type ScenarioName = 'as_requested' | 'capped' | 'profile_baseline';
+
+export const SCENARIO_NAMES: ScenarioName[] = ['as_requested', 'capped', 'profile_baseline'];
+
+export const SCENARIO_METRIC_LABELS: Record<string, string> = {
+  volatility_ann: 'Volatilité annuelle',
+  max_drawdown: 'Perte max historique',
+  stress_2022: 'Stress test 2022',
+  top_weight: 'Poids principal',
+  sector_concentration_hhi: 'Concentration (HHI)',
+  us_exposure: 'Exposition US',
+};
+
+export interface Profile {
+  persona: PersonaId;
+  objective: string;
+  horizon_years: number;
+  risk_tolerance: 'low' | 'low_moderate' | 'moderate' | 'high';
+  risk_capacity: 'low' | 'moderate' | 'high';
+  constraints: string[];
+  preferences: string[];
+  budget_cad: number | null;
+  request_type: 'build' | 'judge';
+  requested_idea: { ticker: string; weight: number } | null;
+  excluded_tickers: string[];
+  conflicts: string[];
+  clarification_needed: string | null;
+}
+
+export interface Evidence {
+  id: string;
+  value: number | string | Record<string, unknown>;
+  source: string;
+  date: string;
+  date_kind: 'observation' | 'publication';
+  url: string | null;
+  method: string;
+  confidence: 'fact' | 'assumption' | 'fictional';
+}
+
+export interface Scenario {
+  name: ScenarioName;
+  weights: Record<string, number>;
+  metrics: Record<string, string>;
+  notes: string[];
+}
+
+export interface TraceEntry {
+  node: string;
+  started_at: string;
+  ended_at: string;
+  summary: string;
+}
+
+export interface Exclusion {
+  ticker: string;
+  reason: string;
+  evidence_id: string;
+}
+
+export interface EventItem {
+  ticker?: string;
+  headline: string;
+  published_at: string;
+  relevant: boolean;
+  kind: string;
+  risk_type: string;
+  material: boolean;
+  evidence_id: string;
+}
+
+export interface Objection {
+  scenario: string;
+  objection: string;
+  evidence: string[];
+  severity: 'blocking' | 'warning';
+}
+
+export interface ClaimWithEvidence {
+  claim: string;
+  evidence: string[];
+}
+
+export interface Explanation {
+  resume: string;
+  quelles_donnees: ClaimWithEvidence[];
+  pourquoi_ce_choix: ClaimWithEvidence[];
+  limites: ClaimWithEvidence[];
+  ce_qui_changerait_la_reponse: ClaimWithEvidence[];
+  incertitude: string;
+  scenario_le_plus_coherent: ScenarioName;
+  avertissement: string;
+}
+
+export interface Verification {
+  passed: boolean;
+  errors: string[];
+}
+
+export interface GraphState {
+  as_of_date: string;
+  persona: PersonaId;
+  request_text: string;
+  profile: Profile | null;
+  eligible_universe: string[];
+  exclusions: Exclusion[];
+  evidence: Record<string, Evidence>;
+  events: EventItem[];
+  scenarios: Scenario[];
+  objections: Objection[];
+  explanation: Explanation | null;
+  verification: Verification | null;
+  retries: Record<string, number>;
+  trace: TraceEntry[];
+  run_id?: string;
+}
+
+export interface PersonaMeta {
+  label: string;
+  objective: string;
+  horizon_years: number;
+  risk_tolerance: string;
+  risk_capacity: string;
+  constraints: string[];
+  preferences: string[];
+  budget_cad: number | null;
+  example_request: string;
+}
+
+export type SSEEvent =
+  | { type: 'trace'; entry: TraceEntry }
+  | { type: 'interrupt'; question: string }
+  | { type: 'final'; run_id: string }
+  | { type: 'error'; error: string; message?: string };
