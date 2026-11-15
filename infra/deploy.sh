@@ -80,7 +80,7 @@ redeploy_via_ssm() {
     echo "Public IP: ${PUBLIC_IP}"
 
     echo "Sending update command to ${INSTANCE_ID} via SSM..."
-    DOCKER_CMD="aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com && docker pull ${ECR_URI}:latest && docker rm -f alphaforge || true && docker run -d --name alphaforge --restart always -p 80:8000 --log-driver awslogs --log-opt awslogs-group=/alphaforge/app --log-opt awslogs-region=${AWS_REGION} --log-opt awslogs-create-group=true -e AF_S3_BUCKET=${S3_BUCKET} -e AF_DYNAMODB_TABLE=${DYNAMODB_TABLE} -e AF_TRACE_BACKEND=dynamodb -e AF_CHECKPOINTER=dynamodb -e AF_CHECKPOINTS_TABLE=${CHECKPOINTS_TABLE} -e AWS_REGION=${AWS_REGION} ${ECR_URI}:latest"
+    DOCKER_CMD="aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com && docker pull ${ECR_URI}:latest && docker rm -f alphaforge || true && FINNHUB_KEY=\$(aws ssm get-parameter --name /alphaforge/finnhub_api_key --with-decryption --query Parameter.Value --output text 2>/dev/null || true) && TAVILY_KEY=\$(aws ssm get-parameter --name /alphaforge/tavily_api_key --with-decryption --query Parameter.Value --output text 2>/dev/null || true) && docker run -d --name alphaforge --restart always -p 80:8000 --log-driver awslogs --log-opt awslogs-group=/alphaforge/app --log-opt awslogs-region=${AWS_REGION} --log-opt awslogs-create-group=true -e AF_S3_BUCKET=${S3_BUCKET} -e AF_DYNAMODB_TABLE=${DYNAMODB_TABLE} -e AF_TRACE_BACKEND=dynamodb -e AF_CHECKPOINTER=dynamodb -e AF_CHECKPOINTS_TABLE=${CHECKPOINTS_TABLE} -e AF_NEWS_MODE=\$( [ -n "\${FINNHUB_KEY}\${TAVILY_KEY}" ] && echo live || echo cache ) \${FINNHUB_KEY:+-e FINNHUB_API_KEY=\${FINNHUB_KEY}} \${TAVILY_KEY:+-e TAVILY_API_KEY=\${TAVILY_KEY}} -e AWS_REGION=${AWS_REGION} ${ECR_URI}:latest"
 
     CMD_ID=$(aws ssm send-command \
         --instance-ids "${INSTANCE_ID}" \
@@ -178,7 +178,9 @@ full_deploy() {
                 {\"Effect\": \"Allow\", \"Action\": [\"bedrock:InvokeModel\", \"bedrock:InvokeModelWithResponseStream\"], \"Resource\": \"*\"},
                 {\"Effect\": \"Allow\", \"Action\": [\"s3:*\"], \"Resource\": [\"arn:aws:s3:::${S3_BUCKET}\", \"arn:aws:s3:::${S3_BUCKET}/*\"]},
                 {\"Effect\": \"Allow\", \"Action\": [\"dynamodb:*\"], \"Resource\": [\"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}/*\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}/*\"]},
-                {\"Effect\": \"Allow\", \"Action\": [\"logs:CreateLogGroup\", \"logs:CreateLogStream\", \"logs:PutLogEvents\", \"logs:DescribeLogStreams\"], \"Resource\": \"*\"}
+                {\"Effect\": \"Allow\", \"Action\": [\"logs:CreateLogGroup\", \"logs:CreateLogStream\", \"logs:PutLogEvents\", \"logs:DescribeLogStreams\"], \"Resource\": \"*\"},
+                {\"Effect\": \"Allow\", \"Action\": [\"ssm:GetParameter\", \"ssm:GetParameters\", \"ssm:GetParametersByPath\"], \"Resource\": \"arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/alphaforge/*\"},
+                {\"Effect\": \"Allow\", \"Action\": [\"secretsmanager:GetSecretValue\"], \"Resource\": \"arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:/alphaforge/*\"}
             ]
         }"
 
@@ -211,6 +213,8 @@ for i in {1..10}; do
   sleep 3
 done
 docker pull "${ECR_URI}:latest"
+FINNHUB_KEY=\$(aws ssm get-parameter --name /alphaforge/finnhub_api_key --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
+TAVILY_KEY=\$(aws ssm get-parameter --name /alphaforge/tavily_api_key --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
 docker run -d --name alphaforge --restart always \
   -p 80:8000 \
   --log-driver awslogs \
@@ -222,6 +226,9 @@ docker run -d --name alphaforge --restart always \
   -e AF_TRACE_BACKEND="dynamodb" \
   -e AF_CHECKPOINTER="dynamodb" \
   -e AF_CHECKPOINTS_TABLE="${CHECKPOINTS_TABLE}" \
+  -e AF_NEWS_MODE="\$( [ -n "\${FINNHUB_KEY}\${TAVILY_KEY}" ] && echo live || echo cache )" \
+  \${FINNHUB_KEY:+-e FINNHUB_API_KEY="\${FINNHUB_KEY}"} \
+  \${TAVILY_KEY:+-e TAVILY_API_KEY="\${TAVILY_KEY}"} \
   -e AWS_REGION="${AWS_REGION}" \
   "${ECR_URI}:latest"
 echo "AlphaForge bootstrap complete!"

@@ -57,8 +57,54 @@ All created resources are tagged with `project=alphaforge`.
 | `AF_S3_BUCKET` | `alphaforge-data-908027403910` | S3 bucket holding dataset, caches, and offloaded run states. |
 | `AF_DYNAMODB_TABLE` | `alphaforge-traces` | DynamoDB table name for storing run traces. |
 | `AF_TRACE_BACKEND` | `dynamodb` | Trace storage backend: `dynamodb` (AWS) or `local` (offline). |
+| `AF_NEWS_MODE` | `cache` (local) / `live` (EC2) | News retrieval mode: `live` fetches fresh company news and web search; `cache` uses committed SEC filings/searches only. |
+| `FINNHUB_API_KEY` | *(None / SSM)* | Finnhub API key for live company news. Resolved from env or SSM Parameter Store `/alphaforge/finnhub_api_key`. |
+| `TAVILY_API_KEY` | *(None / SSM)* | Tavily Search API key for live web search. Resolved from env or SSM Parameter Store `/alphaforge/tavily_api_key`. |
 | `AWS_REGION` | `us-east-1` | AWS region for all resources. |
 | `AWS_PROFILE` | `datathon` | AWS CLI / SDK profile (if using local named profile). |
+
+---
+
+### 4.1 Secrets Management & Live News API Keys (B-9)
+
+In compliance with strict security requirements (PRD §8), API secrets are **never committed to the repository, never built into Docker images, and never hardcoded**:
+
+- **Resolution Precedence** (`alphaforge.secrets.get_secret`):
+  1. Container environment variables (`FINNHUB_API_KEY`, `TAVILY_API_KEY`).
+  2. AWS Systems Manager (SSM) Parameter Store:
+     - `/alphaforge/finnhub_api_key`
+     - `/alphaforge/tavily_api_key`
+  3. Seamless cache fallback with diagnostic evidence warning (zero crashes).
+
+- **Setting Keys via AWS CLI**:
+  ```bash
+  export AWS_PROFILE=datathon
+  export AWS_REGION=us-east-1
+
+  # Finnhub API Key (Company News)
+  aws ssm put-parameter \
+    --name "/alphaforge/finnhub_api_key" \
+    --value "<YOUR_FINNHUB_API_KEY>" \
+    --type SecureString \
+    --overwrite
+
+  # Tavily API Key (Live Web Search)
+  aws ssm put-parameter \
+    --name "/alphaforge/tavily_api_key" \
+    --value "<YOUR_TAVILY_API_KEY>" \
+    --type SecureString \
+    --overwrite
+  ```
+
+- **IAM Permissions**:
+  The EC2 IAM role `alphaforge-ec2-role` includes scoped permissions for SSM Parameter Store:
+  `arn:aws:ssm:us-east-1:<ACCOUNT_ID>:parameter/alphaforge/*` and Secrets Manager `arn:aws:secretsmanager:us-east-1:<ACCOUNT_ID>:secret:/alphaforge/*`.
+
+- **Resilience & Graceful Degradation**:
+  - **No key configured**: Agent 2 falls back to the local SEC EDGAR filings and cached search results, logging a warning in evidence (`news_warning`).
+  - **Rate limits (HTTP 429)**: Handled gracefully without raising; falls back to cache with an explicit warning evidence entry.
+  - **Timeouts**: Handled gracefully without raising; falls back to cache with an explicit warning evidence entry.
+  - **Zero hallucinated data**: The platform never fabricates news items or returns fake numbers.
 
 ---
 

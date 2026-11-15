@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
-import os
 
 import httpx
 
@@ -79,7 +78,9 @@ def web_search(
     key = query_key(query)
     path = cache_path("search", key)
     if _mode(mode) == "live":
-        api_key = os.getenv("TAVILY_API_KEY")
+        from alphaforge.secrets import get_secret
+
+        api_key = get_secret("TAVILY_API_KEY")
         if not api_key:
             warnings.append("TAVILY_API_KEY absente : lecture du cache uniquement.")
         else:
@@ -87,6 +88,13 @@ def web_search(
                 fresh = _tavily(query, max_results, api_key)
                 if fresh:
                     write_cache("search", key, fresh)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 429:
+                    warnings.append(f"Tavily limite de débit atteinte (HTTP 429) pour {query!r} : repli sur le cache.")
+                else:
+                    warnings.append(f"Tavily indisponible pour {query!r} (HTTP {exc.response.status_code}) : repli sur le cache.")
+            except httpx.TimeoutException:
+                warnings.append(f"Tavily délai d'attente dépassé (timeout) pour {query!r} : repli sur le cache.")
             except (httpx.HTTPError, ValueError) as exc:
                 warnings.append(f"Tavily indisponible ({type(exc).__name__}) : cache utilisé.")
     return read_cache_file(path)[:max_results]

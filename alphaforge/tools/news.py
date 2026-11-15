@@ -146,7 +146,9 @@ def fetch_company_news(
     """
     warnings = warnings if warnings is not None else []
     if _mode(mode) == "live":
-        key = os.getenv("FINNHUB_API_KEY")
+        from alphaforge.secrets import get_secret
+
+        key = get_secret("FINNHUB_API_KEY")
         if not key:
             warnings.append("FINNHUB_API_KEY absente : lecture du cache uniquement.")
         else:
@@ -154,6 +156,13 @@ def fetch_company_news(
                 fresh = _finnhub(ticker, date_from, date_to, key)
                 if fresh:
                     write_cache("finnhub", ticker, fresh)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 429:
+                    warnings.append(f"Finnhub limite de débit atteinte (HTTP 429) pour {ticker} : repli sur le cache.")
+                else:
+                    warnings.append(f"Finnhub indisponible pour {ticker} (HTTP {exc.response.status_code}) : repli sur le cache.")
+            except httpx.TimeoutException:
+                warnings.append(f"Finnhub délai d'attente dépassé (timeout) pour {ticker} : repli sur le cache.")
             except (httpx.HTTPError, ValueError) as exc:
                 warnings.append(f"Finnhub indisponible pour {ticker} ({type(exc).__name__}) : cache utilisé.")
     return _sorted([i for i in cached_company_news(ticker) if _in_window(i, date_from, date_to)])
