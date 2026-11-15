@@ -297,7 +297,7 @@ def get_run_state(run_id: str) -> dict[str, Any]:
 
 @app.get("/{full_path:path}")
 async def spa_fallback(full_path: str):
-    dist_dir = DIST_DIR
+    dist_dir = DIST_DIR.resolve()
     if not dist_dir.is_dir():
         raise HTTPException(status_code=404, detail="Not found")
 
