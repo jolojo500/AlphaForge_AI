@@ -20,7 +20,7 @@ def evidence():
 
 
 CLEAN = {
-    "resume": "Comparaison de trois scénarios fictifs pour le profil déclaré.",
+    "resume": "Comparaison de trois scénarios fictifs pour le profil déclaré [EQ1].",
     "quelles_donnees": [
         {"claim": "La perte maximale historique de TSLA est de 38,2 %.", "evidence": ["EQ1"]},
         {"claim": "La volatilité annualisée de SPY est de 0,18.", "evidence": ["EQ2"]},
@@ -31,7 +31,7 @@ CLEAN = {
     ],
     "limites": [{"claim": "Le passé ne prédit pas l'avenir.", "evidence": []}],
     "ce_qui_changerait_la_reponse": [{"claim": "Un horizon plus long.", "evidence": []}],
-    "incertitude": "Les statistiques historiques ne décrivent pas l'avenir.",
+    "incertitude": "Les statistiques historiques ne décrivent pas l'avenir [EQ3].",
     "scenario_le_plus_coherent": "capped",
     "avertissement": "Simulation éducative. Aucun conseil personnalisé.",
 }
@@ -66,6 +66,21 @@ def test_unknown_id_inside_claim_text(evidence):
 def test_fact_claim_without_evidence_fails(evidence):
     e = mutate(quelles_donnees=[{"claim": "Les actions sont volatiles.", "evidence": []}])
     assert any("sans preuve" in m for m in v.check_eids(e, evidence))
+
+
+def test_resume_and_incertitude_require_inline_evidence(evidence):
+    e = mutate(
+        resume="Comparaison de trois scénarios fictifs pour le profil déclaré.",
+        incertitude="Les statistiques historiques ne décrivent pas l'avenir.",
+    )
+    errs = v.check_eids(e, evidence)
+    assert "resume: aucune preuve citée" in errs
+    assert "incertitude: aucune preuve citée" in errs
+
+
+def test_unknown_id_in_resume_is_caught(evidence):
+    e = mutate(resume="La perte maximale historique est de 38,2 % [EQ99].")
+    assert any("EQ99" in m for m in v.check_eids(e, evidence))
 
 
 # ---- numbers
@@ -114,6 +129,75 @@ def test_context_numbers_allow_user_and_scenario_values(evidence):
     assert v.check_numbers(e, evidence, context=[0.25]) == []
 
 
+@pytest.mark.parametrize("text", ["47 points", "47 point", "47 pts"])
+def test_integers_followed_by_a_unit_are_checked(evidence, text):
+    e = mutate(limites=[{"claim": f"La perte atteint {text}.", "evidence": ["EQ1"]}])
+    errs = v.check_numbers(e, evidence)
+    assert len(errs) == 1 and "47" in errs[0]
+
+
+def test_invented_number_in_resume_fails(evidence):
+    e = mutate(resume="Le scénario plafonné limiterait la perte maximale à 12 % [EQ1].")
+    errs = v.check_numbers(e, evidence)
+    assert any("resume" in m and "12 %" in m for m in errs)
+
+
+def test_resume_number_matches_its_cited_evidence(evidence):
+    e = mutate(resume="La perte maximale historique est de 38,2 % [EQ1].")
+    assert v.check_numbers(e, evidence) == []
+
+
+def _state_with_scenarios(evidence, explanation, scenarios):
+    profile = Profile(
+        persona="robert", objective="x", horizon_years=4, risk_tolerance="low_moderate",
+        risk_capacity="low",
+    )
+    return GraphState(
+        as_of_date=D, persona="robert", profile=profile, evidence=evidence,
+        explanation=explanation, scenarios=scenarios,
+    )
+
+
+def _weights(name, tsla, spy):
+    return Scenario(name=name, weights={"TSLA": tsla, "SPY": spy})
+
+
+def test_weight_from_another_scenario_is_not_allowed(evidence):
+    scenarios = [
+        _weights("as_requested", 0.20, 0.80),
+        _weights("capped", 0.05, 0.95),
+        _weights("profile_baseline", 0.0, 1.0),
+    ]
+    e = mutate(
+        quelles_donnees=[{"claim": "Le scénario plafonné place 20 % dans TSLA.", "evidence": ["EQ1"]}]
+    )
+    assert any("20 %" in m for m in v.verify(_state_with_scenarios(evidence, e, scenarios)))
+
+
+def test_weight_of_the_named_scenario_is_allowed(evidence):
+    scenarios = [
+        _weights("as_requested", 0.20, 0.80),
+        _weights("capped", 0.05, 0.95),
+        _weights("profile_baseline", 0.0, 1.0),
+    ]
+    e = mutate(
+        quelles_donnees=[{"claim": "Le scénario plafonné place 5 % dans TSLA.", "evidence": ["EQ1"]}]
+    )
+    assert not any("5 %" in m for m in v.verify(_state_with_scenarios(evidence, e, scenarios)))
+
+
+def test_made_up_percentage_equal_to_some_weight_fails(evidence):
+    scenarios = [
+        _weights("as_requested", 0.04, 0.96),
+        _weights("capped", 0.05, 0.95),
+        _weights("profile_baseline", 0.0, 1.0),
+    ]
+    e = mutate(
+        quelles_donnees=[{"claim": "La perte maximale historique est de 4 %.", "evidence": ["EQ1"]}]
+    )
+    assert any("4 %" in m for m in v.verify(_state_with_scenarios(evidence, e, scenarios)))
+
+
 # ---- wording
 @pytest.mark.parametrize(
     "text",
@@ -141,7 +225,7 @@ def test_context_numbers_allow_user_and_scenario_values(evidence):
     ],
 )
 def test_forbidden_wording_fails_only_wording(evidence, text):
-    e = mutate(resume=text)
+    e = mutate(resume=f"{text} [EQ1]")
     assert v.check_wording(e)
     assert v.check_sections(e) == [] and v.check_eids(e, evidence) == []
 

@@ -1,5 +1,5 @@
 {
- "resume": "Comparaison de trois scénarios fictifs pour Robert, qui vise la préservation du capital.",
+ "resume": "Comparaison de trois scénarios fictifs pour Robert, qui vise la préservation du capital [EP8].",
  "quelles_donnees": [
   {
    "claim": "Le scénario tel que demandé a une volatilité annualisée de 15,5 %.",
@@ -34,7 +34,7 @@
    "evidence": []
   }
  ],
- "incertitude": "Les statistiques historiques ne décrivent pas l'avenir.",
+ "incertitude": "Les statistiques historiques ne décrivent pas l'avenir [EP2].",
  "scenario_le_plus_coherent": "capped",
  "avertissement": "Simulation éducative. Aucun conseil personnalisé."
 }

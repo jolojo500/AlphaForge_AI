@@ -52,6 +52,9 @@ Règles strictes :
 - Tout nombre que tu écris doit venir d'une preuve citée dans la même affirmation, recopié exactement
   comme il est imprimé après « = » (par exemple « 38,0 % »). N'écris aucun autre nombre chiffré
   (sauf ceux de la demande de l'utilisateur), pas d'années de calcul inventées.
+- Le résumé (resume) et l'incertitude (incertitude) citent aussi au moins un identifiant de preuve,
+  inline entre crochets, par exemple « ... [EP7] ». Tout nombre dans ces deux champs doit venir
+  des preuves ainsi citées.
 - Langage de cohérence, jamais de conseil : dis quel scénario est « le plus cohérent avec le profil
   déclaré », sans dire d'acheter, de vendre ou d'investir. Aucune prévision de rendement futur,
   aucune promesse. Les statistiques sont historiques.
@@ -221,6 +224,12 @@ def template_explanation(state: GraphState) -> dict:
                 }
             )
     bm = _metric_value(state, best, "max_drawdown")
+    cited = [
+        best.metrics[m]
+        for m in ("max_drawdown", "volatility_ann")
+        if m in best.metrics and best.metrics[m] in state.evidence
+    ]
+    cite = f" [{', '.join(cited)}]" if cited else ""
     if bm is not None:
         tol_str = (
             TOLERANCE_FR.get(state.profile.risk_tolerance, state.profile.risk_tolerance)
@@ -250,14 +259,17 @@ def template_explanation(state: GraphState) -> dict:
             {"claim": "Le profil comporte des tensions avec la demande formulée.", "evidence": []}
         )
     return {
-        "resume": "Comparaison de trois scénarios fictifs avec leurs indicateurs de risque historiques.",
+        "resume": (
+            "Comparaison de trois scénarios fictifs avec leurs indicateurs de risque "
+            f"historiques{cite}."
+        ),
         "quelles_donnees": donnees,
         "pourquoi_ce_choix": pourquoi,
         "limites": limites,
         "ce_qui_changerait_la_reponse": [
             {"claim": "Un autre horizon, une autre tolérance au risque ou une exclusion d'actif.", "evidence": []}
         ],
-        "incertitude": "Les statistiques historiques ne décrivent pas l'avenir.",
+        "incertitude": f"Les statistiques historiques ne décrivent pas l'avenir{cite}.",
         "scenario_le_plus_coherent": best.name,
         "avertissement": DISCLAIMER,
     }

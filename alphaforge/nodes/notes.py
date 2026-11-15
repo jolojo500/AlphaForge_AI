@@ -136,13 +136,15 @@ def _draft_scenarios(
         )
     except llm.LLMError:
         return scenarios
-    context = [float(w) for sc in scenarios for w in sc.weights.values()]
+    request_context = []
     if profile and profile.requested_idea:
-        context.append(float(profile.requested_idea["weight"]))
+        request_context.append(float(profile.requested_idea["weight"]))
     result = []
     for sc in scenarios:
         notes: list[Note] = getattr(out, sc.name, [])
         allowed = {e for e in sc.metrics.values() if e in evidence}
+        # Only this scenario's weights may be restated by its notes, plus the request number.
+        context = request_context + [float(w) for w in sc.weights.values()]
         if _valid(notes, allowed, evidence, context):
             sc = sc.model_copy(update={"notes": [_render(n) for n in notes]})
         result.append(sc)

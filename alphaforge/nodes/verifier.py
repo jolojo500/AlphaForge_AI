@@ -18,7 +18,17 @@ CLAIM_SECTIONS = ("quelles_donnees", "pourquoi_ce_choix", "limites", "ce_qui_cha
 MUST_CITE = ("quelles_donnees", "pourquoi_ce_choix")
 SECTIONS = CLAIM_SECTIONS  # kept for importers of the stub
 REQUIRED_TEXT = ("resume", "incertitude", "avertissement", "scenario_le_plus_coherent")
+PROSE_SECTIONS = ("resume", "incertitude")  # free text the user reads first; must cite evidence
 SCENARIO_NAMES = ("as_requested", "capped", "profile_baseline")
+SCENARIO_PATTERNS = {
+    "as_requested": re.compile(r"\b(?:as[_ ]requested|tel(?:le)?s? que demand[ée]e?s?)\b", re.I),
+    "capped": re.compile(r"\b(?:capped|plafonn[ée]e?s?)\b", re.I),
+    "profile_baseline": re.compile(
+        r"\b(?:profile[_ ]baseline|baseline|(?:sc[ée]nario|allocation|portefeuille) "
+        r"(?:de )?r[ée]f[ée]rence)\b",
+        re.I,
+    ),
+}
 
 REL_TOL = 0.01
 
@@ -54,7 +64,8 @@ _NEGATION_RE = re.compile(
 _ISO_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 _NUM_RE = re.compile(
     r"(?P<num>[-−–]?\d+(?:[ \u00a0\u202f]\d{3})*(?:[.,]\d+)?)"
-    r"(?P<pct>\s*(?:%|pour cent|percent))?",
+    r"(?P<pct>\s*(?:%|pour cent|percent))?"
+    r"(?P<unit>\s*(?:(?:points?|pts?)\b))?",
     re.IGNORECASE,
 )
 
@@ -71,7 +82,7 @@ def _items(explanation: dict):
 def _all_text(explanation: dict) -> list[tuple[str, str]]:
     """(where, text) for all free text that the user will read, disclaimer excluded."""
     out = []
-    for key in ("resume", "incertitude"):
+    for key in PROSE_SECTIONS:
         if isinstance(explanation.get(key), str):
             out.append((key, explanation[key]))
     for section, claim, _ in _items(explanation):
@@ -79,11 +90,17 @@ def _all_text(explanation: dict) -> list[tuple[str, str]]:
     return out
 
 
+def _scenarios_named(text: str) -> list[str]:
+    """Scenario names a claim refers to, in raw (capped) or French (plafonné) form."""
+    return [name for name, pattern in SCENARIO_PATTERNS.items() if pattern.search(text)]
+
+
 def extract_numbers(text: str) -> list[tuple[float, bool, int]]:
     """Numbers worth checking in `text`: (value, is_percent, decimals).
 
-    Only percentages and decimal numbers are checked. Bare integers (years, counts, amounts
-    like 100 000) are not claims about evidence. Evidence ids and ISO dates are ignored.
+    Percentages, decimal numbers, and integers followed by a unit such as "points" are
+    checked. Other bare integers (years, counts, amounts like 100 000) are not claims about
+    evidence. Evidence ids and ISO dates are ignored.
     """
     cleaned = EID_RE.sub(" ", _ISO_DATE_RE.sub(" ", text))
     found = []
@@ -92,7 +109,7 @@ def extract_numbers(text: str) -> list[tuple[float, bool, int]]:
         raw = raw.replace("−", "-").replace("–", "-").replace(",", ".")
         is_pct = bool(m.group("pct"))
         decimals = len(raw.split(".")[1]) if "." in raw else 0
-        if not is_pct and decimals == 0:
+        if not is_pct and decimals == 0 and not m.group("unit"):
             continue
         try:
             found.append((abs(float(raw)), is_pct, decimals))
@@ -105,7 +122,6 @@ def _matches(claimed: float, is_pct: bool, decimals: int, actual: float) -> bool
     """Claimed number vs an evidence value, allowing ratio/percent conversion and rounding."""
     actual = abs(actual)
     candidates = [actual * 100, actual] if is_pct else [actual, actual * 100]
-    candidates.append(actual / 100)
     half_step = 0.5 * 10 ** (-decimals)
     for cand in candidates:
         if abs(claimed - cand) <= max(REL_TOL * abs(cand), half_step + 1e-9):
@@ -113,9 +129,28 @@ def _matches(claimed: float, is_pct: bool, decimals: int, actual: float) -> bool
     return False
 
 
+def _context_matches(claimed: float, is_pct: bool, decimals: int, actual: float) -> bool:
+    """Claimed number vs a context value (scenario weight or request number).
+
+    Context values are ratios or plain amounts, never percentages. A percent claim can only
+    restate a ratio (0.25 -> 25 %), so a request horizon of 4 never validates an invented "4 %".
+    """
+    actual = abs(actual)
+    if is_pct:
+        if actual > 1.5:
+            return False
+        candidates = [actual * 100]
+    else:
+        candidates = [actual]
+    half_step = 0.5 * 10 ** (-decimals)
+    return any(
+        abs(claimed - cand) <= max(REL_TOL * abs(cand), half_step + 1e-9) for cand in candidates
+    )
+
+
 # --------------------------------------------------------------------------- checks
 def check_eids(explanation: dict, evidence: Mapping[str, Evidence]) -> list[str]:
-    """Every cited id exists; fact claims cite at least one id."""
+    """Every cited id exists; fact claims and the two prose sections cite at least one id."""
     errors = []
     for section, claim, ids in _items(explanation):
         for eid in ids:
@@ -126,30 +161,67 @@ def check_eids(explanation: dict, evidence: Mapping[str, Evidence]) -> list[str]
                 errors.append(f"{section}: preuve inconnue {eid} (citée dans le texte)")
         if section in MUST_CITE and not ids:
             errors.append(f"{section}: affirmation sans preuve « {claim[:60]} »")
+    for section in PROSE_SECTIONS:
+        text = explanation.get(section)
+        if not isinstance(text, str) or not text.strip():
+            continue
+        ids = EID_RE.findall(text)
+        for eid in ids:
+            if eid not in evidence:
+                errors.append(f"{section}: preuve inconnue {eid} (citée dans le texte)")
+        if not ids:
+            errors.append(f"{section}: aucune preuve citée")
+    return errors
+
+
+def _number_errors(
+    section: str,
+    text: str,
+    ids: list[str],
+    evidence: Mapping[str, Evidence],
+    context: list[float],
+    scenario_context: Mapping[str, list[float]],
+) -> list[str]:
+    values = [numeric(evidence[e]) for e in ids if e in evidence]
+    values = [v for v in values if v is not None]
+    ctx = list(context)
+    for name in _scenarios_named(text):
+        ctx += scenario_context.get(name, [])
+    errors = []
+    for claimed, is_pct, decimals in extract_numbers(text):
+        if any(_matches(claimed, is_pct, decimals, v) for v in values):
+            continue
+        if any(_context_matches(claimed, is_pct, decimals, v) for v in ctx):
+            continue
+        shown = f"{claimed:g} %" if is_pct else f"{claimed:g}"
+        if values:
+            errors.append(f"{section}: le nombre {shown} ne correspond pas aux preuves citées")
+        else:
+            errors.append(f"{section}: le nombre {shown} n'a aucune preuve citée")
     return errors
 
 
 def check_numbers(
-    explanation: dict, evidence: Mapping[str, Evidence], context: list[float] | None = None
+    explanation: dict,
+    evidence: Mapping[str, Evidence],
+    context: list[float] | None = None,
+    scenario_context: Mapping[str, list[float]] | None = None,
 ) -> list[str]:
-    """Every percentage or decimal in a claim appears in its cited evidence (±1%).
+    """Every checked number in a claim or prose section matches its cited evidence (±1%).
 
-    `context` holds numbers that come from the user's own request or from the scenario
-    weights (not evidence), which a claim may restate.
+    `context` holds numbers from the user's own request. `scenario_context` maps a scenario
+    name to its weights; a claim may only restate the weights of a scenario it names.
     """
     errors = []
     ctx = list(context or [])
+    sc_ctx = scenario_context or {}
     for section, claim, ids in _items(explanation):
-        values = [numeric(evidence[e]) for e in ids if e in evidence]
-        values = [v for v in values if v is not None]
-        for claimed, is_pct, decimals in extract_numbers(claim):
-            if any(_matches(claimed, is_pct, decimals, v) for v in values + ctx):
-                continue
-            shown = f"{claimed:g} %" if is_pct else f"{claimed:g}"
-            if values:
-                errors.append(f"{section}: le nombre {shown} ne correspond pas aux preuves citées")
-            else:
-                errors.append(f"{section}: le nombre {shown} n'a aucune preuve citée")
+        errors += _number_errors(section, claim, ids, evidence, ctx, sc_ctx)
+    for section in PROSE_SECTIONS:
+        text = explanation.get(section)
+        if not isinstance(text, str) or not text.strip():
+            continue
+        errors += _number_errors(section, text, EID_RE.findall(text), evidence, ctx, sc_ctx)
     return errors
 
 
@@ -189,6 +261,7 @@ def check_sections(explanation: dict) -> list[str]:
 
 
 def _context_numbers(state: GraphState) -> list[float]:
+    """Numbers from the user's own request that a claim may restate."""
     out: list[float] = []
     p = state.profile
     if p:
@@ -197,9 +270,12 @@ def _context_numbers(state: GraphState) -> list[float]:
             out.append(float(p.budget_cad))
         if p.requested_idea:
             out.append(float(p.requested_idea["weight"]))
-    for sc in state.scenarios:
-        out += [float(w) for w in sc.weights.values()]
     return out
+
+
+def _scenario_numbers(state: GraphState) -> dict[str, list[float]]:
+    """Scenario weights, available only to a claim that names that scenario."""
+    return {sc.name: [float(w) for w in sc.weights.values()] for sc in state.scenarios}
 
 
 def verify(state: GraphState) -> list[str]:
@@ -208,7 +284,9 @@ def verify(state: GraphState) -> list[str]:
         return ["explication absente"]
     errors = check_sections(explanation)
     errors += check_eids(explanation, state.evidence)
-    errors += check_numbers(explanation, state.evidence, _context_numbers(state))
+    errors += check_numbers(
+        explanation, state.evidence, _context_numbers(state), _scenario_numbers(state)
+    )
     errors += check_wording(explanation)
     return errors
 
