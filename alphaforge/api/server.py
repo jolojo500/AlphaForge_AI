@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
@@ -28,6 +28,7 @@ from alphaforge.graph import (
 from alphaforge.personas import PERSONAS
 from alphaforge.state import GraphState
 from alphaforge.trace_store import get_trace_store
+from alphaforge.whatif import diff_scenarios, prepare_whatif_inputs
 
 DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -53,6 +54,8 @@ class Run:
         self.state: GraphState | None = None
         self.question: str | None = None
         self.error: str | None = None
+        self.parent_run_id: str | None = None
+        self.change: dict[str, Any] | None = None
         self.subscribers: set[tuple[asyncio.Queue, asyncio.AbstractEventLoop]] = set()
         self._lock = threading.Lock()
 
@@ -277,18 +280,88 @@ async def stream_run_events(run_id: str) -> EventSourceResponse:
     return EventSourceResponse(event_generator())
 
 
+class WhatIfRequest(BaseModel):
+    field: str = Field(..., description="Hypothesis field to change")
+    value: Any = Field(..., description="New value for the hypothesis")
+
+
+@app.post("/runs/{run_id}/whatif")
+def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
+    parent = store.get(run_id)
+    if parent is None:
+        raise HTTPException(status_code=404, detail="Parent run not found")
+
+    parent_state = parent.state
+    if parent_state is None:
+        try:
+            parent_state = get_state(parent.run_id)
+        except Exception:  # noqa: BLE001
+            raise HTTPException(
+                status_code=400, detail="Parent run state is not available for what-if"
+            ) from None
+
+    if parent_state.profile is None:
+        raise HTTPException(status_code=400, detail="Parent profile is not established")
+
+    try:
+        inputs = prepare_whatif_inputs(
+            parent_state, {"field": req.field, "value": req.value}
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    child_run = store.create(
+        persona=inputs["persona"],
+        request_text=inputs["request_text"],
+        as_of_date=inputs["as_of_date"],
+    )
+    child_run.parent_run_id = parent.run_id
+    child_run.change = {"field": req.field, "value": req.value}
+
+    start_run_thread(
+        child_run,
+        stream_run,
+        inputs,
+        child_run.run_id,
+    )
+
+    return {"run_id": child_run.run_id, "parent_run_id": parent.run_id}
+
+
+@app.get("/runs/{run_id}/diff")
+def get_run_diff(run_id: str) -> dict[str, Any]:
+    run = store.get(run_id)
+    if run is None or run.parent_run_id is None:
+        raise HTTPException(status_code=404, detail="What-if run with parent not found")
+
+    parent = store.get(run.parent_run_id)
+    if parent is None:
+        raise HTTPException(status_code=404, detail="Parent run not found")
+
+    if run.state is None or parent.state is None:
+        raise HTTPException(status_code=400, detail="Both runs must be completed to diff")
+
+    diff = diff_scenarios(parent.state, run.state)
+    diff["change"] = run.change
+    diff["parent_run_id"] = parent.run_id
+    diff["child_run_id"] = run.run_id
+    return diff
+
+
 @app.post("/runs/{run_id}/answer")
 def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
     run = store.get(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
-    if run.status != "interrupted":
-        raise HTTPException(
-            status_code=400,
-            detail=f"Run is not awaiting an answer (current status: {run.status})",
-        )
 
-    run.status = "running"
+    with run._lock:
+        if run.status != "interrupted":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Run is not awaiting an answer (current status: {run.status})",
+            )
+        run.status = "running"
+
     start_run_thread(
         run,
         resume_run,
@@ -299,7 +372,7 @@ def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
 
 
 @app.get("/runs/{run_id}")
-def get_run_state(run_id: str) -> dict[str, Any]:
+def get_run_state(run_id: str):
     run = store.get(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -307,19 +380,27 @@ def get_run_state(run_id: str) -> dict[str, Any]:
     if run.state is not None:
         data = run.state.model_dump(mode="json")
         data["run_id"] = run.run_id
+        if run.parent_run_id:
+            data["parent_run_id"] = run.parent_run_id
+            data["change"] = run.change
         return data
 
     try:
         state = get_state(run.run_id)
         data = state.model_dump(mode="json")
         data["run_id"] = run.run_id
+        if run.parent_run_id:
+            data["parent_run_id"] = run.parent_run_id
+            data["change"] = run.change
         return data
     except Exception:  # noqa: BLE001
         if run.status == "error":
             raise HTTPException(
                 status_code=500, detail=run.error or "Run failed with an error"
             ) from None
-        raise HTTPException(status_code=202, detail="Run in progress") from None
+        return JSONResponse(
+            content={"status": "running", "run_id": run.run_id}, status_code=202
+        )
 
 
 @app.get("/{full_path:path}")

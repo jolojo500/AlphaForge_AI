@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from starlette.testclient import TestClient
 
 from alphaforge.api.server import InMemoryRunStore, app, set_store
@@ -218,3 +219,55 @@ def test_spa_fallback_when_dist_exists():
             r_spa = client.get("/robert/scenarios")
             assert r_spa.status_code == 200
             assert "SPA" in r_spa.text
+
+
+def test_whatif_api_flow():
+    client = TestClient(app)
+    # Start parent run
+    create_resp = client.post(
+        "/runs",
+        json={"persona": "robert", "request_text": PERSONAS["robert"]["example_request"]},
+    )
+    parent_id = create_resp.json()["run_id"]
+
+    # Stream parent to completion
+    with client.stream("GET", f"/runs/{parent_id}/events") as sse_resp:
+        for _ in sse_resp.iter_lines():
+            pass
+
+    # Start what-if child run
+    whatif_resp = client.post(
+        f"/runs/{parent_id}/whatif",
+        json={"field": "risk_tolerance", "value": "high"},
+    )
+    assert whatif_resp.status_code == 200
+    child_id = whatif_resp.json()["run_id"]
+    assert whatif_resp.json()["parent_run_id"] == parent_id
+
+    # Stream child events
+    child_events = []
+    with client.stream("GET", f"/runs/{child_id}/events") as sse_resp:
+        for line in sse_resp.iter_lines():
+            if line.startswith("data: "):
+                child_events.append(json.loads(line[len("data: ") :]))
+
+    # Child run skips Agent 1 (profile)
+    trace_nodes = {e["entry"]["node"] for e in child_events if e["type"] == "trace"}
+    assert "profile" not in trace_nodes
+    assert "screening" in trace_nodes
+
+    # Fetch child state
+    state_resp = client.get(f"/runs/{child_id}")
+    assert state_resp.status_code == 200
+    child_state = state_resp.json()
+    assert child_state["parent_run_id"] == parent_id
+    assert child_state["change"] == {"field": "risk_tolerance", "value": "high"}
+    assert child_state["profile"]["risk_tolerance"] == "high"
+
+    # Fetch diff
+    diff_resp = client.get(f"/runs/{child_id}/diff")
+    assert diff_resp.status_code == 200
+    diff = diff_resp.json()
+    assert "scenarios" in diff
+    assert "capped" in diff["scenarios"]
+    assert diff["scenarios"]["capped"]["weights"]["TSLA"]["old"] == pytest.approx(0.05)
