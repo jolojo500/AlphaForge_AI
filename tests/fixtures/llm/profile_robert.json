@@ -1,0 +1,8 @@
+{
+ "request_type": "judge",
+ "ticker": "TSLA",
+ "weight_pct": 25,
+ "conflicts": [
+  "Une action volatile à 25 % s'accorde mal avec la préservation du capital sur 4 ans."
+ ]
+}
