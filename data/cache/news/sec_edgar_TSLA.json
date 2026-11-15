@@ -1,0 +1,385 @@
+{
+ "provider": "sec_edgar",
+ "key": "TSLA",
+ "fetched_at": "2026-11-14T00:00:00+00:00",
+ "items": [
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026066775/tsla-20260930.htm",
+   "published_at": "2026-10-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026066738/tsla-20261021.htm",
+   "published_at": "2026-10-21T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026064366/tsla-20261002.htm",
+   "published_at": "2026-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026063820/tsla-20260929.htm",
+   "published_at": "2026-09-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049270/tsla-20260630.htm",
+   "published_at": "2026-07-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049213/tsla-20260722.htm",
+   "published_at": "2026-07-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026046717/tsla-20260702.htm",
+   "published_at": "2026-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026026673/tsla-20260331.htm",
+   "published_at": "2026-04-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026026551/tsla-20260422.htm",
+   "published_at": "2026-04-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026022956/tsla-20260402.htm",
+   "published_at": "2026-04-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003837/tsla-20260128.htm",
+   "published_at": "2026-01-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026000016/tsla-20260102.htm",
+   "published_at": "2026-01-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925108507/tm2530590d1_8k.htm",
+   "published_at": "2025-11-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025045968/tsla-20250930.htm",
+   "published_at": "2025-10-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025045861/tsla-20251022.htm",
+   "published_at": "2025-10-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025043530/tsla-20251002.htm",
+   "published_at": "2025-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925087862/tm2525337d1_8k.htm",
+   "published_at": "2025-09-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925073263/tm2522385d1_8k.htm",
+   "published_at": "2025-08-04T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025035806/tsla-20250630.htm",
+   "published_at": "2025-07-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025035738/tsla-20250723.htm",
+   "published_at": "2025-07-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025034692/tsla-20250709.htm",
+   "published_at": "2025-07-10T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025033842/tsla-20250702.htm",
+   "published_at": "2025-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025026148/tsla-20250515.htm",
+   "published_at": "2025-05-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465925050072/tm2515421d1_8k.htm",
+   "published_at": "2025-05-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025018911/tsla-20250331.htm",
+   "published_at": "2025-04-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025018851/tsla-20250422.htm",
+   "published_at": "2025-04-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025016070/tsla-20250402.htm",
+   "published_at": "2025-04-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025002993/tsla-20250129.htm",
+   "published_at": "2025-01-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025000007/tsla-20250102.htm",
+   "published_at": "2025-01-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024043486/tsla-20240930.htm",
+   "published_at": "2024-10-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024043432/tsla-20241023.htm",
+   "published_at": "2024-10-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024041816/tsla-20241002.htm",
+   "published_at": "2024-10-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024032662/tsla-20240630.htm",
+   "published_at": "2024-07-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024032603/tsla-20240723.htm",
+   "published_at": "2024-07-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024030714/tsla-20240702.htm",
+   "published_at": "2024-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000110465924071439/tm2413800d31_8k.htm",
+   "published_at": "2024-06-14T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024017503/tsla-20240331.htm",
+   "published_at": "2024-04-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000095017024046895/tsla-20240423.htm",
+   "published_at": "2024-04-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000095017024044588/tsla-20240414.htm",
+   "published_at": "2024-04-16T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000095017024040274/tsla-20240402.htm",
+   "published_at": "2024-04-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000095017024007073/tsla-20240124.htm",
+   "published_at": "2024-01-24T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "TSLA",
+   "headline": "TSLA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1318605/000095017024000282/tsla-20240102.htm",
+   "published_at": "2024-01-02T00:00:00Z",
+   "provider": "sec_edgar"
+  }
+ ]
+}

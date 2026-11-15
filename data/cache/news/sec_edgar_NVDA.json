@@ -1,0 +1,349 @@
+{
+ "provider": "sec_edgar",
+ "key": "NVDA",
+ "fetched_at": "2026-11-14T00:00:00+00:00",
+ "items": [
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000082/nvda-20261111.htm",
+   "published_at": "2026-11-12T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000078/nvda-20260902.htm",
+   "published_at": "2026-09-03T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/nvda-20260726.htm",
+   "published_at": "2026-08-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000073/nvda-20260826.htm",
+   "published_at": "2026-08-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000069/nvda-20260817.htm",
+   "published_at": "2026-08-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000060/nvda-20260628.htm",
+   "published_at": "2026-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000056/nvda-20260624.htm",
+   "published_at": "2026-06-30T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000119312526275783/d48176d8k.htm",
+   "published_at": "2026-06-18T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000052/nvda-20260426.htm",
+   "published_at": "2026-05-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/nvda-20260520.htm",
+   "published_at": "2026-05-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000028/nvda-20260507.htm",
+   "published_at": "2026-05-08T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000026/nvda-20260424.htm",
+   "published_at": "2026-04-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000024/nvda-20260302.htm",
+   "published_at": "2026-03-06T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000019/nvda-20260225.htm",
+   "published_at": "2026-02-25T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000003/nvda-20260120.htm",
+   "published_at": "2026-01-23T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000230/nvda-20251026.htm",
+   "published_at": "2025-11-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000228/nvda-20251119.htm",
+   "published_at": "2025-11-19T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000209/nvda-20250727.htm",
+   "published_at": "2025-08-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000207/nvda-20250827.htm",
+   "published_at": "2025-08-27T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000197/nvda-20250731.htm",
+   "published_at": "2025-08-05T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000179/nvda-20250625.htm",
+   "published_at": "2025-07-01T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000116/nvda-20250427.htm",
+   "published_at": "2025-05-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000115/nvda-20250528.htm",
+   "published_at": "2025-05-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000082/nvda-20250409.htm",
+   "published_at": "2025-04-15T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000039/nvda-20250303.htm",
+   "published_at": "2025-03-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000021/nvda-20250226.htm",
+   "published_at": "2025-02-26T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581025000007/nvda-20250113.htm",
+   "published_at": "2025-01-17T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000316/nvda-20241027.htm",
+   "published_at": "2024-11-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000315/nvda-20241120.htm",
+   "published_at": "2024-11-20T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000300/nvda-20241107.htm",
+   "published_at": "2024-11-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000264/nvda-20240728.htm",
+   "published_at": "2024-08-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000262/nvda-20240828.htm",
+   "published_at": "2024-08-28T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000206/nvda-20240626.htm",
+   "published_at": "2024-07-02T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000144/nvda-20240607.htm",
+   "published_at": "2024-06-07T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 10-Q filing (quarterly report)",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000124/nvda-20240428.htm",
+   "published_at": "2024-05-29T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000113/nvda-20240522.htm",
+   "published_at": "2024-05-22T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000069/nvda-20240308.htm",
+   "published_at": "2024-03-14T00:00:00Z",
+   "provider": "sec_edgar"
+  },
+  {
+   "ticker": "NVDA",
+   "headline": "NVDA: Form 8-K filing",
+   "summary": "SEC EDGAR filing reference; the headline is derived from the form type and item numbers, not from the document text.",
+   "source": "SEC EDGAR",
+   "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581024000028/nvda-20240221.htm",
+   "published_at": "2024-02-21T00:00:00Z",
+   "provider": "sec_edgar"
+  }
+ ]
+}
