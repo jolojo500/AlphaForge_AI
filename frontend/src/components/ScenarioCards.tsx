@@ -1,6 +1,6 @@
 import React from 'react';
 import { Scenario, Evidence } from '../types';
-import { BarChart3, Star } from 'lucide-react';
+import { BarChart3, Star, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -69,6 +69,34 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
             </h2>
           </div>
         </div>
+
+        {(() => {
+          const hardGateNotes = Array.from(
+            new Set(
+              scenarios.flatMap((s) =>
+                (s.notes || []).filter(
+                  (n) => n.includes('Garde-fou') || n.includes('Avertissement préalable')
+                )
+              )
+            )
+          );
+          if (hardGateNotes.length === 0) return null;
+          return (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-900 dark:text-amber-200 text-xs">
+              <div className="font-semibold flex items-center gap-1.5 mb-1.5 text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                Garde-fous prudentiels & Situation financière
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-muted-foreground dark:text-amber-200/90">
+                {hardGateNotes.map((note, idx) => (
+                  <li key={idx} className="leading-relaxed">
+                    {note.replace(/^⚠️\s*/, '')}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
 
         <div className={`grid grid-cols-1 ${scenarios.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
           {scenarios.map((sc) => {

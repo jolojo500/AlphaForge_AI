@@ -15,6 +15,8 @@ interface Step2Props {
   setSimulatedCapital: (val: number) => void;
   accountType: string;
   setAccountType: (val: string) => void;
+  netWorthShare?: string;
+  setNetWorthShare?: (val: string) => void;
 }
 
 export const Step2FinancialGoals: React.FC<Step2Props> = ({
@@ -28,6 +30,8 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
   setSimulatedCapital,
   accountType,
   setAccountType,
+  netWorthShare = '',
+  setNetWorthShare,
 }) => {
   const objectiveOptions = [
     'Croissance du capital',
@@ -270,6 +274,27 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Share of net worth (KYC suitability #117) */}
+        <div>
+          <label className="block text-xs font-medium text-foreground mb-1.5">
+            Part du patrimoine global représentée par ce montant <span className="text-destructive">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {[
+              'Moins de 25 % · Part modérée',
+              'Entre 25 % et 50 % · Part significative',
+              'Plus de 50 % · Majorité du patrimoine',
+            ].map((opt) => (
+              <RadioCard
+                key={opt}
+                label={opt}
+                selected={netWorthShare === opt || Boolean(netWorthShare && opt.startsWith(netWorthShare.slice(0, 10)))}
+                onClick={() => setNetWorthShare && setNetWorthShare(opt)}
+              />
+            ))}
           </div>
         </div>
 

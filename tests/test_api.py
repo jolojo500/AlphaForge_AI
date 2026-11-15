@@ -295,6 +295,10 @@ def _custom(tolerance: str, horizon: int = 10) -> dict:
         "constraints": [],
         "preferences": ["likes_tech"],
         "budget_cad": 50000,
+        "has_emergency_fund": True,
+        "has_high_interest_debt": False,
+        "net_worth_share": 0.20,
+        "investment_knowledge": "intermediate",
     }
 
 

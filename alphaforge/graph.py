@@ -86,7 +86,10 @@ def build_graph(checkpointer=None):
 
 def _serde() -> JsonPlusSerializer:
     # Our Pydantic models are stored in checkpoints; declare them so LangGraph trusts them.
-    models = [("alphaforge.state", n) for n in ("Profile", "Evidence", "Scenario", "GraphState")]
+    models = [
+        ("alphaforge.state", n)
+        for n in ("Profile", "Evidence", "Scenario", "GraphState", "KycCompleteness", "KycField")
+    ]
     return JsonPlusSerializer(allowed_msgpack_modules=models)
 
 

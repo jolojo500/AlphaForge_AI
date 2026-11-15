@@ -121,6 +121,24 @@ export const ResolvedProfileCard: React.FC<ResolvedProfileCardProps> = ({
                 >
                   {isResolved ? 'Vérifié par Agent 1' : 'En cours'}
                 </Badge>
+                {profile?.kyc_completeness && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] py-0 px-2 font-normal ${
+                      profile.kyc_completeness.is_complete
+                        ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10'
+                        : 'border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10'
+                    }`}
+                  >
+                    KYC {Math.round(profile.kyc_completeness.score * 100)} %
+                    {(() => {
+                      const hypCount = Object.values(profile.kyc_completeness?.fields || {}).filter(
+                        (f) => f.source === 'assumption'
+                      ).length;
+                      return hypCount > 0 ? ` (${hypCount} hyp.)` : '';
+                    })()}
+                  </Badge>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 Paramètres investisseur alimentant l&apos;analyse, les filtres et le calibrage des scénarios.
@@ -232,7 +250,7 @@ export const ResolvedProfileCard: React.FC<ResolvedProfileCardProps> = ({
         </div>
 
         {/* Optional Budget & Evaluated Idea bar */}
-        {(budget != null || requestedIdea) && (
+        {(budget != null || requestedIdea || profile?.has_emergency_fund !== undefined || profile?.debt_level) && (
           <div className="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-border/30 text-[11px] text-muted-foreground">
             {budget != null && (
               <div className="flex items-center gap-1">
@@ -252,6 +270,28 @@ export const ResolvedProfileCard: React.FC<ResolvedProfileCardProps> = ({
                   Idée demandée :{' '}
                   <strong className="text-foreground font-medium">
                     {requestedIdea.ticker} ({Math.round(requestedIdea.weight * 100)} %)
+                  </strong>
+                </span>
+              </div>
+            )}
+            {profile?.has_emergency_fund !== undefined && (
+              <div className="flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${profile.has_emergency_fund ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                <span>
+                  Fonds d&apos;urgence :{' '}
+                  <strong className="text-foreground font-medium">
+                    {profile.has_emergency_fund ? 'Constitué' : 'Non constitué'}
+                  </strong>
+                </span>
+              </div>
+            )}
+            {profile?.debt_level && (
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span>
+                  Dettes :{' '}
+                  <strong className="text-foreground font-medium">
+                    {profile.debt_level}
                   </strong>
                 </span>
               </div>

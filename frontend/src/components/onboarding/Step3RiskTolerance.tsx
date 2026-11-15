@@ -15,6 +15,10 @@ interface Step3Props {
   essentialExpensesImpact: string;
   setEssentialExpensesImpact: (val: string) => void;
   simulatedCapital: number;
+  debtLevel?: string;
+  setDebtLevel?: (val: string) => void;
+  incomeStability?: string;
+  setIncomeStability?: (val: string) => void;
 }
 
 export const Step3RiskTolerance: React.FC<Step3Props> = ({
@@ -29,6 +33,10 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
   essentialExpensesImpact,
   setEssentialExpensesImpact,
   simulatedCapital,
+  debtLevel = '',
+  setDebtLevel,
+  incomeStability = '',
+  setIncomeStability,
 }) => {
   const cap = simulatedCapital || 0;
   const hasCap = cap > 0;
@@ -175,6 +183,47 @@ export const Step3RiskTolerance: React.FC<Step3Props> = ({
                 label={opt}
                 selected={essentialExpensesImpact === opt}
                 onClick={() => setEssentialExpensesImpact(opt)}
+              />
+            ))}
+          </div>
+        </div>
+        {/* Debt status (KYC hard gate #117) */}
+        <div>
+          <label className="block text-xs font-medium text-foreground mb-1.5">
+            Endettement & dettes à taux d'intérêt élevé <span className="text-destructive">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {[
+              'Aucune dette ou dettes remboursées',
+              'Prêt hypothécaire uniquement',
+              'Dettes à taux élevé (cartes de crédit, marge)',
+            ].map((opt) => (
+              <RadioCard
+                key={opt}
+                label={opt}
+                selected={debtLevel === opt || Boolean(debtLevel && opt.startsWith(debtLevel.slice(0, 10)))}
+                onClick={() => setDebtLevel && setDebtLevel(opt)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Income stability (KYC suitability #117) */}
+        <div>
+          <label className="block text-xs font-medium text-foreground mb-1.5">
+            Stabilité de vos revenus <span className="text-destructive">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {[
+              'Revenus stables (salarié permanent)',
+              'Revenus variables ou travailleur autonome',
+              'Retraité (revenu fixe de rente)',
+            ].map((opt) => (
+              <RadioCard
+                key={opt}
+                label={opt}
+                selected={incomeStability === opt || Boolean(incomeStability && opt.startsWith(incomeStability.slice(0, 10)))}
+                onClick={() => setIncomeStability && setIncomeStability(opt)}
               />
             ))}
           </div>
