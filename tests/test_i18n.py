@@ -3,7 +3,12 @@ import datetime as dt
 
 from alphaforge.i18n import detect_language
 from alphaforge.nodes.explain import template_explanation
-from alphaforge.nodes.profile import Extraction, _regex_extract, detect_conflict, needs_clarification
+from alphaforge.nodes.profile import (
+    Extraction,
+    _regex_extract,
+    detect_conflict,
+    needs_clarification,
+)
 from alphaforge.nodes.scenarios import _template_notes
 from alphaforge.state import Evidence, GraphState, Profile, Scenario
 
