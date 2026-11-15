@@ -369,11 +369,11 @@ Une campagne d'évaluation systématique et automatisée a été menée pour val
 | **Profil contradictoire** | Retraite 4 ans + 100 % crypto (interrompu/résolu) | 100 % (11/11) | 0 | 100 % (8/8) | 100 % (Δ=0,0) | Cohérent (excl. BTC-USD) | **Conforme** |
 
 #### Synthèse des métriques d'évaluation
-- **Taux de succès du vérificateur** : **7/7 (100 %)** des cas atteignent le statut conforme du premier coup.
+- **Taux de succès du vérificateur** : **7/7 (100 %)** des cas atteignent le statut conforme (exécution réelle sur Amazon Bedrock).
 - **Fidélité numérique** : **100.0 %** — aucun nombre fictif n'est inventé ; l'intégralité des valeurs chiffrées dans l'explication correspond rigoureusement à des identifiants de preuve audités (tolérance ±1 %).
 - **Violations de contraintes** : **0 violation** sur l'ensemble des scénarios encadrés (`capped` et `profile_baseline`), garantissant le strict respect des plafonds et exclusions déclarés.
 - **Couverture de citation** : **100 %** des affirmations relatives aux choix et limites citent directement une preuve formelle.
-- **Stabilité inter-exécutions** : **100 % déterministe** (écart maximal sur les pondérations Δ = 0,0000 entre deux exécutions consécutives).
+- **Stabilité inter-exécutions** : **6/7 cas identiques** (écart de pondération Δ = 0,0000 entre deux exécutions). Exception : Mateo (Δmax = 0,0746). Le calcul (screening, statistiques, optimisation) est déterministe, mais la relecture critique (Agent 3, LLM) a soulevé une objection bloquante dans une seule des deux exécutions, ce qui a resserré un plafond et reconstruit les scénarios. Avec `AF_RED_TEAM=off`, les pondérations sont strictement identiques d'une exécution à l'autre.
 - **Cohérence des analyses d'hypothèses (*What-If*)** : **100 % conforme** — l'exclusion d'un actif retire instantanément le titre de l'univers admissible et annule son allocation dans tous les scénarios reconstruits sans recalculer le profil initial.
 
 
