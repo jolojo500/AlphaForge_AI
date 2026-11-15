@@ -353,6 +353,7 @@ export interface UserOnboardingProfile {
 export interface BackendRunPayload {
   persona: string;
   request_text: string;
+  language?: 'fr' | 'en';
   user_profile?: UserOnboardingProfile;
   current_holdings?: Record<string, number>;
   profile_data?: {

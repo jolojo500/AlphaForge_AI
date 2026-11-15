@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ExplanationSectionProps {
   explanation: Explanation | null;
@@ -27,6 +28,9 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
   evidence,
   onSelectEvidence,
 }) => {
+  const { language, t } = useLanguage();
+  const isEn = language === 'en';
+
   // If verification failed explicitly, show the failure panel instead of explanation
   if (verification && verification.passed === false) {
     return (
@@ -35,14 +39,17 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <ShieldAlert className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
           <div>
             <h2 className="text-base font-bold text-red-950 dark:text-red-200 mb-1">
-              Échec du vérificateur formel déterministe
+              {t('explain.verification_failed', 'Échec du vérificateur formel déterministe')}
             </h2>
             <p className="text-xs text-red-900 dark:text-red-300 mb-3">
-              L&apos;explication générée par le modèle a été rejetée car elle ne satisfait pas aux critères stricts d&apos;intégrité numérique ou de conformité (non-conseil).
+              {t(
+                'explain.verification_failed_desc',
+                "L'explication générée par le modèle a été rejetée car elle ne satisfait pas aux critères stricts d'intégrité numérique ou de conformité (non-conseil)."
+              )}
             </p>
             <div className="bg-background/80 rounded-xl p-3 border border-red-500/30">
               <span className="text-xs font-semibold text-red-950 dark:text-red-200 block mb-1">
-                Erreurs identifiées ({verification.errors.length}) :
+                {isEn ? `Identified Errors (${verification.errors.length}):` : `Erreurs identifiées (${verification.errors.length}) :`}
               </span>
               <ul className="text-xs text-red-900 dark:text-red-300 space-y-1 list-disc list-inside">
                 {verification.errors.map((err, idx) => (
@@ -66,14 +73,14 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
             <h2 className="text-sm sm:text-base font-semibold text-foreground">
-              4. Explicabilité de la décision (Les 4 questions BNCD)
+              {t('explain.title', '4. Explicabilité de la décision (Les 4 questions BNCD)')}
             </h2>
           </div>
 
           {verification?.passed && (
             <Badge variant="outline" className="gap-1 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 text-[11px] py-0.5">
               <ShieldCheck className="w-3 h-3 text-emerald-500" />
-              Vérification formelle réussie
+              {t('explain.verification_passed', 'Vérification formelle réussie')}
             </Badge>
           )}
         </div>
@@ -82,7 +89,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
         {explanation.resume && (
           <div className="bg-sky-500/10 border border-sky-500/20 rounded-lg p-3 mb-5 text-xs text-foreground leading-relaxed">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-800 dark:text-sky-300 block mb-0.5">
-              Synthèse de l&apos;analyse :
+              {t('explain.summary', "Synthèse de l'analyse :")}
             </span>
             <p>{explanation.resume}</p>
           </div>
@@ -94,10 +101,10 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <HelpCircle className="w-4 h-4 text-blue-500" />
-              <h3>1. Quelles données avons-nous utilisées ?</h3>
+              <h3>{t('explain.what_data', '1. Quelles données avons-nous utilisées ?')}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Séries de prix historiques ajustées, macroéconomie et actualités datées.
+              {t('explain.what_data_sub', 'Séries de prix historiques ajustées, macroéconomie et actualités datées.')}
             </p>
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.quelles_donnees?.map((item, idx) => (
@@ -122,10 +129,10 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
-              <h3>2. Pourquoi ce choix ?</h3>
+              <h3>{t('explain.why_choice', '2. Pourquoi ce choix ?')}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Cohérence avec les objectifs, la tolérance et la capacité déclarées.
+              {t('explain.why_choice_sub', 'Cohérence avec les objectifs, la tolérance et la capacité déclarées.')}
             </p>
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.pourquoi_ce_choix?.map((item, idx) => (
@@ -150,10 +157,10 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <h3>3. Quelles sont les limites ?</h3>
+              <h3>{t('explain.limits', '3. Quelles sont les limites ?')}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Biais de survie, modèles rétrospectifs et hypothèses de distribution.
+              {t('explain.limits_sub', 'Biais de survie, modèles rétrospectifs et hypothèses de distribution.')}
             </p>
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.limites?.map((item, idx) => (
@@ -178,10 +185,10 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="bg-muted/40 rounded-xl p-4 border border-border/60">
             <div className="flex items-center gap-2 mb-2 text-foreground font-semibold text-sm">
               <RefreshCw className="w-4 h-4 text-indigo-500" />
-              <h3>4. Qu&apos;est-ce qui changerait la réponse ?</h3>
+              <h3>{t('explain.what_change', "4. Qu'est-ce qui changerait la réponse ?")}</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Sensibilité de l&apos;allocation aux variations d&apos;horizon ou de contraintes.
+              {t('explain.what_change_sub', "Sensibilité de l'allocation aux variations d'horizon ou de contraintes.")}
             </p>
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.ce_qui_changerait_la_reponse?.map((item, idx) => (
@@ -208,7 +215,9 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
           <div className="mt-5 p-3 rounded-xl bg-muted/40 border border-border/60 flex items-start gap-2 text-xs text-muted-foreground">
             <Info className="w-4 h-4 text-muted-foreground/80 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-foreground">Incertitude déclarée :</span>{' '}
+              <span className="font-semibold text-foreground">
+                {t('explain.uncertainty', 'Note sur l’incertitude :')}
+              </span>{' '}
               {explanation.incertitude}
             </div>
           </div>

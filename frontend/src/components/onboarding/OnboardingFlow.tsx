@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Logo } from '../Logo';
 import { ThemeToggle } from '../ThemeToggle';
+import { LanguageToggle } from '../LanguageToggle';
 import { UserOnboardingProfile } from '../../types';
 import { Step1Identity } from './Step1Identity';
 import { Step2FinancialGoals } from './Step2FinancialGoals';
@@ -187,9 +188,10 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     <div className="min-h-screen bg-background flex flex-col items-center justify-start px-4 py-6 sm:py-10 transition-colors">
       {/* Top Header */}
       <div className="w-full max-w-2xl flex items-center justify-between mb-4">
-        <div className="w-10" />
+        <div className="w-16" />
         <Logo size="xl" />
-        <div className="w-10 flex justify-end">
+        <div className="flex items-center gap-1.5 justify-end">
+          <LanguageToggle />
           <ThemeToggle />
         </div>
       </div>
