@@ -87,14 +87,14 @@ class LocalJsonTraceStore(TraceStore):
     ) -> dict[str, Any]:
         item = _prepare_item(run_id, state, trace, verification)
         target = self.storage_dir / f"{run_id}.json"
-        target.write_text(json.dumps(item, indent=2, ensure_ascii=False))
+        target.write_text(json.dumps(item, indent=2, ensure_ascii=False), encoding="utf-8")
         return item
 
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         target = self.storage_dir / f"{run_id}.json"
         if not target.is_file():
             return None
-        return json.loads(target.read_text())
+        return json.loads(target.read_text(encoding="utf-8"))
 
     def list_runs(self, limit: int = 50) -> list[dict[str, Any]]:
         runs = []
@@ -104,7 +104,7 @@ class LocalJsonTraceStore(TraceStore):
             reverse=True,
         )[:limit]:
             try:
-                runs.append(json.loads(file_path.read_text()))
+                runs.append(json.loads(file_path.read_text(encoding="utf-8")))
             except Exception:  # noqa: BLE001
                 pass
         return runs
