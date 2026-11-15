@@ -48,6 +48,12 @@ def apply_change(
         current = list(set(profile.excluded_tickers + tickers))
         return profile.model_copy(update={"excluded_tickers": current})
 
+    if field == "account_type":
+        val = str(value).lower()
+        if val not in ("tfsa", "rrsp", "fhsa", "non_registered", "mixed"):
+            raise ValueError(f"account_type must be one of tfsa, rrsp, fhsa, non_registered, mixed, got {value}")
+        return profile.model_copy(update={"account_type": val})
+
     if field == "as_of_date":
         # as_of_date is on GraphState, profile remains unchanged
         return profile

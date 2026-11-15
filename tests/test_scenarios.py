@@ -11,7 +11,16 @@ from alphaforge.personas import PERSONAS
 from alphaforge.state import SCENARIO_METRICS, SCENARIO_NAMES, Evidence, GraphState, Profile
 
 AS_OF = dt.date(2026, 11, 12)
-FIELDS = ("objective", "horizon_years", "risk_tolerance", "risk_capacity", "constraints", "preferences", "budget_cad")
+FIELDS = (
+    "objective",
+    "horizon_years",
+    "risk_tolerance",
+    "risk_capacity",
+    "constraints",
+    "preferences",
+    "budget_cad",
+    "account_type",
+)
 TOL = 1e-6
 
 

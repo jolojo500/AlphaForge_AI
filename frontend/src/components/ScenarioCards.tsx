@@ -36,14 +36,19 @@ const METRIC_LABELS: Record<string, string> = {
   top_weight: 'Poids principal',
   sector_concentration_hhi: 'Concentration (HHI)',
   us_exposure: 'Exposition US',
+  tax_drag: 'Friction fiscale estimée',
 };
 
 function formatMetricValue(ev: Evidence | undefined): string {
   if (!ev) return '—';
-  if (typeof ev.value === 'number') {
-    return `${(ev.value * 100).toFixed(1)} %`;
+  let val = ev.value;
+  if (typeof val === 'object' && val !== null && 'value' in val) {
+    val = (val as { value: unknown }).value as number | string;
   }
-  return String(ev.value);
+  if (typeof val === 'number') {
+    return `${(val * 100).toFixed(1)} %`;
+  }
+  return String(val);
 }
 
 export const ScenarioCards: React.FC<ScenarioCardsProps> = ({

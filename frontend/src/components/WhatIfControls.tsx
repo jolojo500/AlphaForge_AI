@@ -20,9 +20,10 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
   onRunWhatIf,
   isRunning,
 }) => {
-  const [activeTab, setActiveTab] = useState<'tolerance' | 'horizon' | 'exclude' | 'budget' | 'date'>('tolerance');
+  const [activeTab, setActiveTab] = useState<'tolerance' | 'account_type' | 'exclude' | 'horizon' | 'budget' | 'date'>('tolerance');
 
   const [tolerance, setTolerance] = useState<string>(currentProfile?.risk_tolerance || 'moderate');
+  const [accountType, setAccountType] = useState<string>(currentProfile?.account_type || 'non_registered');
   const [horizon, setHorizon] = useState<number>(currentProfile?.horizon_years || 5);
   const [budget, setBudget] = useState<string>(currentProfile?.budget_cad ? String(currentProfile.budget_cad) : '100000');
   const [tickerToExclude, setTickerToExclude] = useState<string>(
@@ -34,6 +35,8 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
     if (isRunning) return;
     if (activeTab === 'tolerance') {
       onRunWhatIf('risk_tolerance', tolerance);
+    } else if (activeTab === 'account_type') {
+      onRunWhatIf('account_type', accountType);
     } else if (activeTab === 'horizon') {
       onRunWhatIf('horizon_years', horizon);
     } else if (activeTab === 'budget') {
@@ -73,6 +76,19 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
           >
             <Shield className="w-3.5 h-3.5" />
             <span>Tolérance au risque</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('account_type')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+              activeTab === 'account_type'
+                ? 'bg-primary text-primary-foreground shadow-2xs'
+                : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Régime fiscal / Compte</span>
           </button>
 
           <button
@@ -159,6 +175,40 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
               </div>
               <p className="text-[11px] text-muted-foreground mt-2">
                 Exemple : Passer de « modérée » à « élevée » déverrouille le plafond de risque sur le scénario plafonné.
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'account_type' && (
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-2">
+                Changer le type de compte fiscal (actuel :{' '}
+                <span className="font-semibold text-primary">{currentProfile?.account_type || 'non_registered'}</span>)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {[
+                  { val: 'tfsa', label: "CELI (Libre d'impôt)" },
+                  { val: 'rrsp', label: 'REER (Épargne-retraite)' },
+                  { val: 'fhsa', label: 'CELIAPP (1re propriété)' },
+                  { val: 'non_registered', label: 'Non enregistré' },
+                  { val: 'mixed', label: 'Mixte (Asset location)' },
+                ].map(({ val, label }) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setAccountType(val)}
+                    className={`p-2.5 rounded-md text-xs font-medium border text-center transition-all cursor-pointer ${
+                      accountType === val
+                        ? 'border-primary bg-primary/10 text-primary font-semibold shadow-2xs'
+                        : 'border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Simule l&apos;impact fiscal : retenue américaine de 15 % récupérable en REER mais non en CELI, crédit d&apos;impôt sur dividendes et imposition à 100 % des intérêts en non enregistré.
               </p>
             </div>
           )}

@@ -105,6 +105,11 @@ export const Step2FinancialGoals: React.FC<Step2Props> = ({
       info: "Compte imposable ordinaire sans plafond de dépôt. 50 % des gains en capital sont imposables, crédits d'impôt sur dividendes canadiens admissibles.",
     },
     {
+      id: "Portefeuille mixte (Enregistré + Non enregistré)",
+      label: "Portefeuille mixte · Enregistré & Imposable",
+      info: "Combinaison de comptes enregistrés (REER/CELI) et non enregistrés permettant l'optimisation fiscale de la localisation des actifs (asset location).",
+    },
+    {
       id: "CRI / FERR — Décaissement de retraite",
       label: "CRI / FERR · Revenu de retraite",
       info: "Compte de retraite immobilisé (CRI) ou Fonds Enregistré de Revenu de Retraite (FERR) soumis à des retraits annuels obligatoires calculés selon l'âge.",

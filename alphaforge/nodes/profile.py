@@ -63,6 +63,7 @@ class Extraction(BaseModel):
     weight_pct: float | None = Field(default=None, description="share of the portfolio, in percent")
     budget_cad: float | None = None
     horizon_years: int | None = None
+    account_type: Literal["tfsa", "rrsp", "fhsa", "non_registered", "mixed"] | None = None
     extra_constraints: list[str] = Field(default_factory=list)
     extra_preferences: list[str] = Field(default_factory=list)
     conflicts: list[str] = Field(default_factory=list)
@@ -133,11 +134,23 @@ def _regex_extract(text: str) -> Extraction:
     m_h = re.search(r"(\d+)\s*ans?\b", lowered)
     if m_h:
         horizon = int(m_h.group(1))
+    act = None
+    if re.search(r"\b(?:celiapp|fhsa)\b", lowered):
+        act = "fhsa"
+    elif re.search(r"\b(?:celi|tfsa)\b", lowered):
+        act = "tfsa"
+    elif re.search(r"\b(?:reer|rrsp|cri|ferr)\b", lowered):
+        act = "rrsp"
+    elif re.search(r"\b(?:mixte|mixed)\b", lowered):
+        act = "mixed"
+    elif re.search(r"\b(?:non[- ]enregistr[ée]|taxable|imposable)\b", lowered):
+        act = "non_registered"
     return Extraction(
         request_type="judge" if ticker else "build",
         ticker=ticker,
         weight_pct=weight,
         horizon_years=horizon,
+        account_type=act,
     )
 
 
@@ -285,6 +298,12 @@ def build_profile(
         if budget is None and current_holdings and sum(current_holdings.values()) > 100:
             budget = float(sum(current_holdings.values()))
 
+    account_type = (
+        (persona_data or {}).get("account_type")
+        or (ext.account_type if getattr(ext, "account_type", None) else None)
+        or p.get("account_type")
+        or "non_registered"
+    )
     return Profile(
         persona=persona_id,
         objective=p["objective"],
@@ -294,6 +313,7 @@ def build_profile(
         constraints=constraints,
         preferences=preferences,
         budget_cad=budget,
+        account_type=account_type,
         request_type="judge" if idea else "build",
         requested_idea=idea,
         conflicts=conflicts,
