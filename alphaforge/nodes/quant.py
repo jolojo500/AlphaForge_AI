@@ -13,6 +13,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
+from alphaforge.data.holdings import holdings_date, holdings_weights, load_holdings
 from alphaforge.data.provider import get_provider
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState
@@ -95,6 +96,25 @@ def concentration(target: Target, info: pd.DataFrame) -> dict[str, float]:
         "us_exposure": float(w[us].sum()),
         "top_weight": float(w.max()),
     }
+
+
+def etf_overlap(a: str, b: str, holdings_dir=None) -> float | None:
+    """Share of the portfolio two ETFs have in common: sum over shared names of min(w_a, w_b).
+
+    None if either ETF has no cached holdings. With a partial (top-N) list the result is a
+    lower bound, since unlisted names cannot be matched.
+    """
+    wa, wb = holdings_weights(a, holdings_dir), holdings_weights(b, holdings_dir)
+    if not wa or not wb:
+        return None
+    return float(sum(min(wa[t], wb[t]) for t in wa.keys() & wb.keys()))
+
+
+def _holdings_label(etf: str) -> str:
+    doc = load_holdings(etf) or {}
+    n = len(doc.get("holdings", []))
+    scope = "full list" if doc.get("complete", True) else f"top {n} of {doc.get('total_holdings', '?')}"
+    return f"{etf} {doc.get('source_name', '?')}, as of {doc.get('as_of', '?')} ({scope})"
 
 
 def stress_2022(prices: pd.DataFrame, target: Target) -> dict[str, float] | None:
@@ -194,6 +214,34 @@ def quant_node(state: GraphState) -> dict:
                 "correlation", "tickers", [a, b], c,
                 f"correlation of daily CAD returns, {CALENDAR}, {window}",
             )
+
+    etfs = [t for t in tickers if holdings_weights(t)]
+    stale = False
+    for a, b in combinations(etfs, 2):
+        overlap = etf_overlap(a, b)
+        if overlap is None or overlap <= 0:
+            continue
+        dates = [d for d in (holdings_date(a), holdings_date(b)) if d]
+        stale = stale or any(d > as_of for d in dates)
+        reg.add(
+            {"metric": "etf_overlap", "tickers": [a, b], "value": _r4(overlap), "unit": "ratio"},
+            source=f"ETF holdings: {a} + {b}",
+            date=min(dates) if dates else as_of,
+            url=(load_holdings(a) or {}).get("source_url"),
+            method=(
+                "sum over shared holdings of min(weight in A, weight in B); "
+                f"{_holdings_label(a)}; {_holdings_label(b)}; a top-N list gives a lower bound"
+            ),
+        )
+    if stale:
+        reg.add(
+            f"Les compositions de FNB utilisées sont postérieures à la date d'analyse ({as_of}) : "
+            "le chevauchement réel à cette date pouvait être différent.",
+            source="data/cache/holdings",
+            date=as_of,
+            method="holdings are a single recent snapshot, not point-in-time",
+            confidence="assumption",
+        )
 
     return {
         "evidence": reg.items(),
