@@ -6,9 +6,8 @@ between the profile and a scenario). Objections must cite existing evidence ids.
 
 Loop contract: the node returns {"retries": {"red_team": n + 1}} on every pass. A blocking
 objection sends the run back to the scenario builder (bounded by MAX_RED_TEAM_LOOPS in the
-graph). Blocking is only allowed on the first pass; on later passes it is downgraded to a
-warning, so a model that keeps objecting cannot waste the loops. Without a model the node is
-a pass-through that returns no objection.
+graph). When Sonnet returns a blocking objection twice, Opus decides as a tie-break. Without a model
+the node is a pass-through that returns no objection.
 """
 from __future__ import annotations
 
@@ -115,28 +114,57 @@ def red_team_node(state: GraphState) -> dict:
         return {**update, "objections": [], "summary": "Relecture critique désactivée (AF_RED_TEAM=off)."}
     if not state.scenarios or state.profile is None:
         return {**update, "objections": [], "summary": "Aucune objection : pas de scénario à relire."}
-    if n > 0:
-        # Second pass after a blocking loop: the scenario builder already acted on the
-        # objections. Keep them as warnings for the explanation instead of a new model call.
-        kept = [{**o, "severity": "warning"} for o in state.objections]
-        return {
-            **update,
-            "objections": kept,
-            "summary": (
-                "Scénarios reconstruits après objection ; "
-                f"{len(kept)} objection(s) conservée(s) comme avertissement."
-            ),
-        }
-    try:
-        review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
-    except llm.LLMError:
-        return {**update, "objections": [], "summary": "Relecture critique indisponible : aucune objection."}
-    objections = clean_objections(review, state, first_pass=n == 0)
-    blocking = sum(o["severity"] == "blocking" for o in objections)
-    if not objections:
-        summary = "Aucune objection solide après relecture critique."
-    elif blocking:
-        summary = f"{len(objections)} objection(s) dont {blocking} bloquante(s) : retour au constructeur."
-    else:
-        summary = f"{len(objections)} objection(s) signalée(s), aucune bloquante."
-    return {**update, "objections": objections, "summary": summary}
+
+    if n == 0:
+        try:
+            review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
+        except llm.LLMError:
+            return {**update, "objections": [], "summary": "Relecture critique indisponible : aucune objection."}
+        objections = clean_objections(review, state, first_pass=True)
+        blocking = sum(o["severity"] == "blocking" for o in objections)
+        if not objections:
+            summary = "Aucune objection solide après relecture critique."
+        elif blocking:
+            summary = f"{len(objections)} objection(s) dont {blocking} bloquante(s) : retour au constructeur."
+        else:
+            summary = f"{len(objections)} objection(s) signalée(s), aucune bloquante."
+        return {**update, "objections": objections, "summary": summary}
+
+    if n == 1:
+        # Re-check with Sonnet on the rebuilt scenarios
+        try:
+            review = llm.call_json(_prompt(state), Review, kind="main", system=SYSTEM)
+            objections = clean_objections(review, state, first_pass=True)
+            blocking = sum(o["severity"] == "blocking" for o in objections)
+        except llm.LLMError:
+            kept = [{**o, "severity": "warning"} for o in state.objections]
+            return {
+                **update,
+                "objections": kept,
+                "summary": "Relecture critique indisponible après révision ; objections conservées comme avertissement.",
+            }
+
+        if blocking:
+            # Sonnet returned a blocking objection twice -> Opus decides (tie-break)
+            try:
+                opus_review = llm.call_json(_prompt(state), Review, kind="review", system=SYSTEM)
+                opus_objections = clean_objections(opus_review, state, first_pass=False)
+            except llm.LLMError:
+                opus_objections = [{**o, "severity": "warning"} for o in objections]
+            summary = f"Arbitrage Opus 5.5 après deux blocages Sonnet : {len(opus_objections)} objection(s) retenue(s)."
+            return {**update, "objections": opus_objections, "summary": summary}
+        else:
+            summary = (
+                f"{len(objections)} objection(s) signalée(s) après révision, aucune bloquante."
+                if objections
+                else "Scénarios révisés validés sans objection."
+            )
+            return {**update, "objections": objections, "summary": summary}
+
+    # Safety fallback for n >= 2
+    kept = [{**o, "severity": "warning"} for o in state.objections]
+    return {
+        **update,
+        "objections": kept,
+        "summary": f"Scénarios finalisés ; {len(kept)} objection(s) conservée(s) comme avertissement.",
+    }

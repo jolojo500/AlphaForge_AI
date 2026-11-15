@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel
 
-from alphaforge import llm
+from alphaforge import config, llm
 
 
 class Out(BaseModel):
@@ -82,14 +82,15 @@ def test_system_prompt_includes_schema():
 
 
 def test_model_id_kinds():
-    assert llm.model_id("main") and llm.model_id("fast")
+    assert llm.model_id("main") and llm.model_id("fast") and llm.model_id("review")
     assert llm.model_id("main") != llm.model_id("fast")
+    assert llm.model_id("review") == config.MODEL_REVIEW
     with pytest.raises(ValueError):
         llm.model_id("huge")  # type: ignore[arg-type]
 
 
 @pytest.mark.live
-@pytest.mark.parametrize("kind", ["main", "fast"])
+@pytest.mark.parametrize("kind", ["main", "fast", "review"])
 def test_live_bedrock_json(kind):
     out = llm.call_json('Return label "pong" and score 1.', Out, kind=kind)
     assert out.label.lower() == "pong"

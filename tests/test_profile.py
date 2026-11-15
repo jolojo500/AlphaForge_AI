@@ -25,9 +25,11 @@ class Canned:
     def __init__(self, *replies):
         self.replies = list(replies)
         self.calls = 0
+        self.kinds = []
 
     def __call__(self, messages, kind):
         self.calls += 1
+        self.kinds.append(kind)
         r = self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]
         return r if isinstance(r, str) else json.dumps(r)
 
@@ -195,6 +197,44 @@ def test_at_most_one_question(canned):
     events = list(resume_run("je ne sais pas", tid))
     assert events[-1]["type"] == "final"
     assert events[-1]["state"].profile.requested_idea is None
+
+
+def test_contradictory_profile_escalates_to_opus_before_question(canned):
+    reply = {
+        "request_type": "judge",
+        "ticker": "BTC-USD",
+        "weight_pct": 100.0,
+        "horizon_years": 4,
+    }
+    fake = canned(reply, reply, reply)
+    tid = uuid.uuid4().hex
+    events = list(
+        stream_run(
+            initial_state("amira", "Je prévois ma retraite dans 4 ans et je veux 100 % en crypto"),
+            tid,
+        )
+    )
+    questions = [e for e in events if e["type"] == "interrupt"]
+    assert len(questions) == 1
+    assert "contradit" in questions[0]["question"] or "horizon" in questions[0]["question"]
+    assert "review" in fake.kinds
+    assert fake.kinds[:2] == ["main", "review"]
+
+    events = list(resume_run("Je préfère allonger mon horizon à 10 ans.", tid))
+    assert [e["type"] for e in events].count("interrupt") == 0
+    final = events[-1]["state"]
+    assert final.profile is not None
+
+
+@pytest.mark.live
+def test_live_opus_escalation_on_contradictory_profile():
+    ext, fallback = prof.extract_profile(
+        "amira",
+        "Je prévois ma retraite dans 4 ans et je veux 100 % en crypto (BTC-USD)",
+        kind="review",
+    )
+    assert not fallback
+    assert ext.ticker == "BTC-USD" or "crypto" in str(ext.model_dump())
 
 
 @pytest.mark.live

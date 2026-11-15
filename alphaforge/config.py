@@ -15,6 +15,7 @@ CACHE_DIR = Path(os.getenv("AF_CACHE_DIR", REPO_ROOT / "data" / "cache"))
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 MODEL_MAIN = os.getenv("AF_MODEL_MAIN", "global.anthropic.claude-sonnet-5-5")
 MODEL_FAST = os.getenv("AF_MODEL_FAST", "global.anthropic.claude-haiku-5-5")
+MODEL_REVIEW = os.getenv("AF_MODEL_REVIEW", "global.anthropic.claude-opus-5-5")
 
 NEWS_MODE = os.getenv("AF_NEWS_MODE", "cache")  # cache | live
 TRACE_BACKEND = os.getenv("AF_TRACE_BACKEND", "local")  # local | dynamodb

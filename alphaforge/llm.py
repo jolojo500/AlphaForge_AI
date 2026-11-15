@@ -26,7 +26,7 @@ from alphaforge import config
 
 log = logging.getLogger("alphaforge.llm")
 
-ModelKind = Literal["main", "fast"]
+ModelKind = Literal["main", "fast", "review"]
 Messages = list[tuple[str, str]]
 # fn(messages, kind) -> raw reply text. `messages` is [("system", ...), ("human", ...)] and, on a
 # repair turn, also the previous ("ai", ...) reply and a new ("human", ...) correction.
@@ -58,14 +58,18 @@ def llm_override(fn: Override) -> Iterator[None]:
 
 
 def model_id(kind: ModelKind) -> str:
-    if kind not in ("main", "fast"):
-        raise ValueError(f"unknown model kind {kind!r}; use 'main' or 'fast'")
-    return config.MODEL_MAIN if kind == "main" else config.MODEL_FAST
+    if kind == "main":
+        return config.MODEL_MAIN
+    if kind == "fast":
+        return config.MODEL_FAST
+    if kind == "review":
+        return config.MODEL_REVIEW
+    raise ValueError(f"unknown model kind {kind!r}; use 'main', 'fast' or 'review'")
 
 
 @lru_cache(maxsize=4)
 def get_llm(kind: ModelKind = "main"):
-    """A cached ChatBedrockConverse for `kind` ('main' = Sonnet, 'fast' = Haiku)."""
+    """A cached ChatBedrockConverse for `kind` ('main' = Sonnet, 'fast' = Haiku, 'review' = Opus)."""
     from langchain_aws import ChatBedrockConverse  # lazy: keeps imports cheap in unit tests
 
     return ChatBedrockConverse(

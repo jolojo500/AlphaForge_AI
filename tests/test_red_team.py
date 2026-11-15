@@ -85,7 +85,7 @@ def test_live_red_team(persona):
     assert s.retries["red_team"] <= 3
 
 
-def test_second_pass_makes_no_model_call(use_llm):
+def test_second_pass_blocking_twice_escalates_to_opus_tie_break(use_llm):
     calls = []
     use_llm({"objections": [obj("blocking")]})
     route = llm._override
@@ -98,7 +98,35 @@ def test_second_pass_makes_no_model_call(use_llm):
     llm.set_llm_override(counting)
     s = run("amira", PERSONAS["amira"]["example_request"])
     assert s.retries["red_team"] == 2
-    assert len(calls) == 1  # the rebuilt scenarios are not re-reviewed by the model
+    assert calls == ["main", "main", "review"]
+    assert all(o["severity"] == "warning" for o in s.objections)
+
+
+def test_second_pass_non_blocking_does_not_call_opus(use_llm):
+    calls = []
+    use_llm(
+        {"objections": [obj("blocking")]},
+        {"objections": [obj("warning")]},
+    )
+    route = llm._override
+
+    def counting(messages, kind):
+        if '"severity"' in messages[0][1]:
+            calls.append(kind)
+        return route(messages, kind)
+
+    llm.set_llm_override(counting)
+    s = run("amira", PERSONAS["amira"]["example_request"])
+    assert s.retries["red_team"] == 2
+    assert calls == ["main", "main"]
+
+
+@pytest.mark.live
+def test_live_red_team_opus_tie_break():
+    state = run("robert", PERSONAS["robert"]["example_request"])
+    review = llm.call_json(rt._prompt(state), rt.Review, kind="review", system=rt.SYSTEM)
+    objections = rt.clean_objections(review, state, first_pass=False)
+    assert all(o["severity"] == "warning" for o in objections)
 
 
 def test_objection_with_invented_number_is_dropped(use_llm):
