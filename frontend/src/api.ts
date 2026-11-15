@@ -265,17 +265,6 @@ export async function fetchRunDiff(childRunId: string): Promise<WhatIfDiff> {
   return res.json();
 }
 
-export async function compareRuns(runA: string, runB: string): Promise<WhatIfDiff> {
-  const res = await apiFetch(
-    `${API_BASE}/runs/compare?run_a=${encodeURIComponent(runA)}&run_b=${encodeURIComponent(runB)}`
-  );
-  if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}));
-    throw new Error(errorBody.detail || `Failed to compare runs: ${res.statusText}`);
-  }
-  return res.json();
-}
-
 export async function reviewRun(
   runId: string,
   chosenScenario: string,

@@ -845,20 +845,6 @@ def get_run_diff(run_id: str, request: Request) -> dict[str, Any]:
     return diff
 
 
-@app.get("/runs/compare")
-def compare_runs(run_a: str, run_b: str, request: Request) -> dict[str, Any]:
-    """Compare two completed runs using diff_scenarios (PRD 7, C-9)."""
-    r_a = _authorize(store.get(run_a) or _rehydrate_run_from_trace_store(run_a), request)
-    r_b = _authorize(store.get(run_b) or _rehydrate_run_from_trace_store(run_b), request)
-    s_a, s_b = _final_state(r_a), _final_state(r_b)
-    if s_a is None or s_b is None:
-        raise HTTPException(status_code=400, detail="Both runs must be completed to compare")
-    diff = diff_scenarios(s_a, s_b)
-    diff["run_a_id"] = r_a.run_id
-    diff["run_b_id"] = r_b.run_id
-    return diff
-
-
 @app.post("/runs/{run_id}/answer")
 def answer_run(run_id: str, req: AnswerRequest, request: Request) -> dict[str, str]:
     run = _authorize(
