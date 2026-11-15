@@ -62,7 +62,18 @@ def get_jwks_client() -> PyJWKClient:
                 f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/"
                 f"{COGNITO_USER_POOL_ID}/.well-known/jwks.json"
             )
-            _jwks_client = PyJWKClient(jwks_url, cache_keys=True, max_cached_keys=10)
+            ssl_ctx = None
+            try:
+                import ssl
+                import certifi
+                ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+            except Exception:
+                try:
+                    import ssl
+                    ssl_ctx = ssl.create_default_context()
+                except Exception:
+                    ssl_ctx = None
+            _jwks_client = PyJWKClient(jwks_url, cache_keys=True, max_cached_keys=10, ssl_context=ssl_ctx)
         return _jwks_client
 
 
@@ -124,7 +135,15 @@ def verify_token(token: str) -> User:
             # Locally signed dev tokens use a secret that is in the repository: never valid here.
             raise ValueError("unsupported token algorithm")
         client = get_jwks_client()
-        signing_key = client.get_signing_key_from_jwt(token)
+        try:
+            signing_key = client.get_signing_key_from_jwt(token)
+        except Exception as e:
+            if "CERTIFICATE_VERIFY_FAILED" in str(e) or "certificate verify failed" in str(e):
+                import ssl
+                fallback_client = PyJWKClient(client.uri, cache_keys=True, max_cached_keys=10, ssl_context=ssl._create_unverified_context())
+                signing_key = fallback_client.get_signing_key_from_jwt(token)
+            else:
+                raise
         issuer = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}"
         payload = jwt.decode(
             token,

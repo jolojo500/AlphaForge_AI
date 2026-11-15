@@ -346,6 +346,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
                   scenarios={runState.scenarios}
                   evidence={runState.evidence}
                   mostConsistentName={runState.explanation?.scenario_le_plus_coherent}
+                  evaluatedTicker={runState.profile?.requested_idea?.ticker}
                 />
               </div>
             )}

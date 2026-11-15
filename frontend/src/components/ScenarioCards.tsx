@@ -9,6 +9,7 @@ interface ScenarioCardsProps {
   scenarios: Scenario[];
   evidence: Record<string, Evidence>;
   mostConsistentName?: string;
+  evaluatedTicker?: string | null;
 }
 
 const SCENARIO_TITLES_FR: Record<string, { title: string; subtitle: string }> = {
@@ -92,6 +93,7 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
   scenarios,
   evidence,
   mostConsistentName,
+  evaluatedTicker,
 }) => {
   const { language } = useLanguage();
   const isEn = language === 'en';
@@ -191,7 +193,7 @@ export const ScenarioCards: React.FC<ScenarioCardsProps> = ({
                     <div className="space-y-1.5">
                       {sortedWeights.map(([ticker, weight]) => {
                         const pct = (weight * 100).toFixed(1);
-                        const isHighlightedTicker = ticker === 'TSLA' || ticker === 'NVDA';
+                        const isHighlightedTicker = Boolean(evaluatedTicker && ticker === evaluatedTicker);
                         return (
                           <div
                             key={ticker}

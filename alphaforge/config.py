@@ -6,7 +6,26 @@ import datetime as dt
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+# Automatically load environment variables from .env file if present
+load_dotenv(REPO_ROOT / ".env")
+
+# If explicit AWS access keys are provided, do not let a placeholder AWS_PROFILE override them
+if os.getenv("AWS_ACCESS_KEY_ID") and "AWS_PROFILE" in os.environ:
+    from pathlib import Path
+    if not (Path.home() / ".aws" / "config").exists() and not (Path.home() / ".aws" / "credentials").exists():
+        del os.environ["AWS_PROFILE"]
+
+# Ensure Python on macOS uses certifi's CA bundle for SSL verification if not already configured
+try:
+    import certifi
+    if "SSL_CERT_FILE" not in os.environ:
+        os.environ["SSL_CERT_FILE"] = certifi.where()
+except ImportError:
+    pass
+
 STARTER_DIR = Path(
     os.getenv("AF_STARTER_DIR", REPO_ROOT / "Datathon2026" / "alphaforge_starter")
 )
@@ -15,7 +34,7 @@ YF_CACHE_DIR = Path(os.getenv("AF_YF_CACHE_DIR", CACHE_DIR / "yfinance"))
 YF_CACHE_HOURS = float(os.getenv("AF_YF_CACHE_HOURS", "12"))
 YF_TIMEOUT_S = float(os.getenv("AF_YF_TIMEOUT_S", "20"))
 
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 MODEL_MAIN = os.getenv("AF_MODEL_MAIN", "global.anthropic.claude-sonnet-5-5")
 MODEL_FAST = os.getenv("AF_MODEL_FAST", "global.anthropic.claude-haiku-5-5")
 MODEL_REVIEW = os.getenv("AF_MODEL_REVIEW", "global.anthropic.claude-opus-5-5")
