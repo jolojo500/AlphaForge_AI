@@ -448,15 +448,17 @@ def build_kyc_completeness_and_assumptions(
     missing_required: list[str] = []
 
     ASSUMED_DEFAULTS = {
+        # Unanswered safety-relevant fields stay unknown (None) rather than taking the
+        # favourable value: a suitability check must not assume what it could not confirm.
         "has_emergency_fund": (
-            True,
-            "fonds d'urgence de 3 à 6 mois supposé constitué",
-            "Fonds d'urgence de précaution supposé constitué",
+            None,
+            "fonds d'urgence non confirmé (réponse non obtenue)",
+            "Fonds d'urgence non confirmé : à vérifier avant toute décision",
         ),
         "has_high_interest_debt": (
-            False,
-            "absence de dettes à taux d'intérêt élevé supposée",
-            "Aucune dette à taux d'intérêt élevé supposée",
+            None,
+            "dettes à taux d'intérêt élevé non confirmées (réponse non obtenue)",
+            "Dettes à taux d'intérêt élevé non confirmées : à vérifier avant toute décision",
         ),
         "net_worth_share": (
             0.20,
@@ -474,9 +476,9 @@ def build_kyc_completeness_and_assumptions(
             "Aucun plan de retrait anticipé supposé",
         ),
         "income_stability": (
-            "stable",
-            "revenus supposés stables et réguliers",
-            "Revenus supposés stables",
+            "unknown",
+            "stabilité des revenus non confirmée (réponse non obtenue)",
+            "Stabilité des revenus non confirmée : à vérifier",
         ),
         "liquidity_need_12m": (
             "none",
@@ -531,7 +533,7 @@ def build_kyc_completeness_and_assumptions(
                 field_name, ("assumed", "hypothèse de convenance", "Valeur par défaut")
             )
             eid = reg.add(
-                value=default_val,
+                value="non confirmé" if default_val is None else default_val,
                 source="assumption:kyc",
                 date=as_of_date,
                 method=f"Hypothèse KYC : {method_desc}",
