@@ -1,26 +1,228 @@
-"""Verifier (PRD 5.10). STUB (checks cited ids only): Track B replaces the body in B-3."""
+"""Verifier (PRD 5.10). Owned by Track B.
 
+The LLM audits reasoning; this code audits numbers. Four deterministic checks:
+cited ids exist, numbers match their cited evidence, no advice or forecast wording,
+all required sections are present.
+"""
 from __future__ import annotations
 
-from alphaforge.state import GraphState
+import re
+from collections.abc import Mapping
+
+from alphaforge.evidence import EID_RE, numeric
+from alphaforge.state import Evidence, GraphState
 from alphaforge.tracing import traced
 
-SECTIONS = ("quelles_donnees", "pourquoi_ce_choix", "limites", "ce_qui_changerait_la_reponse")
+CLAIM_SECTIONS = ("quelles_donnees", "pourquoi_ce_choix", "limites", "ce_qui_changerait_la_reponse")
+# Claims in these sections state facts about the analysis, so they must cite evidence.
+MUST_CITE = ("quelles_donnees", "pourquoi_ce_choix")
+SECTIONS = CLAIM_SECTIONS  # kept for importers of the stub
+REQUIRED_TEXT = ("resume", "incertitude", "avertissement", "scenario_le_plus_coherent")
+SCENARIO_NAMES = ("as_requested", "capped", "profile_baseline")
+
+REL_TOL = 0.01
+
+# Advice and forecast phrasing, French and English (PRD 5.10). Matched on lowercase text.
+_WORDING = [
+    r"vous devriez (?:acheter|vendre|investir|placer|mettre|choisir|privil[ée]gier)",
+    r"nous vous (?:recommandons|conseillons)",
+    r"je vous (?:recommande|conseille)",
+    r"\b(?:achetez|vendez|investissez)\b",
+    r"il faut (?:acheter|vendre|investir)",
+    r"vous (?:allez|pourrez) gagner",
+    r"(?:rendement|gain|profit)s? (?:garanti|assur[ée]|certain)",
+    r"\bgaranti(?:e|s|es)?\b",
+    r"\bsans risque\b",
+    r"rendement attendu",
+    r"\bva (?:rapporter|monter|augmenter|surperformer)\b",
+    r"\bdevrait (?:rapporter|monter|augmenter|surperformer)\b",
+    r"\bsurperformera\b",
+    r"you should (?:buy|sell|invest|put|choose)",
+    r"we (?:recommend|advise) (?:that )?you",
+    r"i (?:recommend|advise) (?:that )?you",
+    r"\bguaranteed?\b",
+    r"\brisk[- ]free\b",
+    r"expected returns?",
+    r"\bwill (?:return|earn|gain|rise|outperform|grow)\b",
+]
+_WORDING_RE = [re.compile(p) for p in _WORDING]
+_NEGATION_RE = re.compile(
+    r"\b(?:pas|aucun|aucune|ne|jamais|non|sans|n'|no|not|never|cannot|without)\b[^.;:]{0,30}$"
+)
+
+_ISO_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+_NUM_RE = re.compile(
+    r"(?P<num>[-−–]?\d+(?:[ \u00a0\u202f]\d{3})*(?:[.,]\d+)?)"
+    r"(?P<pct>\s*(?:%|pour cent|percent))?",
+    re.IGNORECASE,
+)
+
+
+# --------------------------------------------------------------------------- helpers
+def _items(explanation: dict):
+    """Yield (section, claim, evidence ids) for every claim item."""
+    for section in CLAIM_SECTIONS:
+        for item in explanation.get(section) or []:
+            if isinstance(item, dict):
+                yield section, str(item.get("claim", "")), list(item.get("evidence") or [])
+
+
+def _all_text(explanation: dict) -> list[tuple[str, str]]:
+    """(where, text) for all free text that the user will read, disclaimer excluded."""
+    out = []
+    for key in ("resume", "incertitude"):
+        if isinstance(explanation.get(key), str):
+            out.append((key, explanation[key]))
+    for section, claim, _ in _items(explanation):
+        out.append((section, claim))
+    return out
+
+
+def extract_numbers(text: str) -> list[tuple[float, bool, int]]:
+    """Numbers worth checking in `text`: (value, is_percent, decimals).
+
+    Only percentages and decimal numbers are checked. Bare integers (years, counts, amounts
+    like 100 000) are not claims about evidence. Evidence ids and ISO dates are ignored.
+    """
+    cleaned = EID_RE.sub(" ", _ISO_DATE_RE.sub(" ", text))
+    found = []
+    for m in _NUM_RE.finditer(cleaned):
+        raw = re.sub(r"[ \u00a0\u202f]", "", m.group("num"))
+        raw = raw.replace("−", "-").replace("–", "-").replace(",", ".")
+        is_pct = bool(m.group("pct"))
+        decimals = len(raw.split(".")[1]) if "." in raw else 0
+        if not is_pct and decimals == 0:
+            continue
+        try:
+            found.append((abs(float(raw)), is_pct, decimals))
+        except ValueError:
+            continue
+    return found
+
+
+def _matches(claimed: float, is_pct: bool, decimals: int, actual: float) -> bool:
+    """Claimed number vs an evidence value, allowing ratio/percent conversion and rounding."""
+    actual = abs(actual)
+    candidates = [actual * 100, actual] if is_pct else [actual, actual * 100]
+    candidates.append(actual / 100)
+    half_step = 0.5 * 10 ** (-decimals)
+    for cand in candidates:
+        if abs(claimed - cand) <= max(REL_TOL * abs(cand), half_step + 1e-9):
+            return True
+    return False
+
+
+# --------------------------------------------------------------------------- checks
+def check_eids(explanation: dict, evidence: Mapping[str, Evidence]) -> list[str]:
+    """Every cited id exists; fact claims cite at least one id."""
+    errors = []
+    for section, claim, ids in _items(explanation):
+        for eid in ids:
+            if eid not in evidence:
+                errors.append(f"{section}: preuve inconnue {eid}")
+        for eid in EID_RE.findall(claim):
+            if eid not in evidence:
+                errors.append(f"{section}: preuve inconnue {eid} (citée dans le texte)")
+        if section in MUST_CITE and not ids:
+            errors.append(f"{section}: affirmation sans preuve « {claim[:60]} »")
+    return errors
+
+
+def check_numbers(
+    explanation: dict, evidence: Mapping[str, Evidence], context: list[float] | None = None
+) -> list[str]:
+    """Every percentage or decimal in a claim appears in its cited evidence (±1%).
+
+    `context` holds numbers that come from the user's own request or from the scenario
+    weights (not evidence), which a claim may restate.
+    """
+    errors = []
+    ctx = list(context or [])
+    for section, claim, ids in _items(explanation):
+        values = [numeric(evidence[e]) for e in ids if e in evidence]
+        values = [v for v in values if v is not None]
+        for claimed, is_pct, decimals in extract_numbers(claim):
+            if any(_matches(claimed, is_pct, decimals, v) for v in values + ctx):
+                continue
+            shown = f"{claimed:g} %" if is_pct else f"{claimed:g}"
+            if values:
+                errors.append(f"{section}: le nombre {shown} ne correspond pas aux preuves citées")
+            else:
+                errors.append(f"{section}: le nombre {shown} n'a aucune preuve citée")
+    return errors
+
+
+def check_wording(explanation: dict) -> list[str]:
+    """No advice or forecast phrasing. A negated phrase ("aucun rendement garanti") is allowed."""
+    errors = []
+    for where, text in _all_text(explanation):
+        lowered = text.lower()
+        for rx in _WORDING_RE:
+            for m in rx.finditer(lowered):
+                if _NEGATION_RE.search(lowered[max(0, m.start() - 40) : m.start()]):
+                    continue
+                errors.append(f"{where}: formulation interdite « {m.group(0)} »")
+    return errors
+
+
+def check_sections(explanation: dict) -> list[str]:
+    """The four questions, the uncertainty and the disclaimer are present and non-empty."""
+    errors = []
+    for section in CLAIM_SECTIONS:
+        items = explanation.get(section)
+        if not isinstance(items, list) or not items:
+            errors.append(f"{section}: section manquante ou vide")
+            continue
+        for item in items:
+            if not isinstance(item, dict) or not str(item.get("claim", "")).strip():
+                errors.append(f"{section}: affirmation vide")
+    for key in REQUIRED_TEXT:
+        val = explanation.get(key)
+        if not isinstance(val, str) or not val.strip():
+            errors.append(f"{key}: champ manquant ou vide")
+    if explanation.get("scenario_le_plus_coherent") not in SCENARIO_NAMES:
+        errors.append("scenario_le_plus_coherent: nom de scénario invalide")
+    if "simulation" not in str(explanation.get("avertissement", "")).lower():
+        errors.append("avertissement: mention de simulation absente")
+    return errors
+
+
+def _context_numbers(state: GraphState) -> list[float]:
+    out: list[float] = []
+    p = state.profile
+    if p:
+        out += [float(p.horizon_years)]
+        if p.budget_cad:
+            out.append(float(p.budget_cad))
+        if p.requested_idea:
+            out.append(float(p.requested_idea["weight"]))
+    for sc in state.scenarios:
+        out += [float(w) for w in sc.weights.values()]
+    return out
+
+
+def verify(state: GraphState) -> list[str]:
+    explanation = state.explanation
+    if not explanation:
+        return ["explication absente"]
+    errors = check_sections(explanation)
+    errors += check_eids(explanation, state.evidence)
+    errors += check_numbers(explanation, state.evidence, _context_numbers(state))
+    errors += check_wording(explanation)
+    return errors
 
 
 @traced("verifier")
 def verifier_node(state: GraphState) -> dict:
-    errors = []
-    explanation = state.explanation or {}
-    for section in SECTIONS:
-        for item in explanation.get(section, []):
-            for eid in item.get("evidence", []):
-                if eid not in state.evidence:
-                    errors.append(f"{section}: preuve inconnue {eid}")
+    errors = verify(state)
     passed = not errors
     update = {
         "verification": {"passed": passed, "errors": errors},
-        "summary": "Vérification réussie [stub]." if passed else f"{len(errors)} erreur(s) détectée(s).",
+        "summary": (
+            "Vérification réussie : preuves, nombres, formulations et sections conformes."
+            if passed
+            else f"{len(errors)} erreur(s) détectée(s) dans l'explication."
+        ),
     }
     if not passed:
         update["retries"] = {"explain": state.retries.get("explain", 0) + 1}
