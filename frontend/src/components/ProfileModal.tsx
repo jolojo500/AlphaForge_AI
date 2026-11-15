@@ -154,7 +154,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {currentUser?.is_advisor && (
               <Badge variant="outline" className="flex items-center gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Conseiller agréé
+                Réviseur (démonstration)
               </Badge>
             )}
           </div>

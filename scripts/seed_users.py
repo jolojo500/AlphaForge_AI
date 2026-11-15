@@ -115,7 +115,9 @@ def sync_cognito_passwords(
         except Exception as exc:
             logging.warning("Could not set password for %s: %s", user, exc)
 
-    advisor_password = os.getenv("AF_ADVISOR_PASSWORD")
+    from alphaforge.secrets import get_secret
+
+    advisor_password = get_secret("AF_ADVISOR_PASSWORD")
     if advisor_password:
         try:
             client.admin_set_user_password(
@@ -124,11 +126,11 @@ def sync_cognito_passwords(
                 Password=advisor_password,
                 Permanent=True,
             )
-            logging.info("Set Cognito password for 'advisor' from AF_ADVISOR_PASSWORD")
+            logging.info("Set Cognito password for 'advisor' from AF_ADVISOR_PASSWORD / SSM")
         except Exception as exc:
             logging.warning("Could not set password for advisor: %s", exc)
     else:
-        logging.info("AF_ADVISOR_PASSWORD not set; advisor password left unchanged.")
+        logging.info("AF_ADVISOR_PASSWORD not found in env or SSM; advisor password left unchanged.")
 
 
 if __name__ == "__main__":

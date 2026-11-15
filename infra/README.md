@@ -45,6 +45,8 @@ All created resources are tagged with `project=alphaforge`.
 | **S3 Bucket** | `AWS::S3::Bucket` | `alphaforge-data-908027403910` | Versioned object storage for starter data, caches, and run states. |
 | **DynamoDB Table** | `AWS::DynamoDB::Table` | `alphaforge-traces` | On-demand table for run audit records, verification, and traces. |
 | **DynamoDB Table** | `AWS::DynamoDB::Table` | `alphaforge-users` | On-demand table for investor profiles, KYC records, and account types (#128). |
+| **DynamoDB Table** | `AWS::DynamoDB::Table` | `alphaforge-suitability` | On-demand table for immutable Suitability Records & advisor sign-offs (#121). |
+| **S3 Suitability Records** | `AWS::S3::Object` | `alphaforge-data-908027403910/suitability/{run_id}.pdf` | Immutable formal PDF Suitability Records generated upon advisor review (#121). |
 | **Cognito User Pool** | `AWS::Cognito::UserPool` | `us-east-1_XjxuVar8b` (`alphaforge-users`) | User authentication directory with seeded demo personas and `advisor` group (#128). |
 | **Cognito App Client** | `AWS::Cognito::UserPoolClient` | `9lreq61mqkf01s9h9h48gkcfe` (`alphaforge-web`) | Web client for password-based and token-based authentication. |
 | **CloudWatch Log Group** | `AWS::Logs::LogGroup` | `/alphaforge/app` | Real-time container application logs. |
@@ -65,11 +67,46 @@ All created resources are tagged with `project=alphaforge`.
 | `TAVILY_API_KEY` | *(None / SSM)* | Tavily Search API key for live web search. Resolved from env or SSM Parameter Store `/alphaforge/tavily_api_key`. |
 | `AF_USERS_TABLE` | `alphaforge-users` | DynamoDB table name for storing user profiles (#128). |
 | `AF_USERS_BACKEND` | `dynamodb` (AWS) / `local` (dev) | User store backend: `dynamodb` or in-memory `local`. |
+| `AF_SUITABILITY_TABLE` | `alphaforge-suitability` | DynamoDB table name for storing immutable suitability records (#121). |
+| `AF_SUITABILITY_BACKEND` | `dynamodb` (AWS) / `local` (dev) | Suitability record backend: `dynamodb` or in-memory `local` (#121). |
 | `AF_COGNITO_USER_POOL_ID` | `us-east-1_XjxuVar8b` | Cognito User Pool ID for client authentication (#128). |
 | `AF_COGNITO_CLIENT_ID` | `9lreq61mqkf01s9h9h48gkcfe` | Cognito App Client ID for authentication (#128). |
 | `AF_AUTH` | `off` (local/dev/tests) / `on` (prod) | Authentication enforcement mode (#128). |
 | `AWS_REGION` | `us-east-1` | AWS region for all resources. |
 | `AWS_PROFILE` | `datathon` | AWS CLI / SDK profile (if using local named profile). |
+
+---
+
+### 4.1 Secrets Management & Live News API Keys (B-9)
+
+In compliance with strict security requirements (PRD §8), API secrets are **never committed to the repository, never built into Docker images, and never hardcoded**:
+
+- **Resolution Precedence** (`alphaforge.secrets.get_secret`):
+  1. Container environment variables (`FINNHUB_API_KEY`, `TAVILY_API_KEY`).
+  2. AWS Systems Manager (SSM) Parameter Store:
+     - `/alphaforge/finnhub_api_key`
+     - `/alphaforge/tavily_api_key`
+  3. Seamless cache fallback with diagnostic evidence warning (zero crashes).
+
+- **Setting Keys via AWS CLI**:
+  ```bash
+  export AWS_PROFILE=datathon
+  export AWS_REGION=us-east-1
+
+  # Finnhub API Key (Company News)
+  aws ssm put-parameter \
+    --name "/alphaforge/finnhub_api_key" \
+    --value "<YOUR_FINNHUB_API_KEY>" \
+    --type SecureString \
+    --overwrite
+
+  # Tavily API Key (Live Web Search)
+  aws ssm put-parameter \
+    --name "/alphaforge/tavily_api_key" \
+    --value "<YOUR_TAVILY_API_KEY>" \
+    --type SecureString \
+    --overwrite
+  ```
 
 ---
 
@@ -129,36 +166,14 @@ When `AF_AUTH=on`:
 
 ---
 
-### 4.1 Secrets Management & Live News API Keys (B-9)
+### 4.3 Advisor-in-the-Loop Mode & Suitability Records (B-14, #121)
 
-In compliance with strict security requirements (PRD §8), API secrets are **never committed to the repository, never built into Docker images, and never hardcoded**:
+To bridge educational simulations and professional advisory compliance:
+- **Role Verification**: Sign-off endpoint `POST /runs/{run_id}/review` requires an authenticated user belonging to Cognito group `advisor` (`require_advisor` dependency).
+- **Immutable Suitability Record**: Stored in DynamoDB table `alphaforge-suitability` (`PAY_PER_REQUEST`, tag `project=alphaforge`). It records the advisor username, timestamp, chosen scenario, professional rationale, edited assumptions snapshot, and verifier result.
+- **Pure-Python PDF Generation**: Generates standard PDF 1.4 documents (`alphaforge/suitability_pdf.py`) with zero native C-extension dependencies, uploaded to Amazon S3 (`alphaforge-data-908027403910/suitability/{run_id}.pdf`).
+- **Client Banner Transition**: Runs default to the educational simulation banner. Upon advisor sign-off, the client UI transitions to a green verified banner « REVU PAR UN CONSEILLER AGRÉÉ » displaying the advisor's username, review date, and a direct download link for the formal Suitability Record PDF.
 
-- **Resolution Precedence** (`alphaforge.secrets.get_secret`):
-  1. Container environment variables (`FINNHUB_API_KEY`, `TAVILY_API_KEY`).
-  2. AWS Systems Manager (SSM) Parameter Store:
-     - `/alphaforge/finnhub_api_key`
-     - `/alphaforge/tavily_api_key`
-  3. Seamless cache fallback with diagnostic evidence warning (zero crashes).
-
-- **Setting Keys via AWS CLI**:
-  ```bash
-  export AWS_PROFILE=datathon
-  export AWS_REGION=us-east-1
-
-  # Finnhub API Key (Company News)
-  aws ssm put-parameter \
-    --name "/alphaforge/finnhub_api_key" \
-    --value "<YOUR_FINNHUB_API_KEY>" \
-    --type SecureString \
-    --overwrite
-
-  # Tavily API Key (Live Web Search)
-  aws ssm put-parameter \
-    --name "/alphaforge/tavily_api_key" \
-    --value "<YOUR_TAVILY_API_KEY>" \
-    --type SecureString \
-    --overwrite
-  ```
 
 - **IAM Permissions**:
   The EC2 IAM role `alphaforge-ec2-role` includes scoped permissions for SSM Parameter Store:

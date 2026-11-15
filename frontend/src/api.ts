@@ -9,6 +9,7 @@ import {
   PersonaMeta,
   SavedRunSummary,
   SSEEvent,
+  SuitabilityRecord,
   UserProfileData,
   WhatIfDiff,
 } from './types';
@@ -252,6 +253,43 @@ export async function compareRuns(runA: string, runB: string): Promise<WhatIfDif
     throw new Error(errorBody.detail || `Failed to compare runs: ${res.statusText}`);
   }
   return res.json();
+}
+
+export async function reviewRun(
+  runId: string,
+  chosenScenario: string,
+  rationale: string,
+  editedAssumptions?: Record<string, unknown> | null
+): Promise<{ status: string; run_id: string; reviewer_id: string; reviewed_at: string; chosen_scenario: string }> {
+  const res = await apiFetch(`${API_BASE}/runs/${runId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chosen_scenario: chosenScenario,
+      rationale,
+      edited_assumptions: editedAssumptions || null,
+    }),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Échec de la validation du conseiller: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchSuitabilityRecord(runId: string): Promise<SuitabilityRecord> {
+  const res = await apiFetch(`${API_BASE}/runs/${runId}/suitability`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Dossier de convenance introuvable: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export function getSuitabilityPdfUrl(runId: string): string {
+  const token = getAuthToken();
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${API_BASE}/runs/${runId}/suitability/pdf${tokenParam}`;
 }
 
 export function subscribeRunEvents(

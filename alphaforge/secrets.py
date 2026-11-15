@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 SSM_MAPPINGS: dict[str, str] = {
     "FINNHUB_API_KEY": "/alphaforge/finnhub_api_key",
     "TAVILY_API_KEY": "/alphaforge/tavily_api_key",
+    "AF_ADVISOR_PASSWORD": "/alphaforge/advisor_password",
 }
 
 
