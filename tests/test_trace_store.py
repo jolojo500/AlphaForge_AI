@@ -192,3 +192,20 @@ def test_live_dynamodb_read_write():
     assert retrieved["persona"] == "robert"
     assert retrieved["verification"]["passed"] is True
     assert len(retrieved["trace"]) >= 9
+
+
+def test_golden_runs_survive_the_limit(tmp_path):
+    from alphaforge.trace_store import LocalJsonTraceStore
+
+    store = LocalJsonTraceStore(storage_dir=tmp_path)
+    for i in range(60):
+        (tmp_path / f"r{i}.json").write_text(
+            '{"run_id": "r%d", "persona": "robert", "verification": {"passed": true}}' % i,
+            encoding="utf-8",
+        )
+    runs = store.list_runs(limit=50, include_golden=True)
+    assert len(runs) == 50
+    assert {"golden_robert_tsla", "golden_amira_build", "golden_mateo_build"} <= {
+        r["run_id"] for r in runs
+    }
+    assert all(r["is_golden"] for r in runs[:3])
