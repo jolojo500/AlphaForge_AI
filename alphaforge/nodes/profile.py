@@ -18,7 +18,7 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
 from alphaforge import config, llm
-from alphaforge.personas import PERSONAS
+from alphaforge.personas import get_persona
 from alphaforge.state import GraphState, Profile
 from alphaforge.tracing import traced
 
@@ -146,11 +146,12 @@ def extract_profile(
     *,
     kind: llm.ModelKind = "main",
     llm_client=None,
+    persona_data: dict | None = None,
 ) -> tuple[Extraction, bool]:
     """Read the request. Returns (extraction, used_fallback)."""
     if not text.strip():
         return Extraction(), False
-    persona = PERSONAS[state_persona]
+    persona = get_persona(state_persona, persona_data)
     prompt = (
         f"Persona hypotheses: objective={persona['objective']}, horizon={persona['horizon_years']} "
         f"years, tolerance={persona['risk_tolerance']}, capacity={persona['risk_capacity']}, "
@@ -228,8 +229,13 @@ def _clean_tags(tags: list[str]) -> list[str]:
     return out[:5]
 
 
-def build_profile(persona_id: str, ext: Extraction, used_fallback: bool) -> Profile:
-    p = PERSONAS[persona_id]
+def build_profile(
+    persona_id: str,
+    ext: Extraction,
+    used_fallback: bool,
+    persona_data: dict | None = None,
+) -> Profile:
+    p = get_persona(persona_id, persona_data)
     ticker = _resolve_ticker(ext.ticker)
     idea = None
     if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100:
@@ -311,9 +317,11 @@ def profile_node(state: GraphState) -> dict:
         except RuntimeError:
             pass
 
-    ext, fallback = extract_profile(state.persona, text, kind="main")
+    ext, fallback = extract_profile(
+        state.persona, text, kind="main", persona_data=state.persona_data
+    )
 
-    p = PERSONAS[state.persona]
+    p = get_persona(state.persona, state.persona_data)
     ticker = _resolve_ticker(ext.ticker)
     idea = (
         {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
@@ -331,7 +339,9 @@ def profile_node(state: GraphState) -> dict:
 
     if is_contradictory_profile(conflicts, idea, horizon, constraints):
         # Contradictory free-text profile: second pass on Opus 5.5 before asking the clarifying question
-        ext, fallback = extract_profile(state.persona, text, kind="review")
+        ext, fallback = extract_profile(
+            state.persona, text, kind="review", persona_data=state.persona_data
+        )
         ticker = _resolve_ticker(ext.ticker)
         idea = (
             {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
@@ -352,11 +362,15 @@ def profile_node(state: GraphState) -> dict:
                 answer = str(interrupt({"question": clarif_q})).strip()
                 text = f"{text} {answer}".strip()
                 update = {"request_text": text, "retries": {"clarify": 1}}
-                ext, fallback = extract_profile(state.persona, text, kind="review")
+                ext, fallback = extract_profile(
+                    state.persona, text, kind="review", persona_data=state.persona_data
+                )
             except RuntimeError:
                 pass
 
-    profile = build_profile(state.persona, ext, fallback)
+    profile = build_profile(
+        state.persona, ext, fallback, persona_data=state.persona_data
+    )
     if profile.request_type == "judge":
         summary = f"Profil compris : évaluation de {profile.requested_idea['ticker']}."
     else:

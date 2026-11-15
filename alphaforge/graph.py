@@ -166,10 +166,15 @@ def set_graph(graph=None) -> None:
 
 
 def initial_state(
-    persona: str, request_text: str, as_of_date: dt.date | None = None, profile=None
+    persona: str,
+    request_text: str,
+    as_of_date: dt.date | None = None,
+    profile=None,
+    persona_data: dict | None = None,
 ) -> dict:
     return {
         "persona": persona,
+        "persona_data": persona_data,
         "request_text": request_text,
         "as_of_date": as_of_date or config.DEFAULT_AS_OF,
         "profile": profile,
@@ -217,10 +222,12 @@ def run(
     profile=None,
     thread_id: str | None = None,
     graph=None,
+    persona_data: dict | None = None,
 ) -> GraphState:
     """Blocking helper for tests and scripts. Raises if the run pauses on a question."""
     thread_id = thread_id or uuid.uuid4().hex
-    for event in stream_run(initial_state(persona, request_text, as_of_date, profile), thread_id, graph):
+    inputs = initial_state(persona, request_text, as_of_date, profile, persona_data)
+    for event in stream_run(inputs, thread_id, graph):
         if event["type"] == "interrupt":
             raise RuntimeError(f"run paused on a question: {event['question']}")
         if event["type"] == "final":

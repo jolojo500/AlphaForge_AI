@@ -79,6 +79,7 @@ def prepare_whatif_inputs(
         request_text=state.request_text,
         as_of_date=as_of,
         profile=new_profile,
+        persona_data=state.persona_data,
     )
 
 
@@ -95,6 +96,7 @@ def rerun(
         as_of_date=inputs["as_of_date"],
         profile=inputs["profile"],
         thread_id=thread_id,
+        persona_data=inputs.get("persona_data"),
     )
 
 

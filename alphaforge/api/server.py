@@ -10,6 +10,8 @@ import logging
 import os
 import threading
 import uuid
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
@@ -35,6 +37,13 @@ from alphaforge.whatif import diff_scenarios, prepare_whatif_inputs
 
 DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
+# Server-side run capacity. A t3.medium must not start one OS thread per request.
+RUN_WORKERS = max(1, int(os.getenv("AF_RUN_WORKERS", "4")))
+RUN_QUEUE_SIZE = max(0, int(os.getenv("AF_RUN_QUEUE_SIZE", "8")))
+RUN_RETENTION_MINUTES = float(os.getenv("AF_RUN_RETENTION_MINUTES", "30"))
+RUN_RETRY_AFTER_SECONDS = os.getenv("AF_RUN_RETRY_AFTER", "5")
+FINISHED_STATUSES = frozenset({"completed", "error"})
+
 
 class Run:
     """Represents an execution run and its state/subscribers."""
@@ -52,6 +61,7 @@ class Run:
         self.request_text = request_text
         self.as_of_date = as_of_date
         self.created_at = created_at or dt.datetime.now(dt.UTC)
+        self.finished_at: dt.datetime | None = None
         self.status: Literal["running", "interrupted", "completed", "error"] = "running"
         self.events: list[dict[str, Any]] = []
         self.state: GraphState | None = None
@@ -109,11 +119,34 @@ class BaseRunStore(abc.ABC):
     def save(self, run: Run) -> None:
         pass
 
+    @abc.abstractmethod
+    def discard(self, run_id: str) -> None:
+        pass
+
 
 class InMemoryRunStore(BaseRunStore):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        retention: dt.timedelta | None = None,
+        clock: Callable[[], dt.datetime] | None = None,
+    ) -> None:
         self._runs: dict[str, Run] = {}
         self._lock = threading.Lock()
+        self._retention = (
+            retention
+            if retention is not None
+            else dt.timedelta(minutes=RUN_RETENTION_MINUTES)
+        )
+        self._clock = clock or (lambda: dt.datetime.now(dt.UTC))
+
+    def _evict_expired_locked(self) -> None:
+        now = self._clock()
+        for run_id, run in list(self._runs.items()):
+            if run.status not in FINISHED_STATUSES:
+                continue
+            finished_at = run.finished_at or run.created_at
+            if now - finished_at >= self._retention:
+                self._runs.pop(run_id, None)
 
     def create(
         self, persona: str, request_text: str, as_of_date: dt.date | None = None
@@ -126,16 +159,23 @@ class InMemoryRunStore(BaseRunStore):
             as_of_date=as_of_date,
         )
         with self._lock:
+            self._evict_expired_locked()
             self._runs[run_id] = run
         return run
 
     def get(self, run_id: str) -> Run | None:
         with self._lock:
+            self._evict_expired_locked()
             return self._runs.get(run_id)
 
     def save(self, run: Run) -> None:
         with self._lock:
+            self._evict_expired_locked()
             self._runs[run.run_id] = run
+
+    def discard(self, run_id: str) -> None:
+        with self._lock:
+            self._runs.pop(run_id, None)
 
 
 store: BaseRunStore = InMemoryRunStore()
@@ -243,8 +283,8 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
             t = item.get("type")
             if t == "final":
                 run.state = item.get("state")
-                run.status = "completed"
-                run.record_event({"type": "final", "run_id": run.run_id})
+                # Persist before publishing "final": an evicted run must be readable
+                # from the trace store as soon as clients see it as completed.
                 try:
                     ts = get_trace_store()
                     ts.save_run(
@@ -257,6 +297,9 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
                     )
                 except Exception:
                     logging.exception("Failed to persist trace for run %s", run.run_id)
+                run.status = "completed"
+                run.finished_at = dt.datetime.now(dt.UTC)
+                run.record_event({"type": "final", "run_id": run.run_id})
             elif t == "interrupt":
                 run.status = "interrupted"
                 run.question = item.get("question")
@@ -266,17 +309,68 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
     except Exception as exc:  # noqa: BLE001
         run.status = "error"
         run.error = str(exc)
+        run.finished_at = dt.datetime.now(dt.UTC)
         run.record_event({"type": "error", "error": str(exc), "message": str(exc)})
 
 
-def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> threading.Thread:
-    thread = threading.Thread(
-        target=_run_worker,
-        args=(run, gen_fn, *args),
-        daemon=True,
+class RunQueueFull(RuntimeError):
+    """Raised when the bounded run worker pool and its queue are saturated."""
+
+
+class RunPool:
+    """Bounded ThreadPoolExecutor plus a bounded pending queue."""
+
+    def __init__(self, max_workers: int, max_queue: int) -> None:
+        self.max_workers = max_workers
+        self.max_queue = max_queue
+        self._executor = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="alphaforge-run"
+        )
+        self._lock = threading.Lock()
+        self._active = 0
+
+    @property
+    def capacity(self) -> int:
+        return self.max_workers + self.max_queue
+
+    def submit(self, fn: Any, *args: Any, **kwargs: Any) -> Future:
+        with self._lock:
+            if self._active >= self.capacity:
+                raise RunQueueFull
+            self._active += 1
+        try:
+            return self._executor.submit(self._run, fn, args, kwargs)
+        except BaseException:
+            self._release()
+            raise
+
+    def _run(self, fn: Any, args: tuple, kwargs: dict) -> Any:
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            self._release()
+
+    def _release(self) -> None:
+        with self._lock:
+            self._active -= 1
+
+    def shutdown(self, wait: bool = True) -> None:
+        self._executor.shutdown(wait=wait, cancel_futures=True)
+
+
+run_pool = RunPool(max_workers=RUN_WORKERS, max_queue=RUN_QUEUE_SIZE)
+
+
+def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> Future:
+    return run_pool.submit(_run_worker, run, gen_fn, *args)
+
+
+def _queue_full() -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail="Run queue is full; retry shortly",
+        headers={"Retry-After": RUN_RETRY_AFTER_SECONDS},
     )
-    thread.start()
-    return thread
 
 
 @asynccontextmanager
@@ -289,7 +383,10 @@ async def lifespan(_: FastAPI):
             pull_caches(bucket_name=bucket)
         except Exception:
             logging.exception("Failed to pull caches from S3 bucket %s", bucket)
-    yield
+    try:
+        yield
+    finally:
+        run_pool.shutdown(wait=False)
 
 
 app = FastAPI(title="AlphaForge AI API", lifespan=lifespan)
@@ -378,11 +475,12 @@ def list_runs(persona: str | None = None, limit: int = 50) -> list[dict[str, Any
 @app.post("/runs")
 def create_run(req: RunCreateRequest) -> dict[str, str]:
     persona = req.persona
+    persona_data = None
     if req.profile_data:
-        # A questionnaire profile is registered under its own key for this run only,
-        # so concurrent users never overwrite each other and the demo personas stay intact.
+        # A questionnaire profile travels with this run only, so concurrent users
+        # never overwrite each other and the demo personas stay intact.
         persona = f"custom_{uuid.uuid4().hex[:12]}"
-        PERSONAS[persona] = _custom_persona(req.profile_data, req.request_text)
+        persona_data = _custom_persona(req.profile_data, req.request_text)
     elif persona not in DEMO_PERSONAS:
         raise HTTPException(
             status_code=400,
@@ -393,12 +491,21 @@ def create_run(req: RunCreateRequest) -> dict[str, str]:
         request_text=req.request_text,
         as_of_date=req.as_of_date,
     )
-    start_run_thread(
-        run,
-        stream_run,
-        initial_state(run.persona, run.request_text, run.as_of_date),
-        run.run_id,
-    )
+    try:
+        start_run_thread(
+            run,
+            stream_run,
+            initial_state(
+                run.persona,
+                run.request_text,
+                run.as_of_date,
+                persona_data=persona_data,
+            ),
+            run.run_id,
+        )
+    except RunQueueFull:
+        store.discard(run.run_id)
+        raise _queue_full() from None
     return {"run_id": run.run_id}
 
 
@@ -463,12 +570,16 @@ def whatif_run(run_id: str, req: WhatIfRequest) -> dict[str, str]:
     child_run.parent_run_id = parent.run_id
     child_run.change = {"field": req.field, "value": req.value}
 
-    start_run_thread(
-        child_run,
-        stream_run,
-        inputs,
-        child_run.run_id,
-    )
+    try:
+        start_run_thread(
+            child_run,
+            stream_run,
+            inputs,
+            child_run.run_id,
+        )
+    except RunQueueFull:
+        store.discard(child_run.run_id)
+        raise _queue_full() from None
 
     return {"run_id": child_run.run_id, "parent_run_id": parent.run_id}
 
@@ -522,12 +633,17 @@ def answer_run(run_id: str, req: AnswerRequest) -> dict[str, str]:
             )
         run.status = "running"
 
-    start_run_thread(
-        run,
-        resume_run,
-        req.text,
-        run.run_id,
-    )
+    try:
+        start_run_thread(
+            run,
+            resume_run,
+            req.text,
+            run.run_id,
+        )
+    except RunQueueFull:
+        with run._lock:
+            run.status = "interrupted"
+        raise _queue_full() from None
     return {"run_id": run.run_id, "status": "resumed"}
 
 

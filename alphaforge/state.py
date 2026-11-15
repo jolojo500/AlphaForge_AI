@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import operator
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -65,6 +65,9 @@ def _merge(left: dict, right: dict) -> dict:
 class GraphState(BaseModel):
     as_of_date: dt.date
     persona: PersonaId
+    # Run-scoped persona table entry for questionnaire profiles. Kept in state (and
+    # checkpoints) instead of mutating the global PERSONAS table.
+    persona_data: dict[str, Any] | None = None
     request_text: str = ""
     profile: Profile | None = None
     eligible_universe: list[str] = Field(default_factory=list)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 PERSONAS: dict[str, dict] = {
     "amira": {
         "label": "Amira, 26 ans",
@@ -43,3 +45,8 @@ PERSONAS: dict[str, dict] = {
         "example_request": "Je veux mettre 25 % de mon portefeuille dans TSLA.",
     },
 }
+
+
+def get_persona(persona_id: str, persona_data: dict[str, Any] | None = None) -> dict:
+    """Return the run-scoped custom entry when present, else the global persona table entry."""
+    return persona_data if persona_data is not None else PERSONAS[persona_id]
