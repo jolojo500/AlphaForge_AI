@@ -6,8 +6,10 @@ import abc
 import asyncio
 import datetime as dt
 import json
+import os
 import threading
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
@@ -25,6 +27,7 @@ from alphaforge.graph import (
 )
 from alphaforge.personas import PERSONAS
 from alphaforge.state import GraphState
+from alphaforge.trace_store import get_trace_store
 
 DIST_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -149,6 +152,18 @@ def _run_worker(run: Run, gen_fn: Any, *args: Any) -> None:
                 run.state = item.get("state")
                 run.status = "completed"
                 run.record_event({"type": "final", "run_id": run.run_id})
+                try:
+                    ts = get_trace_store()
+                    ts.save_run(
+                        run_id=run.run_id,
+                        state=run.state,
+                        trace=run.state.trace if hasattr(run.state, "trace") else None,
+                        verification=run.state.verification
+                        if hasattr(run.state, "verification")
+                        else None,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
             elif t == "interrupt":
                 run.status = "interrupted"
                 run.question = item.get("question")
@@ -171,7 +186,19 @@ def start_run_thread(run: Run, gen_fn: Any, *args: Any) -> threading.Thread:
     return thread
 
 
-app = FastAPI(title="AlphaForge AI API")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if os.getenv("AF_S3_BUCKET"):
+        try:
+            from infra.sync_s3 import pull_caches
+
+            pull_caches()
+        except Exception:  # noqa: BLE001
+            pass
+    yield
+
+
+app = FastAPI(title="AlphaForge AI API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
