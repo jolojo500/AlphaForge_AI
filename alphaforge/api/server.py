@@ -707,6 +707,8 @@ def get_user_dossier_endpoint(
 def list_runs(request: Request, persona: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
     """Golden demo runs plus the caller's own runs; never other people's requests (#111)."""
     limit = max(1, min(limit, 100))
+    if persona in ("custom_user", "me"):
+        persona = "custom"  # questionnaire runs are stored under "custom"
     me = _owner(request)
     golden = get_trace_store().list_runs(limit=limit, persona=persona, include_golden=True, owner=me)
     out = [r for r in golden if r.get("is_golden")]

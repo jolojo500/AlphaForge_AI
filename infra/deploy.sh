@@ -184,9 +184,10 @@ full_deploy() {
             \"Statement\": [
                 {\"Effect\": \"Allow\", \"Action\": [\"bedrock:InvokeModel\", \"bedrock:InvokeModelWithResponseStream\"], \"Resource\": \"*\"},
                 {\"Effect\": \"Allow\", \"Action\": [\"s3:*\"], \"Resource\": [\"arn:aws:s3:::${S3_BUCKET}\", \"arn:aws:s3:::${S3_BUCKET}/*\"]},
-                {\"Effect\": \"Allow\", \"Action\": [\"dynamodb:*\"], \"Resource\": [\"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}/*\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}/*\"]},
+                {\"Effect\": \"Allow\", \"Action\": [\"dynamodb:*\"], \"Resource\": [\"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${DYNAMODB_TABLE}/*\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/${CHECKPOINTS_TABLE}/*\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/alphaforge-users\", \"arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/alphaforge-suitability\"]},
                 {\"Effect\": \"Allow\", \"Action\": [\"logs:CreateLogGroup\", \"logs:CreateLogStream\", \"logs:PutLogEvents\", \"logs:DescribeLogStreams\"], \"Resource\": \"*\"},
                 {\"Effect\": \"Allow\", \"Action\": [\"ssm:GetParameter\", \"ssm:GetParameters\", \"ssm:GetParametersByPath\"], \"Resource\": \"arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:parameter/alphaforge/*\"},
+                {\"Effect\": \"Allow\", \"Action\": [\"cognito-idp:AdminConfirmSignUp\"], \"Resource\": \"arn:aws:cognito-idp:${AWS_REGION}:${ACCOUNT_ID}:userpool/us-east-1_XjxuVar8b\"},
                 {\"Effect\": \"Allow\", \"Action\": [\"secretsmanager:GetSecretValue\"], \"Resource\": \"arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:/alphaforge/*\"}
             ]
         }"

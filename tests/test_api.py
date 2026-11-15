@@ -543,3 +543,22 @@ def test_authenticated_run_ownership():
     # Anonymous user without credentials cannot access run
     anon = TestClient(app, headers={"X-Client-Id": "random_browser"})
     assert anon.get(f"/runs/{run_id}").status_code == 404
+
+
+def test_history_lists_questionnaire_runs_under_the_frontend_persona_name():
+    """The UI asks for persona=custom_user; those runs are stored as "custom"."""
+    client = TestClient(app)
+    h = {"X-Client-Id": "history-custom"}
+    r = client.post(
+        "/runs",
+        json={
+            "persona": "custom_user",
+            "request_text": "Je veux un portefeuille équilibré sur 10 ans.",
+            "profile_data": _custom("moderate"),
+        },
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    rid = r.json()["run_id"]
+    listed = client.get("/runs?persona=custom_user", headers=h).json()
+    assert rid in {x["run_id"] for x in listed}
