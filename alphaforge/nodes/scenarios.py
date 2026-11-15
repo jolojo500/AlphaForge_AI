@@ -431,6 +431,16 @@ def translate_request(profile: Profile, info: pd.DataFrame) -> dict | None:
     """
     by_upper = {str(t).upper(): t for t in info.index}
     alloc = profile.requested_allocation
+    idea = requested_idea_of(profile)
+    if alloc and len(alloc) == 1:
+        # One ticker at one weight is an idea ("25 % dans TSLA"), not a full allocation: the
+        # idea path keeps the rest of the portfolio on the baseline and pins the idea in
+        # `capped` at the profile cap. Agent 1 fills both fields for such a question.
+        (key, raw), = alloc.items()
+        k = str(key).strip()
+        same_as_idea = idea is None or str(idea["ticker"]).strip().upper() == k.upper()
+        if k.lower() not in REQUEST_CLASSES and same_as_idea:
+            idea, alloc = {"ticker": k, "weight": raw}, None
     if alloc:
         explicit: dict[str, float] = {}
         classes: dict[str, float] = {}
@@ -466,7 +476,6 @@ def translate_request(profile: Profile, info: pd.DataFrame) -> dict | None:
             problems.append("aucun poids de la demande n'a pu être associé à un actif analysé")
         return {"kind": "allocation", "weights": weights, "groups": groups,
                 "blocked": blocked, "problems": problems}
-    idea = requested_idea_of(profile)
     if idea:
         t = by_upper.get(str(idea["ticker"]).strip().upper())
         w_req = min(_ratio(idea.get("weight")) or DEFAULT_IDEA_WEIGHT, 1.0)
@@ -569,7 +578,12 @@ def build_scenarios(
         if ticker in universe:
             w_cap = min(w_req, float(_asset_caps([ticker], info, profile_caps)[0]))
             fixed_capped = {ticker: w_cap}
-            capped = optimize(cov, info, opt_caps, fixed=fixed_capped)
+            judge_caps = opt_caps
+            if info.at[ticker, "asset_class"] not in EQUITY_CLASSES and opt_caps["equity_min"] > 1.0 - w_cap:
+                # A pinned bond, gold or crypto line must leave room for the equity floor,
+                # otherwise SLSQP is infeasible and the fallback silently ignores the floor.
+                judge_caps = {**opt_caps, "equity_min": max(0.0, 1.0 - w_cap)}
+            capped = optimize(cov, info, judge_caps, fixed=fixed_capped)
         else:
             capped = baseline.copy()  # excluded by a constraint: capped at zero
     else:
@@ -613,12 +627,15 @@ def resolve_current(profile: Profile, info: pd.DataFrame) -> dict | None:
     if not raw and not extra:
         return None
     total = sum(raw.values())
-    if total <= 1.0 + 1e-6:
-        divisor = 1.0  # declared weights
+    if not raw or max(raw.values()) <= 1.0 + 1e-6:
+        divisor = max(1.0, total)  # declared weights (a total slightly over 1 is rounding, not percentages)
     elif total <= 100.0 + 1e-6:
         divisor = 100.0  # percentages
     else:
-        divisor = total  # dollar amounts
+        # dollar amounts: shares of the declared budget when there is one, so the undeclared
+        # remainder is cash; shares of the declared total otherwise
+        budget = _num(profile.budget_cad) if profile.budget_cad else 0.0
+        divisor = max(total, budget)
     by_upper = {str(t).upper(): t for t in info.index}
     analysed: dict[str, float] = {}
     proxies: dict[str, str] = {}
@@ -900,7 +917,7 @@ def _template_notes(
         notes.append(loc_note)
     if "esg_proxy_share" in ids:
         esg_limit_note = (
-            "Share of the portfolio in assets held by the ESGV fund (indirect indicator): limited to U.S. equities, not an ESG score nor a sustainability guarantee."
+            "Share of the portfolio in assets held by the ESGV fund (indirect indicator): limited to U.S. equities; this is not a guarantee of sustainability nor an ESG score."
             if is_en
             else "Part du portefeuille dans des titres présents dans le fonds ESGV (indicateur indirect) : limitée aux actions américaines, ne constitue pas un score ESG ni une garantie de durabilité."
         )

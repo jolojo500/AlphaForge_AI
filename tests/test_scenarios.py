@@ -317,3 +317,47 @@ def test_issue_174_all_in_cost_evidence():
         assert "tax_drag" in e.value["components"]
         assert e.value["unit"] == "ratio"
 
+
+
+# --- integration fixes after the review of #183, #184 and #185 ------------------------------
+
+
+def test_single_ticker_allocation_is_treated_as_the_idea():
+    """Agent 1 fills both requested_idea and requested_allocation for "25 % dans TSLA": the
+    scenarios must be the idea ones (rest on the baseline, idea pinned at the cap), not an
+    equal-weight allocation across the universe."""
+    both = _profile(
+        "robert", request_type="judge",
+        requested_idea={"ticker": "TSLA", "weight": 0.25}, requested_allocation={"TSLA": 0.25},
+    )
+    with_both = _by_name(_run(both))
+    idea_only = _by_name(_run(ROBERT_TSLA))
+    for name in SCENARIO_NAMES:
+        assert with_both[name].weights == pytest.approx(idea_only[name].weights, abs=1e-6)
+    assert with_both["capped"].weights["TSLA"] == pytest.approx(0.03, abs=TOL)
+
+
+def test_dollar_holdings_are_shares_of_the_budget():
+    from alphaforge.nodes.scenarios import resolve_current
+
+    info = get_provider().asset_info()
+    p = _profile("mateo", budget_cad=100_000, current_holdings={"BTC-USD": 30_000, "SOL": 40_000})
+    cur = resolve_current(p, info)
+    assert cur["analysed"]["BTC-USD"] == pytest.approx(0.30, abs=1e-6)
+    assert cur["unanalysed"]["SOL"] == pytest.approx(0.40, abs=1e-6)
+    assert cur["cash"] == pytest.approx(0.30, abs=1e-6)
+    # weights whose total is slightly over 1 are rounding, not percentages
+    p2 = _profile("mateo", current_holdings={"XIU.TO": 0.34, "XBB.TO": 0.33, "RY.TO": 0.34})
+    cur2 = resolve_current(p2, info)
+    assert sum(cur2["analysed"].values()) == pytest.approx(1.0, abs=1e-6) and cur2["cash"] == 0
+
+
+def test_pinned_bond_idea_stays_feasible_under_the_growth_floor():
+    p = _profile(
+        "amira", objective="growth", risk_tolerance="high", risk_capacity="high",
+        request_type="judge", requested_idea={"ticker": "XBB.TO", "weight": 0.15},
+    )
+    capped = _by_name(_run(p))["capped"].weights
+    assert capped["XBB.TO"] == pytest.approx(0.15, abs=TOL)
+    assert _share(capped, {"equity", "etf_equity"}) >= 0.85 - 1e-3
+    assert sum(capped.values()) == pytest.approx(1.0, abs=1e-6)
