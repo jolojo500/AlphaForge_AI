@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLanguage } from '@/context/LanguageContext';
+import { evidenceLabel } from '@/lib/evidenceText';
 import { Evidence } from '../types';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Database, Search, ExternalLink } from 'lucide-react';
@@ -16,6 +18,8 @@ import {
 interface EvidenceTableProps {
   evidence: Record<string, Evidence>;
   onSelectEvidence: (eid: string) => void;
+  /** Evidence to reveal and highlight; `n` changes on every request so the same id can be asked twice. */
+  focus?: { id: string; n: number } | null;
 }
 
 type PrefixFilter = 'ALL' | 'ES' | 'EQ' | 'EM' | 'EN' | 'EP';
@@ -32,9 +36,28 @@ const PREFIX_LABELS: Record<PrefixFilter, string> = {
 export const EvidenceTable: React.FC<EvidenceTableProps> = ({
   evidence,
   onSelectEvidence,
+  focus,
 }) => {
+  const { language } = useLanguage();
   const [filterPrefix, setFilterPrefix] = useState<PrefixFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [flashId, setFlashId] = useState<string | null>(null);
+
+  // A link in the answer points here: show every row, then scroll to the cited one.
+  useEffect(() => {
+    if (!focus) return;
+    setFilterPrefix('ALL');
+    setSearchQuery('');
+    setFlashId(focus.id);
+    const scroll = window.setTimeout(() => {
+      document.getElementById(`evidence-row-${focus.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    const clear = window.setTimeout(() => setFlashId(null), 3200);
+    return () => {
+      window.clearTimeout(scroll);
+      window.clearTimeout(clear);
+    };
+  }, [focus]);
 
   const evidenceList = useMemo(() => Object.values(evidence), [evidence]);
 
@@ -137,11 +160,17 @@ export const EvidenceTable: React.FC<EvidenceTableProps> = ({
                 return (
                   <TableRow
                     key={ev.id}
+                    id={`evidence-row-${ev.id}`}
                     onClick={() => onSelectEvidence(ev.id)}
-                    className="border-border/60 hover:bg-muted/40 cursor-pointer transition-colors"
+                    className={`border-border/60 hover:bg-muted/40 cursor-pointer transition-colors ${
+                      flashId === ev.id ? 'bg-amber-500/20 ring-2 ring-inset ring-amber-500/60' : ''
+                    }`}
                   >
                     <TableCell className="py-2.5 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">
                       {ev.id}
+                      <span className="block font-sans font-normal text-[11px] text-foreground/80 leading-snug max-w-[220px] whitespace-normal">
+                        {evidenceLabel(ev, language)}
+                      </span>
                     </TableCell>
                     <TableCell className="py-2.5 px-3 font-mono text-foreground max-w-[150px] truncate" title={displayVal}>
                       {displayVal}

@@ -14,12 +14,15 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/LanguageContext';
+import { RichText } from '@/lib/evidenceText';
 
 interface ExplanationSectionProps {
   explanation: Explanation | null;
   verification: Verification | null;
   evidence: Record<string, Evidence>;
   onSelectEvidence: (eid: string) => void;
+  /** Jump to the evidence row in the registry; falls back to opening the evidence dialog. */
+  onJump?: (eid: string) => void;
 }
 
 export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
@@ -27,9 +30,11 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
   verification,
   evidence,
   onSelectEvidence,
+  onJump,
 }) => {
   const { language, t } = useLanguage();
   const isEn = language === 'en';
+  const lang = isEn ? 'en' : 'fr';
 
   // If verification failed explicitly, show the failure panel instead of explanation
   if (verification && verification.passed === false) {
@@ -91,7 +96,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-sky-800 dark:text-sky-300 block mb-0.5">
               {t('explain.summary', "Synthèse de l'analyse :")}
             </span>
-            <p>{explanation.resume}</p>
+            <p><RichText text={explanation.resume} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
           </div>
         )}
 
@@ -109,7 +114,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.quelles_donnees?.map((item, idx) => (
                 <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug">{item.claim}</p>
+                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
                   <div className="flex flex-wrap items-center mt-1">
                     {item.evidence?.map((eid) => (
                       <EvidenceChip
@@ -137,7 +142,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.pourquoi_ce_choix?.map((item, idx) => (
                 <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug">{item.claim}</p>
+                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
                   <div className="flex flex-wrap items-center mt-1">
                     {item.evidence?.map((eid) => (
                       <EvidenceChip
@@ -165,7 +170,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.limites?.map((item, idx) => (
                 <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug">{item.claim}</p>
+                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
                   <div className="flex flex-wrap items-center mt-1">
                     {item.evidence?.map((eid) => (
                       <EvidenceChip
@@ -193,7 +198,7 @@ export const ExplanationSection: React.FC<ExplanationSectionProps> = ({
             <ul className="space-y-2 text-xs text-foreground">
               {explanation.ce_qui_changerait_la_reponse?.map((item, idx) => (
                 <li key={idx} className="bg-card p-3 rounded-lg border border-border/70 shadow-2xs">
-                  <p className="mb-1 text-foreground leading-snug">{item.claim}</p>
+                  <p className="mb-1 text-foreground leading-snug"><RichText text={item.claim} evidence={evidence} onJump={onJump ?? onSelectEvidence} lang={lang} /></p>
                   <div className="flex flex-wrap items-center mt-1">
                     {item.evidence?.map((eid) => (
                       <EvidenceChip

@@ -150,7 +150,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
             <div>
               <label className="block text-xs font-medium text-foreground mb-2">
                 Modifier la tolérance au risque (actuelle :{' '}
-                <span className="font-semibold text-primary">{currentProfile?.risk_tolerance || '—'}</span>)
+                <span className="font-semibold text-primary">{({ low: 'faible', low_moderate: 'faible à modérée', moderate: 'modérée', high: 'élevée' } as Record<string, string>)[currentProfile?.risk_tolerance || ''] || '—'}</span>)
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
@@ -183,7 +183,7 @@ export const WhatIfControls: React.FC<WhatIfControlsProps> = ({
             <div>
               <label className="block text-xs font-medium text-foreground mb-2">
                 Changer le type de compte fiscal (actuel :{' '}
-                <span className="font-semibold text-primary">{currentProfile?.account_type || 'non_registered'}</span>)
+                <span className="font-semibold text-primary">{({ tfsa: 'CELI', rrsp: 'REER', fhsa: 'CELIAPP', resp: 'REEE', non_registered: 'non enregistré' } as Record<string, string>)[currentProfile?.account_type || 'non_registered'] || currentProfile?.account_type}</span>)
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {[

@@ -5,6 +5,7 @@ import {
   ChevronUp,
   AlertTriangle,
   RotateCcw,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   GraphState,
@@ -25,6 +26,14 @@ import { WhatIfDiffView } from './WhatIfDiffView';
 import { AdvisorReviewPanel } from './AdvisorReviewPanel';
 import { SimulationBanner } from './SimulationBanner';
 import { AppHeader } from './AppHeader';
+import { RichText } from '@/lib/evidenceText';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface ResponseScreenProps {
   runState: GraphState;
@@ -83,6 +92,16 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
     .trim();
 
   const effectiveRunId = runState.run_id || null;
+
+  const [whatIfOpen, setWhatIfOpen] = useState(false);
+  const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
+  const lang = isEn ? 'en' : 'fr';
+
+  // A number in the answer links to its evidence: open the details and go to that row.
+  const handleJumpToEvidence = (id: string) => {
+    setShowDetails(true);
+    setFocus((prev) => ({ id, n: (prev?.n ?? 0) + 1 }));
+  };
 
   const handleToggleDetails = () => {
     const nextState = !showDetails;
@@ -207,7 +226,12 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
               <div className="space-y-3.5 text-xs sm:text-sm leading-relaxed text-foreground font-normal">
                 {runState.explanation.resume.split('\n\n').map((paragraph, idx) => (
                   <p key={idx} className="leading-relaxed">
-                    {paragraph}
+                    <RichText
+                      text={paragraph}
+                      evidence={runState.evidence || {}}
+                      onJump={handleJumpToEvidence}
+                      lang={lang}
+                    />
                   </p>
                 ))}
               </div>
@@ -223,15 +247,40 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
             </div>
           )}
 
-          {/* Action Buttons: Poser une autre question & Voir plus de détails */}
+          {/* Result of a what-if: what changed compared with the previous answer */}
+          {(whatIfDiff || isWhatIfRunning) && (
+            <div className="space-y-2">
+              {isWhatIfRunning && (
+                <div className="flex items-center justify-center gap-2 p-3 rounded-xl border border-border bg-card text-xs text-muted-foreground">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  {isEn ? 'Re-running the analysis with the changed assumption...' : "Relance de l'analyse avec l'hypothèse modifiée..."}
+                </div>
+              )}
+              <WhatIfDiffView diff={whatIfDiff} onClose={onCloseWhatIfDiff} />
+            </div>
+          )}
+
+          {/* Action Buttons: Poser une autre question, Et si..., Voir plus de détails */}
           <div className="space-y-2.5 pt-2 max-w-xl mx-auto">
-            <Button
-              type="button"
-              onClick={onAskAnother}
-              className="w-full h-10 text-xs sm:text-sm font-medium cursor-pointer"
-            >
-              {isEn ? 'Ask another question' : 'Poser une autre question'}
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <Button
+                type="button"
+                onClick={onAskAnother}
+                className="w-full h-10 text-xs sm:text-sm font-medium cursor-pointer"
+              >
+                {isEn ? 'Ask another question' : 'Poser une autre question'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setWhatIfOpen(true)}
+                disabled={isWhatIfRunning}
+                className="w-full h-10 text-xs sm:text-sm font-medium cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>{isEn ? 'What if…? Change one assumption' : 'Et si… ? Modifier une hypothèse'}</span>
+              </Button>
+            </div>
 
             <Button
               type="button"
@@ -308,6 +357,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
                 verification={runState.verification}
                 evidence={runState.evidence}
                 onSelectEvidence={onSelectEvidence}
+                onJump={handleJumpToEvidence}
               />
             )}
 
@@ -319,18 +369,6 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
                 onSelectEvidence={onSelectEvidence}
               />
             )}
-
-            {/* Interactive What-If Sensitivity Simulation (PRD 5.5) */}
-            <div className="space-y-4">
-              <WhatIfDiffView diff={whatIfDiff} onClose={onCloseWhatIfDiff} />
-              <WhatIfControls
-                currentProfile={runState.profile}
-                asOfDate={runState.as_of_date}
-                eligibleTickers={runState.eligible_universe}
-                onRunWhatIf={onRunWhatIf}
-                isRunning={isWhatIfRunning}
-              />
-            </div>
 
             {/* Advisor Review & Suitability Sign-off (PRD B-14, #121, #146) */}
             {effectiveRunId && onReviewed && (
@@ -347,6 +385,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
               <EvidenceTable
                 evidence={runState.evidence}
                 onSelectEvidence={onSelectEvidence}
+                focus={focus}
               />
             )}
 
@@ -361,6 +400,31 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
           </div>
         )}
       </div>
+
+      {/* What-if: the same question asked again with one assumption changed */}
+      <Dialog open={whatIfOpen} onOpenChange={setWhatIfOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEn ? 'What if…?' : 'Et si… ?'}</DialogTitle>
+            <DialogDescription>
+              {isEn
+                ? 'Change one assumption and the same question is analysed again. The differences with the current answer are shown under it.'
+                : "Modifiez une hypothèse : la même question est analysée de nouveau, et les écarts avec la réponse actuelle s'affichent sous celle-ci."}
+            </DialogDescription>
+          </DialogHeader>
+          <WhatIfControls
+            currentProfile={runState.profile}
+            asOfDate={runState.as_of_date}
+            eligibleTickers={runState.eligible_universe}
+            onRunWhatIf={(field, value) => {
+              setWhatIfOpen(false);
+              onRunWhatIf(field, value);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            isRunning={isWhatIfRunning}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Bottom Uniform Disclaimer Footer */}
       <footer className="w-full max-w-4xl mx-auto py-6 text-center text-[11px] text-muted-foreground border-t border-border/40 select-none">
