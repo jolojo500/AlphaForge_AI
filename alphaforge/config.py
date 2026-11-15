@@ -14,7 +14,6 @@ load_dotenv(REPO_ROOT / ".env")
 
 # If explicit AWS access keys are provided, do not let a placeholder AWS_PROFILE override them
 if os.getenv("AWS_ACCESS_KEY_ID") and "AWS_PROFILE" in os.environ:
-    from pathlib import Path
     if not (Path.home() / ".aws" / "config").exists() and not (Path.home() / ".aws" / "credentials").exists():
         del os.environ["AWS_PROFILE"]
 

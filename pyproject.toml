@@ -19,6 +19,8 @@ dependencies = [
     "langgraph-checkpoint-aws>=1.2.7",
     "pyjwt[crypto]>=2.8",
     "cryptography>=42.0.0",
+    "python-dotenv>=1.0",
+    "certifi>=2024.2.2",
 ]
 
 [dependency-groups]
