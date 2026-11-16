@@ -10,16 +10,15 @@ kept; news feeds the present-day view only. Budget: 8 tool calls, 40 classified 
 """
 from __future__ import annotations
 
-import csv
 import datetime as dt
 import re
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel
 
 from alphaforge import config, llm
+from alphaforge.data.market_db import get_merged_universe_dict
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.state import GraphState
 from alphaforge.tools.news import NewsItem, fetch_company_news, fetch_etf_holdings
@@ -32,10 +31,8 @@ MAX_EVENTS = 12
 LOOKBACK_DAYS = 180
 
 
-@lru_cache(maxsize=1)
 def _universe() -> dict[str, dict]:
-    with open(config.STARTER_DIR / "assets_universe.csv", newline="") as f:
-        return {r["ticker"]: r for r in csv.DictReader(f)}
+    return get_merged_universe_dict()
 
 
 RiskType = Literal[

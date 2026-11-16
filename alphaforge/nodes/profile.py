@@ -9,16 +9,22 @@ it falls back to the persona table plus a regex read of the request.
 """
 from __future__ import annotations
 
-import csv
 import datetime as dt
 import re
-from functools import lru_cache
 from typing import Any, Literal
 
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
-from alphaforge import config, llm
+from alphaforge import llm
+from alphaforge.data.dynamic_ingestion import (
+    COMMON_ALIASES,
+    ensure_requested_asset,
+    ensure_ticker_in_db,
+    is_stop_token,
+    resolve_candidate_symbol,
+)
+from alphaforge.data.market_db import get_merged_universe_dict
 from alphaforge.evidence import EvidenceRegistry
 from alphaforge.i18n import detect_language
 from alphaforge.nodes.scenarios import CAPS
@@ -114,7 +120,11 @@ SYSTEM = (
     "Extract only what the text says. Never invent a number, a ticker or a preference. "
     "Weights in words count: 'un quart' = 25, 'la moitié' = 50. "
     "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
-    "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
+    "'build' when they want an allocation. "
+    "If the person names a specific asset, stock, ETF, or crypto (e.g. 'TSMC', 'NVDA', 'Dogecoin', 'Amazon', 'Bitcoin', 'Tesla', 'ASML', 'Palantir'), "
+    "extract its standard market ticker symbol (e.g. 'TSM' for TSMC, 'AMZN' for Amazon, 'TSLA' for Tesla, 'DOGE-USD' for Dogecoin, 'BTC-USD' for Bitcoin, 'PLTR' for Palantir). "
+    "If it is in the starter universe, use that exact ticker; if outside, return its standard Yahoo Finance ticker symbol so it can be dynamically ingested. "
+    "If no specific asset is named, ticker must be null. "
     "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
     "Strict wording ('sans énergies fossiles', 'uniquement ESG', 'exclure') maps to extra_constraints: esg_only. "
     "extra_preferences are short snake_case tags (e.g. likes_tech, wants_income, esg_tilt). "
@@ -125,18 +135,25 @@ SYSTEM = (
 )
 
 
-@lru_cache(maxsize=1)
+REQUEST_CLASS_CODES = frozenset({"crypto", "equity", "bond", "gold"})  # asset-class keys of an allocation
+
+
 def _universe() -> dict[str, dict]:
-    with open(config.STARTER_DIR / "assets_universe.csv", newline="") as f:
-        return {r["ticker"]: r for r in csv.DictReader(f)}
+    return get_merged_universe_dict()
 
 
 def _resolve_ticker(raw: str | None) -> str | None:
-    """Map a model or regex ticker to a ticker of the 31-asset universe, else None."""
+    """Map a model or regex ticker to a ticker of the curated universe (or of the local DB).
+
+    A ticker outside both is handed to the dynamic ingestion, which only downloads it when
+    ``AF_DYNAMIC_INGESTION`` is on; otherwise, or on any failure, the result is None and
+    the asset stays "hors univers — non analysé" (#164, #175).
+    """
     if not raw:
         return None
+    raw_str = raw.strip()
+    key = raw_str.upper()
     universe = _universe()
-    key = raw.strip().upper()
     for t in universe:
         if key in (t.upper(), t.upper().split(".")[0]):
             return t
@@ -150,7 +167,12 @@ def _resolve_ticker(raw: str | None) -> str | None:
         return "QQQ"
     if key in ("TSX", "TSX60", "XIU"):
         return "XIU.TO"
-    return None
+    if key.lower() in REQUEST_CLASS_CODES or is_stop_token(key):
+        return None
+    sym = COMMON_ALIASES.get(raw_str.lower()) or key
+    if sym in universe:
+        return sym
+    return ensure_ticker_in_db(sym)
 
 
 def _regex_extract(text: str) -> Extraction:
@@ -200,6 +222,12 @@ def _regex_extract(text: str) -> Extraction:
             ticker = "AMZN"
         elif re.search(r"\b(?:shopify)\b", lowered):
             ticker = "SHOP.TO"
+        else:
+            # A security named outside the universe ("l'action PLTR", "dogecoin"): resolved
+            # only if it is already local or the dynamic ingestion (off by default) gets it.
+            cand = resolve_candidate_symbol(primary_text)
+            if cand:
+                ticker = _resolve_ticker(cand)
     horizon = None
     m_h = re.search(r"(\d+)\s*(?:ans?|years?|yrs?)\b", lowered)
     if m_h:
@@ -284,7 +312,7 @@ def extract_profile(
     prompt = (
         f"Persona hypotheses: objective={obj}, horizon={hor} years, tolerance={tol}, capacity={cap}, "
         f"constraints={con}, preferences={pref}.\n"
-        f"Allowed tickers: {', '.join(sorted(_universe()))}.\n"
+        f"Starter universe tickers: {', '.join(sorted(_universe()))}.\n"
         f'Request ({lang_label}): """{primary_text}"""'
     )
     conflicts_inst = (
@@ -302,7 +330,11 @@ def extract_profile(
         "Extract only what the text says. Never invent a number, a ticker or a preference. "
         "Weights in words count: 'un quart' = 25, 'la moitié' = 50, 'one quarter' = 25, 'half' = 50. "
         "request_type is 'judge' when the person proposes a specific asset or weight to evaluate, "
-        "'build' when they want an allocation. ticker must be one of the listed tickers, else null. "
+        "'build' when they want an allocation. "
+        "If the person names a specific asset, stock, ETF, or crypto (e.g. 'TSMC', 'NVDA', 'Dogecoin', 'Amazon', 'Bitcoin', 'Tesla', 'ASML', 'Palantir'), "
+        "extract its standard market ticker symbol (e.g. 'TSM' for TSMC, 'AMZN' for Amazon, 'TSLA' for Tesla, 'DOGE-USD' for Dogecoin, 'BTC-USD' for Bitcoin, 'PLTR' for Palantir). "
+        "If it is in the starter universe, use that exact ticker; if outside, return its standard Yahoo Finance ticker symbol so it can be dynamically ingested. "
+        "If no specific asset is named, ticker must be null. "
         "requested_allocation holds the weights the request names, as fractions: keys are listed tickers or the "
         "asset-class codes crypto, equity, bond, gold (e.g. 'garder 50 % en crypto' -> {\"crypto\": 0.5}); null if none. "
         "extra_constraints may only use: no_crypto, esg_only, no_controversies. "
@@ -1018,6 +1050,9 @@ def is_contradictory_profile(
 def profile_node(state: GraphState) -> dict:
     lang: Literal["fr", "en"] = getattr(state, "language", None) or detect_language(state.request_text)
     text = state.request_text.strip()
+    # Dynamic ingestion of a security named outside the universe: no-op unless
+    # AF_DYNAMIC_INGESTION=on (never in tests); any failure leaves the asset "Non analysé".
+    ensure_requested_asset(text)
     update: dict = {"language": lang}
     kyc_answers: dict[str, Any] = {}
     clarified_count = state.retries.get("clarify", 0)
@@ -1055,6 +1090,9 @@ def profile_node(state: GraphState) -> dict:
 
     p = state.persona_data or (PERSONAS[state.persona] if state.persona in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
+    for k in ext.requested_allocation or {}:
+        if k not in REQUEST_CLASS_CODES:
+            _resolve_ticker(k)  # an allocation line naming an outside ticker may be ingested
     idea = (
         {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
         if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
@@ -1080,6 +1118,9 @@ def profile_node(state: GraphState) -> dict:
             state.persona_data or state.persona, text, kind="review", language=lang
         )
         ticker = _resolve_ticker(ext.ticker)
+        for k in ext.requested_allocation or {}:
+            if k not in REQUEST_CLASS_CODES:
+                _resolve_ticker(k)
         idea = (
             {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
             if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100

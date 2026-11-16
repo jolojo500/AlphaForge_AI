@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from alphaforge import config
+from alphaforge.data.market_db import get_custom_assets_df, get_custom_prices_df
 from alphaforge.data.provider import DataProvider, DateLike
 
 
@@ -51,8 +52,17 @@ class CsvProvider(DataProvider):
 
     # --- DataProvider -------------------------------------------------------------------
 
-    def universe(self) -> pd.DataFrame:
-        return self._universe.copy()
+    def universe(self, include_custom: Iterable[str] | None = None) -> pd.DataFrame:
+        """The curated universe; an ingested asset appears only when listed in `include_custom`
+        (never the whole DB), so a download made for one question stays out of the others."""
+        base = self._universe.copy()
+        wanted = [t for t in (include_custom or []) if t not in set(base["ticker"])]
+        if not wanted:
+            return base
+        custom = get_custom_assets_df(tickers=wanted)
+        if custom.empty:
+            return base
+        return pd.concat([base, custom], ignore_index=True)
 
     def prices(
         self,
@@ -61,6 +71,14 @@ class CsvProvider(DataProvider):
         end: DateLike | None = None,
     ) -> pd.DataFrame:
         df = self._prices
+        if tickers is not None:
+            t_list = list(tickers)
+            custom_tickers = [t for t in t_list if t not in set(self._universe["ticker"])]
+            if custom_tickers:
+                custom_df = get_custom_prices_df(tickers=custom_tickers)
+                if not custom_df.empty:
+                    df = pd.concat([df, custom_df], ignore_index=True)
+
         mask = pd.Series(True, index=df.index)
         if tickers is not None:
             mask &= df["ticker"].isin(list(tickers))

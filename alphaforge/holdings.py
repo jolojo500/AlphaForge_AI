@@ -219,12 +219,9 @@ class DeclaredHoldings(dict):
 
 
 def _universe_tickers() -> list[str]:
-    import csv
+    from alphaforge.data.market_db import get_merged_universe_dict
 
-    from alphaforge import config
-
-    with open(config.STARTER_DIR / "assets_universe.csv", newline="") as f:
-        return [r["ticker"] for r in csv.DictReader(f)]
+    return list(get_merged_universe_dict().keys())
 
 
 def normalise_ticker(raw: str, universe: list[str] | set[str] | None = None) -> tuple[str, bool]:

@@ -243,14 +243,33 @@ def apply_constraints(
 @traced("screening")
 def screening_node(state: GraphState) -> dict:
     reg = EvidenceRegistry("ES")
-    universe = get_provider().universe().sort_values("ticker", ignore_index=True)
     profile = state.profile
+    requested = (profile.requested_idea or {}).get("ticker") if profile else None
+    asked = ({requested} if requested else set()) | set(profile.requested_allocation or {} if profile else {})
+    universe = get_provider().universe(include_custom=asked).sort_values("ticker", ignore_index=True)
     if profile is None:
         return {
             "eligible_universe": list(universe["ticker"]),
             "evidence": reg.items(),
             "summary": "Profil absent : aucun filtre appliqué.",
         }
+
+    # An ingested asset (asset_id "DYN_...") goes through the same rules as the curated
+    # ones, on fields read from Yahoo Finance; the evidence says so (assumption).
+    if "asset_id" in universe.columns:
+        for _, row in universe[universe["asset_id"].astype(str).str.startswith("DYN_")].iterrows():
+            retrieved = row.get("retrieved_at")
+            retrieved = "date inconnue" if retrieved is None or pd.isna(retrieved) else str(retrieved)
+            reg.add(
+                f"{row['ticker']} est hors de l'univers curaté : téléchargé depuis Yahoo Finance le "
+                f"{retrieved} ; les règles de sélection s'appliquent à partir de la classe "
+                f"« {row['asset_class']} », du marché « {row['market']} » et du secteur "
+                f"« {row.get('sector') or 'Inconnu'} » lus de Yahoo Finance, non vérifiés.",
+                source=f"Yahoo Finance via yfinance, téléchargé le {retrieved} (hors univers curaté)",
+                date=state.as_of_date,
+                method="dynamic ingestion (AF_DYNAMIC_INGESTION): screening on unverified Yahoo Finance fields",
+                confidence="assumption",
+            )
 
     eligible, hits, notes = apply_constraints(
         profile, universe, holdings_dir=HOLDINGS_DIR, as_of=state.as_of_date

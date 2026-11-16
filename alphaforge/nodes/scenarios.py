@@ -45,6 +45,7 @@ from alphaforge.nodes.quant import (
     concentration,
     max_drawdown,
     stress_2022,
+    stress_2022_note,
     usd_exposure,
     volatility,
 )
@@ -498,7 +499,12 @@ def translate_request(profile: Profile, info: pd.DataFrame) -> dict | None:
         groups = [(t, [t], wt) for t, wt in sorted(explicit.items())]
         blocked = set(explicit)
         for code, wt in sorted(classes.items()):
-            in_class = [t for t in info.index if info.at[t, "asset_class"] in REQUEST_CLASSES[code]]
+            in_class = [
+                t
+                for t in info.index
+                if info.at[t, "asset_class"] in REQUEST_CLASSES[code]
+                and not str(info.at[t, "asset_id"] if "asset_id" in info.columns else "").startswith("DYN_")
+            ]
             blocked.update(in_class)
             members = sorted(t for t in in_class if t not in explicit)
             if not members:
@@ -1035,7 +1041,9 @@ def scenarios_node(state: GraphState) -> dict:
         }
 
     provider = get_provider()
-    info = provider.asset_info()
+    # An ingested asset (AF_DYNAMIC_INGESTION) is only known to the provider when asked for.
+    asked_idea = (profile.requested_idea or {}).get("ticker")
+    info = provider.asset_info(include_custom=sorted(set(eligible) | ({asked_idea} if asked_idea else set())))
     blocking = [o for o in state.objections if o.get("severity") == "blocking"]
     rounds = state.retries.get("red_team", 0) if blocking else 0
     request = translate_request(profile, info)
@@ -1150,6 +1158,18 @@ def scenarios_node(state: GraphState) -> dict:
 
     # Pass 1: standard risk metrics (EP2..EP7, EP8..EP13, EP14..EP19)
     price_source = getattr(provider, "evidence_source", SOURCE)
+    for name in SCENARIO_NAMES:
+        if all_values[name].get("stress_2022") is not None:
+            continue
+        note = stress_2022_note(prices, weights[name].to_dict(), f"Scénario {name}")
+        if note:
+            reg.add(
+                note,
+                source=price_source,
+                date=end,
+                method="2022 stress window not usable for every line of the scenario (short history)",
+                confidence="assumption",
+            )
     base_metrics = [m for m in SCENARIO_METRICS if m not in ("tax_drag", "fee_drag")]
     for name in SCENARIO_NAMES:
         values = all_values[name]

@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-  RotateCcw,
   SlidersHorizontal,
 } from 'lucide-react';
 import {
@@ -41,11 +40,10 @@ interface ResponseScreenProps {
   userProfile: UserOnboardingProfile | null;
   customProfile?: UserOnboardingProfile | null;
   activePersonaId?: 'custom' | 'robert' | 'amira' | 'mateo';
-  onSelectPersona?: (personaId: 'custom' | 'robert' | 'amira' | 'mateo') => void;
   requestText: string;
   onAskAnother: () => void;
   onEditProfile: () => void;
-  onResetProfile?: () => void;
+  onOpenProfile?: () => void;
   onSelectEvidence: (evidenceId: string) => void;
   whatIfDiff: WhatIfDiff | null;
   /** The run before the what-if, kept on screen beside the new one. */
@@ -56,7 +54,6 @@ interface ResponseScreenProps {
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
-  onOpenProfile?: () => void;
   onLogout?: () => void;
   onReviewed?: (updated: Partial<GraphState>) => void;
 }
@@ -91,11 +88,10 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   userProfile,
   customProfile,
   activePersonaId = 'custom',
-  onSelectPersona,
   requestText,
   onAskAnother,
   onEditProfile,
-  onResetProfile,
+  onOpenProfile,
   onSelectEvidence,
   whatIfDiff,
   whatIfBaseline,
@@ -105,7 +101,6 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   onOpenHistory,
   currentUser,
   onOpenAuth,
-  onOpenProfile,
   onLogout,
   onReviewed,
 }) => {
@@ -153,39 +148,21 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   let sectionCounter = 0;
   const nextSection = () => ++sectionCounter;
 
-  // The pointer sentence of the explanation becomes a link to the detailed section.
+  // The pointer sentence is stripped because the details section is directly accessible below.
   const renderParagraph = (paragraph: string, idx: number) => {
     const pointer = isEn ? POINTER_EN : POINTER_FR;
     const hasPointer = paragraph.includes(pointer);
     const body = hasPointer ? paragraph.replace(pointer, '').trim() : paragraph;
+    if (!body) return null;
     return (
       <p key={idx} className="leading-relaxed">
-        {body && (
-          <RichText
-            text={body}
-            evidence={runState.evidence || {}}
-            onJump={handleJumpToEvidence}
-            lang={lang}
-            scenarioCount={scenarioCount}
-          />
-        )}
-        {hasPointer && (
-          <>
-            {body ? ' ' : ''}
-            <button
-              type="button"
-              onClick={() => {
-                if (!showDetails) handleToggleDetails();
-                else detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="text-primary underline decoration-dotted underline-offset-2 hover:decoration-solid cursor-pointer text-left"
-            >
-              {isEn
-                ? 'See the detailed allocation and the check of your limits.'
-                : 'Voir la répartition détaillée et la vérification de vos limites.'}
-            </button>
-          </>
-        )}
+        <RichText
+          text={body}
+          evidence={runState.evidence || {}}
+          onJump={handleJumpToEvidence}
+          lang={lang}
+          scenarioCount={scenarioCount}
+        />
       </p>
     );
   };
@@ -209,28 +186,12 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
           userProfile={userProfile}
           customProfile={customProfile}
           activePersonaId={activePersonaId}
-          onSelectPersona={onSelectPersona}
           onEditProfile={onEditProfile}
+          onOpenProfile={onOpenProfile}
           onOpenHistory={onOpenHistory}
           currentUser={currentUser}
           onOpenAuth={onOpenAuth}
-          onOpenProfile={onOpenProfile}
           onLogout={onLogout}
-          rightActions={
-            onResetProfile ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onResetProfile}
-                className="h-8 gap-1 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
-                title={isEn ? 'Reset profile and return to home' : "Réinitialiser et retourner à l'accueil"}
-                aria-label={isEn ? 'Reset profile and return to home' : "Réinitialiser le profil et retourner à l'accueil"}
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isEn ? 'Reset' : 'Réinitialiser'}</span>
-              </Button>
-            ) : undefined
-          }
         />
 
         {/* Main Content Area */}

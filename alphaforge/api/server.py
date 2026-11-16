@@ -435,6 +435,11 @@ async def lifespan(_: FastAPI):
             from infra.sync_s3 import pull_caches
 
             pull_caches(bucket_name=bucket)
+            # Ingested assets (cache/ingested/*.json) back into the SQLite cache lost at redeploy.
+            from alphaforge.data.market_db import ingestion_enabled, load_ingested_from_cache
+
+            if ingestion_enabled():
+                load_ingested_from_cache()
         except Exception:
             logging.exception("Failed to pull caches from S3 bucket %s", bucket)
 
@@ -781,7 +786,7 @@ def update_user_profile_endpoint(
 ) -> dict[str, Any]:
     """Update profile, current holdings, and account type in the users store."""
     res = get_user_store().save_user_profile(
-        user_id=user.username,
+        user_id=user.user_id or user.username,
         profile=req.profile,
         current_holdings=req.current_holdings,
         account_type=req.account_type,

@@ -15,6 +15,9 @@ import {
   createWhatIf,
   fetchRunDiff,
   getStoredUser,
+  setStoredUser,
+  setAuthToken,
+  clearAuth,
   fetchCurrentUser,
   logout,
   getAuthToken,
@@ -75,6 +78,7 @@ export const AppContent: React.FC = () => {
   // Authentication state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  // Read-only versioned profile view (history, dossier download, #170/#192); edits go through the questionnaire.
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   // Unsubscribe ref for SSE stream
@@ -111,13 +115,19 @@ export const AppContent: React.FC = () => {
 
   // Verify auth session on mount, then restore the server profile (#170)
   useEffect(() => {
+    const stored = getStoredUser();
+    if (stored) {
+      setCurrentUser(stored);
+    }
     if (getAuthToken()) {
       fetchCurrentUser()
         .then((res) => {
           setCurrentUser(res.user);
+          setStoredUser(res.user);
           void hydrateProfileFromServer();
         })
         .catch(() => {
+          clearAuth();
           setCurrentUser(null);
         });
     }
@@ -125,7 +135,17 @@ export const AppContent: React.FC = () => {
 
   const handleLogout = () => {
     logout();
+    clearAuth();
     setCurrentUser(null);
+    setCustomProfile(null);
+    setActivePersonaId('custom');
+    setInitialQuery('');
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn('Error clearing localStorage:', e);
+    }
+    setView('welcome');
   };
 
   // Check localStorage on mount
@@ -182,7 +202,7 @@ export const AppContent: React.FC = () => {
   const handleOnboardingComplete = (profile: UserOnboardingProfile) => {
     persistProfile(profile);
     setActivePersonaId('custom');
-    if (getAuthToken() && currentUser) {
+    if (getAuthToken()) {
       saveQuestionnaire(profile)
         .then((res) => {
           persistProfile({ ...profile, profileVersion: res.profile_version ?? profile.profileVersion ?? null });
@@ -192,37 +212,23 @@ export const AppContent: React.FC = () => {
     setView('query');
   };
 
-  // Reset user profile & localStorage
-  const handleResetProfile = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      console.warn('Error clearing localStorage:', e);
-    }
-    setCustomProfile(null);
-    setActivePersonaId('robert');
-    setView('welcome');
-  };
-
-  // Pick demo persona and navigate to query screen with question pre-filled (NO auto-launch!)
+  // Pick demo persona: shortcut to authenticate as this preconfigured profile, leave question empty, navigate to query
   const handleSelectDemo = (personaId: 'robert' | 'amira' | 'mateo') => {
     setActivePersonaId(personaId);
-    const demo = DEMO_PERSONAS[personaId];
-    if (demo) {
-      setInitialQuery(demo.canonicalQuestion);
-    }
-    setView('query');
-  };
+    setInitialQuery(''); // Question input field is intentionally left empty
 
-  // Switch persona from QueryScreen dropdown
-  const handleSelectPersona = (personaId: PersonaChoice) => {
-    setActivePersonaId(personaId);
-    const demo = personaId !== 'custom' ? DEMO_PERSONAS[personaId] : null;
-    if (demo) {
-      setInitialQuery(demo.canonicalQuestion);
-    } else {
-      setInitialQuery('');
-    }
+    const demo = DEMO_PERSONAS[personaId];
+    const demoUser: AuthUser = {
+      user_id: `demo-${personaId}`,
+      username: demo.name,
+      email: `${personaId}@alphaforge.demo`,
+      is_advisor: false,
+    };
+    setCurrentUser(demoUser);
+    setStoredUser(demoUser);
+    setAuthToken(`demo-${personaId}`);
+
+    setView('query');
   };
 
   // Launch live multi-agent backend execution
@@ -420,7 +426,8 @@ export const AppContent: React.FC = () => {
           onOpenHistory={currentUser ? () => setIsReplayModalOpen(true) : undefined}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onEditProfile={() => setView('onboarding')}
+          onOpenProfile={currentUser ? () => setIsProfileModalOpen(true) : undefined}
           onLogout={handleLogout}
         />
         <ReplayRunModal
@@ -448,9 +455,9 @@ export const AppContent: React.FC = () => {
   if (view === 'onboarding') {
     return (
       <OnboardingFlow
-        initialProfile={customProfile}
+        initialProfile={customProfile || activeProfile}
         onComplete={handleOnboardingComplete}
-        onCancel={customProfile ? () => setView('query') : () => setView('welcome')}
+        onCancel={customProfile || currentUser ? () => setView('query') : () => setView('welcome')}
       />
     );
   }
@@ -463,14 +470,12 @@ export const AppContent: React.FC = () => {
           profile={activeProfile}
           customProfile={customProfile}
           activePersonaId={activePersonaId}
-          onSelectPersona={handleSelectPersona}
           onEditProfile={() => setView('onboarding')}
-          onResetProfile={handleResetProfile}
+          onOpenProfile={currentUser ? () => setIsProfileModalOpen(true) : undefined}
           onRunQuery={handleStartRun}
           onOpenHistory={() => setIsReplayModalOpen(true)}
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
-          onOpenProfile={() => setIsProfileModalOpen(true)}
           onLogout={handleLogout}
           initialQuery={initialQuery}
         />
@@ -577,11 +582,10 @@ export const AppContent: React.FC = () => {
             userProfile={activeProfile}
             customProfile={customProfile}
             activePersonaId={activePersonaId}
-            onSelectPersona={handleSelectPersona}
             requestText={lastPayload?.request_text || runState.request_text}
             onAskAnother={() => setView('query')}
             onEditProfile={() => setView('onboarding')}
-            onResetProfile={handleResetProfile}
+            onOpenProfile={currentUser ? () => setIsProfileModalOpen(true) : undefined}
             onSelectEvidence={setSelectedEvidenceId}
             whatIfDiff={whatIfDiff}
             whatIfBaseline={whatIfBaseline}
@@ -594,7 +598,6 @@ export const AppContent: React.FC = () => {
             onOpenHistory={() => setIsReplayModalOpen(true)}
             currentUser={currentUser}
             onOpenAuth={() => setIsAuthModalOpen(true)}
-            onOpenProfile={() => setIsProfileModalOpen(true)}
             onLogout={handleLogout}
             onReviewed={(updated) => {
               setRunState((prev) => (prev ? { ...prev, ...updated } : null));

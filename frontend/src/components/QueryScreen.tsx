@@ -5,22 +5,19 @@ import { PayloadModal } from './PayloadModal';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/context/LanguageContext';
-import { DEMO_PERSONAS } from '../lib/demoProfiles';
 import { AppHeader } from './AppHeader';
-import { ArrowUpRight, RotateCcw } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 interface QueryScreenProps {
   profile: UserOnboardingProfile;
   customProfile: UserOnboardingProfile | null;
   activePersonaId: 'custom' | 'robert' | 'amira' | 'mateo';
-  onSelectPersona: (personaId: 'custom' | 'robert' | 'amira' | 'mateo') => void;
   onEditProfile: () => void;
-  onResetProfile: () => void;
+  onOpenProfile?: () => void;
   onRunQuery: (payload: BackendRunPayload) => void;
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
-  onOpenProfile?: () => void;
   onLogout?: () => void;
   initialQuery?: string;
 }
@@ -29,14 +26,12 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   profile,
   customProfile,
   activePersonaId,
-  onSelectPersona,
   onEditProfile,
-  onResetProfile,
+  onOpenProfile,
   onRunQuery,
   onOpenHistory,
   currentUser,
   onOpenAuth,
-  onOpenProfile,
   onLogout,
   initialQuery = '',
 }) => {
@@ -79,33 +74,12 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
         userProfile={profile}
         customProfile={customProfile}
         activePersonaId={activePersonaId}
-        onSelectPersona={(val) => {
-          onSelectPersona(val);
-          const demo = val !== 'custom' ? DEMO_PERSONAS[val] : null;
-          if (demo) {
-            setQuery(demo.canonicalQuestion);
-          }
-        }}
         onEditProfile={onEditProfile}
+        onOpenProfile={onOpenProfile}
         onOpenHistory={onOpenHistory}
         currentUser={currentUser}
         onOpenAuth={onOpenAuth}
-        onOpenProfile={onOpenProfile}
         onLogout={onLogout}
-        rightActions={
-          onResetProfile && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onResetProfile}
-              className="h-8 gap-1 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
-              title={isEn ? 'Reset profile and return to home' : "Réinitialiser et retourner à l'accueil"}
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{isEn ? 'Reset' : 'Réinitialiser'}</span>
-            </Button>
-          )
-        }
       />
 
       {/* Main Centered Content */}

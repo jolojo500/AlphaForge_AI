@@ -1,6 +1,5 @@
 import React from 'react';
 import { Evidence } from '../types';
-import { EvidencePopover } from '@/components/EvidencePopover';
 import { fixScenarioCount, scenarioName } from '@/lib/labels';
 
 /**
@@ -159,31 +158,18 @@ export const RichText: React.FC<RichTextProps> = ({ text, evidence, onJump, lang
       ? m[1].trim()
       : `(${lang === 'en' ? `see evidence ${id}` : `voir la preuve ${id}`})`;
     const className = m[1] ? NUMBER_CLASS : LONE_CLASS;
-    if (ev) {
-      nodes.push(
-        <EvidencePopover key={key} id={id} evidence={ev} lang={lang} onOpenRegistry={onJump}>
-          <button type="button" title={title} aria-label={title} className={className}>
-            {content}
-          </button>
-        </EvidencePopover>
-      );
-    } else {
-      nodes.push(
-        <a
-          key={key}
-          href={`#evidence-row-${id}`}
-          title={title}
-          aria-label={title}
-          onClick={(e) => {
-            e.preventDefault();
-            onJump(id);
-          }}
-          className={className}
-        >
-          {content}
-        </a>
-      );
-    }
+    nodes.push(
+      <button
+        key={key}
+        type="button"
+        title={title}
+        aria-label={title}
+        onClick={() => onJump(id)}
+        className={className}
+      >
+        {content}
+      </button>
+    );
     last = TOKEN.lastIndex;
   }
   if (last < text.length) nodes.push(humanize(text.slice(last), lang, scenarioCount));
