@@ -6,6 +6,7 @@ import { AppHeader } from './AppHeader';
 import { nodeLabel } from '@/lib/labels';
 import { TOTAL_STEPS, remainingLabel, runProgress } from '@/lib/progress';
 import { type Lang } from '@/lib/format';
+import { GraphProgress } from './GraphProgress';
 
 interface LoadingScreenProps {
   onCancel: () => void;
@@ -31,8 +32,9 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onCancel, trace = 
     <div className="min-h-screen bg-background flex flex-col justify-between px-4 py-5 sm:py-8 font-sans transition-colors">
       <AppHeader />
 
-      <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto space-y-6 py-12 text-center">
-        <div className="w-9 h-9 rounded-full border-2 border-primary border-t-transparent animate-spin" aria-hidden="true" />
+      <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto space-y-5 py-8 text-center">
+        {/* The analysis graph fills in node by node as trace events arrive */}
+        <GraphProgress trace={trace} lang={lang} className="mx-auto" />
 
         <div className="space-y-1.5">
           <h1 className="text-sm sm:text-base font-medium text-foreground tracking-tight">
