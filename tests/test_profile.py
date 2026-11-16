@@ -628,3 +628,15 @@ def test_model_extraction_is_completed_by_the_deterministic_reading(monkeypatch)
 
     res, _ = prof.extract_profile("amira", "Je veux un portfolio complet pour la retraite.")
     assert res.requested_allocation is None and res.ticker is None
+
+
+def test_single_ticker_allocation_without_ticker_becomes_the_idea():
+    """The model sometimes reads "10 % en AMD" as requested_allocation={"AMD": 0.1} and no
+    ticker: the one non-class key is the idea, resolved like a ticker (so it can be ingested)."""
+    ext = prof.Extraction(request_type="judge", requested_allocation={"TSLA": 0.1})
+    built = prof.build_profile("robert", ext, used_fallback=False)
+    assert built.requested_idea == {"ticker": "TSLA", "weight": 0.1}
+    assert built.requested_allocation == {"TSLA": 0.1}
+    # a class key or an unknown ticker (ingestion off) does not become an idea
+    assert prof.build_profile("robert", prof.Extraction(requested_allocation={"crypto": 0.5}), used_fallback=False).requested_idea is None
+    assert prof.build_profile("robert", prof.Extraction(requested_allocation={"AMD": 0.1}), used_fallback=False).requested_idea is None

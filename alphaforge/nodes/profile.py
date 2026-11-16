@@ -175,6 +175,27 @@ def _resolve_ticker(raw: str | None) -> str | None:
     return ensure_ticker_in_db(sym)
 
 
+def _ticker_from_single_allocation(ext: Extraction) -> tuple[str | None, Extraction]:
+    """"10 % en AMD" read by the model as requested_allocation={"AMD": 0.1} and no ticker: the
+    one non-class key is the requested idea. It is resolved like a ticker, so a security outside
+    the universe goes through the dynamic ingestion when it is on; otherwise it stays None."""
+    alloc = ext.requested_allocation or {}
+    keys = [k for k in alloc if str(k).strip().lower() not in REQUEST_CLASS_CODES]
+    if len(keys) != 1:
+        return None, ext
+    resolved = _resolve_ticker(str(keys[0]))
+    if resolved is None:
+        return None, ext
+    try:
+        w = float(alloc[keys[0]])
+    except (TypeError, ValueError):
+        return resolved, ext
+    pct = w * 100 if w <= 1 else w
+    if ext.weight_pct is None and 0 < pct <= 100:
+        ext = ext.model_copy(update={"weight_pct": round(pct, 4)})
+    return resolved, ext
+
+
 def _regex_extract(text: str) -> Extraction:
     """Fallback reader used when the model is unavailable or returns invalid JSON."""
     primary_text = text.split("\n\n[Contexte investisseur]")[0]
@@ -887,6 +908,8 @@ def build_profile(
 ) -> Profile:
     p = persona_data or (PERSONAS[persona_id] if persona_id in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
+    if ticker is None:
+        ticker, ext = _ticker_from_single_allocation(ext)
     idea = None
     if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100:
         idea = {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
@@ -1090,6 +1113,8 @@ def profile_node(state: GraphState) -> dict:
 
     p = state.persona_data or (PERSONAS[state.persona] if state.persona in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
+    if ticker is None:
+        ticker, ext = _ticker_from_single_allocation(ext)
     for k in ext.requested_allocation or {}:
         if k not in REQUEST_CLASS_CODES:
             _resolve_ticker(k)  # an allocation line naming an outside ticker may be ingested
@@ -1118,6 +1143,8 @@ def profile_node(state: GraphState) -> dict:
             state.persona_data or state.persona, text, kind="review", language=lang
         )
         ticker = _resolve_ticker(ext.ticker)
+        if ticker is None:
+            ticker, ext = _ticker_from_single_allocation(ext)
         for k in ext.requested_allocation or {}:
             if k not in REQUEST_CLASS_CODES:
                 _resolve_ticker(k)
