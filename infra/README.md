@@ -63,6 +63,7 @@ All created resources are tagged with `project=alphaforge`.
 | `AF_DYNAMODB_TABLE` | `alphaforge-traces` | DynamoDB table name for storing run traces. |
 | `AF_TRACE_BACKEND` | `dynamodb` | Trace storage backend: `dynamodb` (AWS) or `local` (offline). |
 | `AF_NEWS_MODE` | `cache` (local) / `live` (EC2) | News retrieval mode: `live` fetches fresh company news and web search; `cache` uses committed SEC filings/searches only. |
+| `AF_DYNAMIC_INGESTION` | `off` | `on` lets a run download a ticker outside the 31-asset universe from Yahoo Finance (SQLite cache + S3 `cache/ingested/`), screened like any asset; `off` shows it as "Hors univers · non analysé". |
 | `FINNHUB_API_KEY` | *(None / SSM)* | Finnhub API key for live company news. Resolved from env or SSM Parameter Store `/alphaforge/finnhub_api_key`. |
 | `TAVILY_API_KEY` | *(None / SSM)* | Tavily Search API key for live web search. Resolved from env or SSM Parameter Store `/alphaforge/tavily_api_key`. |
 | `AF_USERS_TABLE` | `alphaforge-users` | DynamoDB table name for storing user profiles (#128). |
