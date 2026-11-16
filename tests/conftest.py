@@ -9,6 +9,8 @@ os.environ.setdefault("AF_AUTH", "off")
 for _var in ("AF_TRACE_BACKEND", "AF_USERS_BACKEND", "AF_SUITABILITY_BACKEND", "AF_DOSSIER_BACKEND"):
     os.environ.setdefault(_var, "local")
 os.environ.setdefault("AF_CHECKPOINTER", "memory")
+# The suite never touches the network: no dynamic asset ingestion from Yahoo Finance.
+os.environ["AF_DYNAMIC_INGESTION"] = "off"
 
 # Ensure offline deterministic fallback for all test fixtures unless --live is requested
 if not any(arg == "--live" for arg in os.sys.argv):

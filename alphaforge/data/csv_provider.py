@@ -53,13 +53,16 @@ class CsvProvider(DataProvider):
     # --- DataProvider -------------------------------------------------------------------
 
     def universe(self, include_custom: Iterable[str] | None = None) -> pd.DataFrame:
+        """The curated universe; an ingested asset appears only when listed in `include_custom`
+        (never the whole DB), so a download made for one question stays out of the others."""
         base = self._universe.copy()
-        custom = get_custom_assets_df(tickers=list(include_custom) if include_custom is not None else None)
-        if not custom.empty:
-            custom_new = custom[~custom["ticker"].isin(base["ticker"])]
-            if not custom_new.empty:
-                base = pd.concat([base, custom_new], ignore_index=True)
-        return base
+        wanted = [t for t in (include_custom or []) if t not in set(base["ticker"])]
+        if not wanted:
+            return base
+        custom = get_custom_assets_df(tickers=wanted)
+        if custom.empty:
+            return base
+        return pd.concat([base, custom], ignore_index=True)
 
     def prices(
         self,
@@ -75,10 +78,6 @@ class CsvProvider(DataProvider):
                 custom_df = get_custom_prices_df(tickers=custom_tickers)
                 if not custom_df.empty:
                     df = pd.concat([df, custom_df], ignore_index=True)
-        else:
-            custom_df = get_custom_prices_df()
-            if not custom_df.empty:
-                df = pd.concat([df, custom_df], ignore_index=True)
 
         mask = pd.Series(True, index=df.index)
         if tickers is not None:

@@ -40,21 +40,36 @@ CALENDAR = "common TSX/US trading days, crypto weekends dropped"
 # --- statistics ---------------------------------------------------------------------------
 
 
+def usable_rows(prices: pd.DataFrame, target: Target) -> pd.DataFrame:
+    """The rows of `prices` where every column of `target` has a price.
+
+    An asset listed after the start of the frame (an ETF created in 2024) has no price
+    before its listing: those rows are not usable for it, nor for a portfolio holding it.
+    """
+    cols = [target] if isinstance(target, str) else list(pd.Series(target, dtype=float).index)
+    return prices[cols].dropna(how="any")
+
+
 def returns(prices: pd.DataFrame, target: Target) -> pd.Series:
     """Daily simple returns of a ticker, or of a portfolio rebalanced daily to `target`."""
+    px = usable_rows(prices, target)
     if isinstance(target, str):
-        return prices[target].pct_change(fill_method=None).dropna()
+        return px[target].pct_change(fill_method=None).dropna()
     w = pd.Series(target, dtype=float)
-    r = prices[list(w.index)].pct_change(fill_method=None).dropna()
+    r = px[list(w.index)].pct_change(fill_method=None).dropna()
     return r.mul(w, axis=1).sum(axis=1)
 
 
 def value(prices: pd.DataFrame, target: Target) -> pd.Series:
-    """Growth of 1 CAD invested on the first date of `prices`."""
+    """Growth of 1 CAD invested on the first usable date of `prices` for `target`.
+
+    Empty (never an IndexError) when the target has no usable row in the frame.
+    """
     r = returns(prices, target)
     if r.empty:
         return pd.Series(dtype=float)
-    start = pd.Series([1.0], index=prices.index[:1])
+    first = usable_rows(prices, target).index[:1]
+    start = pd.Series([1.0], index=first)
     return pd.concat([start, (1 + r).cumprod()])
 
 
@@ -205,15 +220,37 @@ def _holdings_label(
     return f"{etf} {doc.get('source_name', '?')}, as of {doc.get('as_of', '?')} ({scope})"
 
 
+def covers_2022(prices: pd.DataFrame) -> bool:
+    """Whether the frame's calendar spans the 2022 stress window."""
+    return not prices.empty and prices.index[0] <= STRESS_START and prices.index[-1] >= STRESS_END
+
+
 def stress_2022(prices: pd.DataFrame, target: Target) -> dict[str, float] | None:
-    """Total return and max drawdown over 2022 (rate-hike episode), or None if not covered."""
+    """Total return and max drawdown over 2022 (rate-hike episode), or None if not covered.
+
+    None also when the target has too few usable rows in 2022 (an asset listed later):
+    the caller then records "historique insuffisant pour la période 2022".
+    """
     if prices.empty or prices.index[-1] < STRESS_END:
         return None
-    window = prices.loc[STRESS_START:STRESS_END]
+    window = usable_rows(prices.loc[STRESS_START:STRESS_END], target)
     if len(window) < MIN_OBS:
         return None
     v = value(window, target)
+    if v.empty:
+        return None
     return {"return": float(v.iloc[-1] - 1), "drawdown": float((v / v.cummax() - 1).min())}
+
+
+def stress_2022_note(prices: pd.DataFrame, target: Target, label: str) -> str | None:
+    """French assumption note when 2022 is in the frame but not usable for `target`."""
+    if not covers_2022(prices) or stress_2022(prices, target) is not None:
+        return None
+    return (
+        f"{label} : historique insuffisant pour la période 2022 (moins de {MIN_OBS} cotations "
+        "utilisables dans l'année, actif coté après le début de la période) ; le rendement et "
+        "la perte de 2022 ne sont pas calculés."
+    )
 
 
 def rolling_returns_stats(
@@ -230,7 +267,7 @@ def rolling_returns_stats(
     """
     v = value(prices, target)
     window_days = int(window_years * trading_days_per_year)
-    if len(v) <= window_days:
+    if v.empty or len(v) <= window_days:
         return None
     v_arr = v.to_numpy(dtype=float)
     rolling = (v_arr[window_days:] / v_arr[:-window_days]) - 1.0
@@ -246,6 +283,42 @@ def rolling_returns_stats(
     }
 
 
+# --- ingested assets (dynamic ingestion, off by default) ----------------------------------
+
+
+def ingested_assets(info: pd.DataFrame, tickers: list[str] | set[str]) -> dict[str, dict]:
+    """{ticker: row} for the tickers that were downloaded (asset_id "DYN_..."), never curated ones."""
+    out: dict[str, dict] = {}
+    if "asset_id" not in info.columns:
+        return out
+    for t in tickers:
+        if t in info.index and str(info.at[t, "asset_id"]).startswith("DYN_"):
+            out[t] = {k: info.at[t, k] for k in info.columns}
+    return out
+
+
+def _retrieved_at(meta: dict) -> str:
+    v = meta.get("retrieved_at")
+    return str(v) if v is not None and not (isinstance(v, float) and math.isnan(v)) else "date inconnue"
+
+
+def ingested_source(meta: dict) -> str:
+    return f"Yahoo Finance via yfinance, téléchargé le {_retrieved_at(meta)} (hors univers curaté)"
+
+
+def ingested_note(ticker: str, meta: dict) -> str:
+    sector = meta.get("sector")
+    sector = "Inconnu" if sector is None or (isinstance(sector, float) and math.isnan(sector)) else str(sector)
+    return (
+        f"{ticker} ne fait pas partie de l'univers curaté : données téléchargées depuis Yahoo "
+        f"Finance le {_retrieved_at(meta)} à la demande ; classe « {meta.get('asset_class')} », "
+        f"marché « {meta.get('market')} », devise « {meta.get('currency')} » et secteur "
+        f"« {sector} » lus de Yahoo Finance sans vérification, sans transparence de FNB ni "
+        "mandataire à long historique."
+        + (" Secteur inconnu : les vérifications sectorielles ne sont pas faites." if sector == "Inconnu" else "")
+    )
+
+
 # --- node ---------------------------------------------------------------------------------
 
 
@@ -258,11 +331,11 @@ def quant_node(state: GraphState) -> dict:
     reg = EvidenceRegistry("EQ")
     as_of = state.as_of_date
     provider = get_provider()
-    info = provider.asset_info()
-
-    tickers = set(state.eligible_universe)
     idea = state.profile.requested_idea if state.profile else None
     focus = idea.get("ticker") if idea else None
+    tickers = set(state.eligible_universe)
+    # An ingested asset (AF_DYNAMIC_INGESTION) is only known to the provider when asked for.
+    info = provider.asset_info(include_custom=sorted(tickers | ({focus} if focus else set())))
     if focus in info.index:
         tickers.add(focus)  # the requested ticker is analysed even if screening excluded it
     tickers = sorted(tickers)
@@ -280,6 +353,15 @@ def quant_node(state: GraphState) -> dict:
 
     prices = provider.prices_cad(tickers, as_of)
     price_source = getattr(provider, "evidence_source", SOURCE)
+    ingested = ingested_assets(info, tickers)
+    for t, meta in ingested.items():
+        reg.add(
+            ingested_note(t, meta),
+            source=ingested_source(meta),
+            date=as_of,
+            method="dynamic ingestion (AF_DYNAMIC_INGESTION): fields read from Yahoo Finance, unverified",
+            confidence="assumption",
+        )
     if len(prices) < MIN_OBS + 1:
         reg.add(
             f"Historique trop court au {as_of} ({len(prices)} jours de cotation) : "
@@ -296,11 +378,14 @@ def quant_node(state: GraphState) -> dict:
     ppy = periods_per_year(prices.index)
 
     def add(metric: str, key: str, subject, val: float, method: str) -> None:
+        # A figure about an ingested asset cites its download and is an assumption.
+        dyn = [t for t in (subject if isinstance(subject, list) else [subject]) if t in ingested]
         reg.add(
             {"metric": metric, key: subject, "value": _r4(val), "unit": "ratio"},
-            source=price_source,
+            source=ingested_source(ingested[dyn[0]]) if dyn else price_source,
             date=end,
-            method=method,
+            method=method + (f"; {', '.join(dyn)} hors de l'univers curaté" if dyn else ""),
+            confidence="assumption" if dyn else "fact",
         )
 
     for t in tickers:
@@ -322,6 +407,16 @@ def quant_node(state: GraphState) -> dict:
                 "stress_2022_drawdown", "ticker", t, stress["drawdown"],
                 "max drawdown in CAD within 2022-01-03..2022-12-30",
             )
+        else:
+            note = stress_2022_note(prices, t, t)
+            if note:
+                reg.add(
+                    note,
+                    source=price_source,
+                    date=end,
+                    method=f"fewer than {MIN_OBS} usable daily prices for {t} in 2022-01-03..2022-12-30",
+                    confidence="assumption",
+                )
 
     if focus in tickers:
         traded_prices = provider.prices_cad([focus], as_of, field="close")[focus]

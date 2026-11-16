@@ -114,6 +114,18 @@ def crypto_weight(weights: dict[str, float]) -> float:
     return float(sum(w for t, w in weights.items() if u.get(t, {}).get("asset_class") == "crypto"))
 
 
+UNKNOWN_SECTORS = {"", "Inconnu", "nan", "None"}
+
+
+def _sector_label(row: dict) -> str | None:
+    """The universe sector label, or None when it is unknown (ingested asset without one)."""
+    sector = row.get("sector")
+    if sector is None or (isinstance(sector, float) and sector != sector):
+        return None
+    sector = str(sector).strip()
+    return None if sector in UNKNOWN_SECTORS else sector
+
+
 def sector_weights(weights: dict[str, float]) -> dict[str, float]:
     """Scenario weight per universe sector label (funds keep their own label)."""
     u = _universe()
@@ -121,9 +133,15 @@ def sector_weights(weights: dict[str, float]) -> dict[str, float]:
     for t, w in weights.items():
         if w <= 0:
             continue
-        sector = u.get(t, {}).get("sector") or "Autre"
+        sector = _sector_label(u.get(t, {})) or "Autre"
         out[sector] = out.get(sector, 0.0) + float(w)
     return out
+
+
+def unknown_sector_tickers(weights: dict[str, float]) -> list[str]:
+    """Held tickers whose sector is unknown: the sector check cannot run on them."""
+    u = _universe()
+    return sorted(t for t, w in weights.items() if w > EPS and _sector_label(u.get(t, {})) is None)
 
 
 def profile_crypto_cap(profile: Profile) -> float:
@@ -260,6 +278,18 @@ def _sector_entry(profile: Profile, sc: Scenario, evidence: dict[str, Evidence])
     eid = sc.metrics.get("sector_concentration_hhi")
     eids = [eid] if eid else []
     by_sector = sector_weights(sc.weights)
+    unknown = unknown_sector_tickers(sc.weights)
+    if unknown:
+        # Never a check mark for a check that did not run (asset outside the curated universe).
+        return _entry(
+            "sector_cap", "Part maximale par secteur", "Maximum share per sector", sc.name, cap,
+            None, "unknown", eids,
+            _cap(f"{v_fr} : part maximale par secteur non vérifiée, le secteur de "
+                 f"{', '.join(unknown)} est inconnu (actif hors de l'univers curaté)."),
+            _cap(f"{v_en}: maximum share per sector not verified, the sector of "
+                 f"{', '.join(unknown)} is unknown (asset outside the curated universe)."),
+            tickers=unknown,
+        )
     if not by_sector:
         return _entry(
             "sector_cap", "Part maximale par secteur", "Maximum share per sector", sc.name, cap,

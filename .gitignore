@@ -15,6 +15,7 @@ frontend/dist/
 data/traces/
 data/users/
 data/cache/yfinance/
+data/cache/ingested/
 data/*.db
 data/market.db
 .storage/

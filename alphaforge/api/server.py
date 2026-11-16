@@ -435,6 +435,11 @@ async def lifespan(_: FastAPI):
             from infra.sync_s3 import pull_caches
 
             pull_caches(bucket_name=bucket)
+            # Ingested assets (cache/ingested/*.json) back into the SQLite cache lost at redeploy.
+            from alphaforge.data.market_db import ingestion_enabled, load_ingested_from_cache
+
+            if ingestion_enabled():
+                load_ingested_from_cache()
         except Exception:
             logging.exception("Failed to pull caches from S3 bucket %s", bucket)
 

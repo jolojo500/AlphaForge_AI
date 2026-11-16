@@ -21,6 +21,7 @@ from alphaforge.data.dynamic_ingestion import (
     COMMON_ALIASES,
     ensure_requested_asset,
     ensure_ticker_in_db,
+    is_stop_token,
     resolve_candidate_symbol,
 )
 from alphaforge.data.market_db import get_merged_universe_dict
@@ -134,24 +135,24 @@ SYSTEM = (
 )
 
 
+REQUEST_CLASS_CODES = frozenset({"crypto", "equity", "bond", "gold"})  # asset-class keys of an allocation
+
+
 def _universe() -> dict[str, dict]:
     return get_merged_universe_dict()
 
 
 def _resolve_ticker(raw: str | None) -> str | None:
-    """Map a model or regex ticker to a ticker of the starter universe or DB, else None."""
+    """Map a model or regex ticker to a ticker of the curated universe (or of the local DB).
+
+    A ticker outside both is handed to the dynamic ingestion, which only downloads it when
+    ``AF_DYNAMIC_INGESTION`` is on; otherwise, or on any failure, the result is None and
+    the asset stays "hors univers — non analysé" (#164, #175).
+    """
     if not raw:
         return None
     raw_str = raw.strip()
-    alias_match = COMMON_ALIASES.get(raw_str.lower())
-    if alias_match:
-        ensure_ticker_in_db(alias_match)
-        return alias_match
     key = raw_str.upper()
-    if key in ("DOGECOIN", "DOGERCOIN", "DODGECOIN", "DOGE"):
-        ensure_ticker_in_db("DOGE-USD")
-        return "DOGE-USD"
-    ensure_ticker_in_db(key)
     universe = _universe()
     for t in universe:
         if key in (t.upper(), t.upper().split(".")[0]):
@@ -160,23 +161,18 @@ def _resolve_ticker(raw: str | None) -> str | None:
         return "BTC-USD"
     if key in ("ETHER", "ETHEREUM", "ETH"):
         return "ETH-USD"
-    if key in ("DOGECOIN", "DOGE"):
-        return "DOGE-USD"
-    if key in ("SOLANA", "SOL"):
-        return "SOL-USD"
-    if key in ("RIPPLE", "XRP"):
-        return "XRP-USD"
-    if key in ("CARDANO", "ADA"):
-        return "ADA-USD"
-    if key in ("PALANTIR", "PLTR"):
-        return "PLTR"
     if key in ("SP500", "S&P 500", "S&P500", "SNP500", "S&P", "SPY"):
         return "SPY"
     if key in ("NASDAQ", "NAS100", "QQQ"):
         return "QQQ"
     if key in ("TSX", "TSX60", "XIU"):
         return "XIU.TO"
-    return None
+    if key.lower() in REQUEST_CLASS_CODES or is_stop_token(key):
+        return None
+    sym = COMMON_ALIASES.get(raw_str.lower()) or key
+    if sym in universe:
+        return sym
+    return ensure_ticker_in_db(sym)
 
 
 def _regex_extract(text: str) -> Extraction:
@@ -206,12 +202,6 @@ def _regex_extract(text: str) -> Extraction:
             ticker = "ETH-USD"
         elif re.search(r"\b(?:bitcoin|btc)\b", lowered):
             ticker = "BTC-USD"
-        elif re.search(r"\b(?:dogecoin|doge)\b", lowered):
-            ticker = "DOGE-USD"
-        elif re.search(r"\b(?:solana|sol)\b", lowered):
-            ticker = "SOL-USD"
-        elif re.search(r"\b(?:palantir|pltr)\b", lowered):
-            ticker = "PLTR"
         elif re.search(r"\b(?:sp500|s&p\s*500|snp500|s&p)\b", lowered):
             ticker = "SPY"
         elif re.search(r"\b(?:nasdaq|nas100)\b", lowered):
@@ -233,6 +223,8 @@ def _regex_extract(text: str) -> Extraction:
         elif re.search(r"\b(?:shopify)\b", lowered):
             ticker = "SHOP.TO"
         else:
+            # A security named outside the universe ("l'action PLTR", "dogecoin"): resolved
+            # only if it is already local or the dynamic ingestion (off by default) gets it.
             cand = resolve_candidate_symbol(primary_text)
             if cand:
                 ticker = _resolve_ticker(cand)
@@ -1058,7 +1050,8 @@ def is_contradictory_profile(
 def profile_node(state: GraphState) -> dict:
     lang: Literal["fr", "en"] = getattr(state, "language", None) or detect_language(state.request_text)
     text = state.request_text.strip()
-    # Ingest dynamically requested asset if not in base universe or DB
+    # Dynamic ingestion of a security named outside the universe: no-op unless
+    # AF_DYNAMIC_INGESTION=on (never in tests); any failure leaves the asset "Non analysé".
     ensure_requested_asset(text)
     update: dict = {"language": lang}
     kyc_answers: dict[str, Any] = {}
@@ -1097,9 +1090,9 @@ def profile_node(state: GraphState) -> dict:
 
     p = state.persona_data or (PERSONAS[state.persona] if state.persona in PERSONAS else {})
     ticker = _resolve_ticker(ext.ticker)
-    if ext.requested_allocation:
-        for k in ext.requested_allocation:
-            _resolve_ticker(k)
+    for k in ext.requested_allocation or {}:
+        if k not in REQUEST_CLASS_CODES:
+            _resolve_ticker(k)  # an allocation line naming an outside ticker may be ingested
     idea = (
         {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
         if ticker and ext.weight_pct is not None and 0 < ext.weight_pct <= 100
@@ -1125,8 +1118,8 @@ def profile_node(state: GraphState) -> dict:
             state.persona_data or state.persona, text, kind="review", language=lang
         )
         ticker = _resolve_ticker(ext.ticker)
-        if ext.requested_allocation:
-            for k in ext.requested_allocation:
+        for k in ext.requested_allocation or {}:
+            if k not in REQUEST_CLASS_CODES:
                 _resolve_ticker(k)
         idea = (
             {"ticker": ticker, "weight": round(ext.weight_pct / 100, 4)}
