@@ -92,21 +92,27 @@ def create_dev_token(user: User, expires_in_seconds: int = 3600) -> str:
     return jwt.encode(payload, LOCAL_DEV_SECRET, algorithm="HS256")
 
 
+DEMO_PERSONA_IDS: frozenset[str] = frozenset({"amira", "mateo", "robert"})
+
+
 def verify_token(token: str) -> User:
     """Verify Cognito or Dev JWT token and return User object. Raises HTTPException 401 on failure."""
     if not token:
         raise HTTPException(status_code=401, detail="Jeton d'authentification manquant")
 
-    # Demo session tokens for preconfigured demo personas
+    # Fixed session tokens of the three fictional demo personas, and nothing else: any other
+    # "demo-..." string (demo-advisor, demo-<real username>, "demo-") is rejected and never
+    # grants a group. The match is exact (no case folding, no trimming).
     if token.startswith("demo-"):
-        demo_id = token[5:].strip().lower()
-        if demo_id in ("amira", "mateo", "robert"):
+        demo_id = token[5:]
+        if demo_id in DEMO_PERSONA_IDS:
             return User(
                 user_id=f"demo-{demo_id}",
                 username=demo_id.capitalize(),
                 email=f"{demo_id}@alphaforge.demo",
                 groups=[],
             )
+        raise HTTPException(status_code=401, detail="Jeton de démonstration inconnu")
 
     # If auth is off or it's a dev token
     if not is_auth_enabled():

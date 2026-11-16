@@ -39,6 +39,38 @@ def test_dev_token_creation_and_verification():
     demo_u = verify_token("demo-amira")
     assert demo_u.username == "Amira"
     assert demo_u.user_id == "demo-amira"
+    assert demo_u.groups == [] and demo_u.is_advisor is False
+
+
+@pytest.mark.parametrize("token", ["demo-advisor", "demo-wilson", "demo-", "demo-Amira", "demo-amira ", "demo-amira2"])
+def test_demo_tokens_are_only_the_three_personas(token, monkeypatch):
+    """A fixed demo token exists for amira, mateo and robert only; nothing else is accepted
+    and nothing starting with "demo-" ever grants a group, with authentication off or on."""
+    from alphaforge import auth
+
+    with pytest.raises(HTTPException) as exc:
+        verify_token(token)
+    assert exc.value.status_code == 401
+
+    monkeypatch.setattr(auth, "is_auth_enabled", lambda: True)
+    monkeypatch.setattr(auth, "get_jwks_client", lambda: (_ for _ in ()).throw(AssertionError("no network")))
+    with pytest.raises(HTTPException) as exc_on:
+        verify_token(token)
+    assert exc_on.value.status_code == 401
+    for ok in ("amira", "mateo", "robert"):
+        u = verify_token(f"demo-{ok}")
+        assert u.user_id == f"demo-{ok}" and u.groups == [] and not u.is_advisor
+
+
+def test_demo_token_rejected_by_the_api(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from alphaforge.api.server import app
+
+    client = TestClient(app)
+    for token in ("demo-advisor", "demo-wilson", "demo-"):
+        res = client.get("/user/profile", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 401, (token, res.status_code, res.text)
 
 
 def test_verify_empty_or_invalid_token():
