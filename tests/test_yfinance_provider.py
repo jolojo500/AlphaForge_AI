@@ -315,3 +315,34 @@ def test_live_spy_month_matches_csv():
     both = pd.concat([live, csv], axis=1, keys=["live", "csv"]).dropna()
     assert len(both) >= 15
     assert ((both["live"] / both["csv"] - 1).abs() < 0.005).all()
+
+
+def test_symbol_dropped_by_the_batch_is_fetched_again(fake_yf, tmp_path):
+    """Live: the threaded batch dropped GLD and the whole site fell back to the frozen dataset."""
+    calls = []
+
+    def flaky_download(tickers, **kwargs):
+        tickers = [tickers] if isinstance(tickers, str) else list(tickers)
+        calls.append((len(tickers), kwargs.get("threads")))
+        if len(tickers) > 5:  # the batch: Yahoo returns everything but GLD
+            tickers = [t for t in tickers if t != "GLD"]
+        return _fake_download(tickers, **kwargs)
+
+    fake_yf.download = flaky_download
+    yp = YFinanceProvider(cache_dir=tmp_path, end="2026-11-12")
+    got = yp.prices(["GLD", "SPY"])
+    assert yp.fallback is False
+    assert set(got["ticker"]) == {"GLD", "SPY"}
+    assert calls[1] == (1, False)  # only the missing symbol, sequentially
+
+
+def test_symbol_still_missing_after_the_retry_falls_back(fake_yf, tmp_path):
+    def never_gld(tickers, **kwargs):
+        tickers = [tickers] if isinstance(tickers, str) else list(tickers)
+        rest = [t for t in tickers if t != "GLD"]
+        return _fake_download(rest, **kwargs) if rest else pd.DataFrame()
+
+    fake_yf.download = never_gld
+    yp = YFinanceProvider(cache_dir=tmp_path, end="2026-11-12")
+    yp.prices(["SPY"])
+    assert yp.fallback is True

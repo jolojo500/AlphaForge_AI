@@ -286,9 +286,34 @@ class YFinanceProvider(CsvProvider):
             raise ValueError("No price records extracted from yfinance")
 
         present = set(prices_df["ticker"])
-        missing = set(tickers) - present
+        missing = sorted(set(tickers) - present)
         if missing:
-            raise ValueError(f"Missing tickers in yfinance data: {sorted(missing)}")
+            # The threaded batch sometimes drops a symbol (yfinance's own cache reports
+            # "database is locked"). Ask again for just those, one at a time, before giving up.
+            def retry_missing():
+                return yf.download(
+                    missing,
+                    auto_adjust=False,
+                    actions=False,
+                    group_by="column",
+                    progress=False,
+                    threads=False,
+                    timeout=int(self.timeout_s),
+                    **window,
+                )
+
+            try:
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    again = executor.submit(retry_missing).result(timeout=self.timeout_s)
+                if again is not None and not again.empty:
+                    extra = to_long(again, missing, currency_map)
+                    if not extra.empty:
+                        prices_df = pd.concat([prices_df, extra], ignore_index=True)
+            except Exception as exc:  # the check below reports what is still missing
+                logger.warning("yfinance retry for %s failed: %s", missing, exc)
+            missing = sorted(set(tickers) - set(prices_df["ticker"]))
+        if missing:
+            raise ValueError(f"Missing tickers in yfinance data: {missing}")
 
         counts = prices_df.groupby("ticker")["date"].count()
         max_count = counts.max()
