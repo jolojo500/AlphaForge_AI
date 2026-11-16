@@ -43,6 +43,7 @@ interface ResponseScreenProps {
   requestText: string;
   onAskAnother: () => void;
   onEditProfile: () => void;
+  onOpenProfile?: () => void;
   onSelectEvidence: (evidenceId: string) => void;
   whatIfDiff: WhatIfDiff | null;
   /** The run before the what-if, kept on screen beside the new one. */
@@ -90,6 +91,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
   requestText,
   onAskAnother,
   onEditProfile,
+  onOpenProfile,
   onSelectEvidence,
   whatIfDiff,
   whatIfBaseline,
@@ -185,6 +187,7 @@ export const ResponseScreen: React.FC<ResponseScreenProps> = ({
           customProfile={customProfile}
           activePersonaId={activePersonaId}
           onEditProfile={onEditProfile}
+          onOpenProfile={onOpenProfile}
           onOpenHistory={onOpenHistory}
           currentUser={currentUser}
           onOpenAuth={onOpenAuth}

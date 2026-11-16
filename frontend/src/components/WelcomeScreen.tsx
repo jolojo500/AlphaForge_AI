@@ -26,6 +26,8 @@ interface WelcomeScreenProps {
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
   onEditProfile?: () => void;
+  /** Opens the read-only ProfileModal (versioned profile, history, dossier download). */
+  onOpenProfile?: () => void;
   onLogout?: () => void;
 }
 
@@ -36,6 +38,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   currentUser,
   onOpenAuth,
   onEditProfile,
+  onOpenProfile,
   onLogout,
 }) => {
   const { language } = useLanguage();
@@ -113,6 +116,21 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                       <p className="text-[11px] text-muted-foreground truncate">{currentUser.email}</p>
                     )}
                   </div>
+
+                  {onOpenProfile && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onOpenProfile();
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md text-foreground hover:bg-muted hover:text-foreground text-left cursor-pointer transition-colors"
+                    >
+                      <UserRound className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{isEn ? 'My profile' : 'Mon profil'}</span>
+                    </button>
+                  )}
 
                   {onEditProfile && (
                     <button

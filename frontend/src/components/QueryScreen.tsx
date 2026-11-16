@@ -13,6 +13,7 @@ interface QueryScreenProps {
   customProfile: UserOnboardingProfile | null;
   activePersonaId: 'custom' | 'robert' | 'amira' | 'mateo';
   onEditProfile: () => void;
+  onOpenProfile?: () => void;
   onRunQuery: (payload: BackendRunPayload) => void;
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
@@ -26,6 +27,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
   customProfile,
   activePersonaId,
   onEditProfile,
+  onOpenProfile,
   onRunQuery,
   onOpenHistory,
   currentUser,
@@ -73,6 +75,7 @@ export const QueryScreen: React.FC<QueryScreenProps> = ({
         customProfile={customProfile}
         activePersonaId={activePersonaId}
         onEditProfile={onEditProfile}
+        onOpenProfile={onOpenProfile}
         onOpenHistory={onOpenHistory}
         currentUser={currentUser}
         onOpenAuth={onOpenAuth}

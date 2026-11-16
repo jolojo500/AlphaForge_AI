@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import {
   User,
   UserCog,
+  UserRound,
   ChevronDown,
   History,
   LogIn,
@@ -21,6 +22,8 @@ export interface AppHeaderProps {
   customProfile?: UserOnboardingProfile | null;
   activePersonaId?: 'custom' | 'robert' | 'amira' | 'mateo';
   onEditProfile?: () => void;
+  /** Opens the read-only ProfileModal (versioned profile, history, dossier download, #170/#192). */
+  onOpenProfile?: () => void;
   onOpenHistory?: () => void;
   currentUser?: AuthUser | null;
   onOpenAuth?: () => void;
@@ -30,6 +33,7 @@ export interface AppHeaderProps {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   onEditProfile,
+  onOpenProfile,
   onOpenHistory,
   currentUser,
   onOpenAuth,
@@ -118,6 +122,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <p className="text-[11px] text-muted-foreground truncate">{currentUser.email}</p>
                   )}
                 </div>
+
+                {onOpenProfile && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onOpenProfile();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md text-foreground hover:bg-muted hover:text-foreground text-left cursor-pointer transition-colors"
+                  >
+                    <UserRound className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>{isEn ? 'My profile' : 'Mon profil'}</span>
+                  </button>
+                )}
 
                 {onEditProfile && (
                   <button

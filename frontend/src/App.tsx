@@ -36,6 +36,7 @@ import { ResponseScreen } from './components/ResponseScreen';
 import { EvidenceModal } from './components/EvidenceModal';
 import { ReplayRunModal } from './components/ReplayRunModal';
 import { AuthModal } from './components/AuthModal';
+import { ProfileModal } from './components/ProfileModal';
 import { AppHeader } from './components/AppHeader';
 import { DEMO_PERSONAS } from './lib/demoProfiles';
 import { Button } from './components/ui/button';
@@ -77,6 +78,8 @@ export const AppContent: React.FC = () => {
   // Authentication state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  // Read-only versioned profile view (history, dossier download, #170/#192); edits go through the questionnaire.
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   // Unsubscribe ref for SSE stream
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -424,6 +427,7 @@ export const AppContent: React.FC = () => {
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onEditProfile={() => setView('onboarding')}
+          onOpenProfile={currentUser ? () => setIsProfileModalOpen(true) : undefined}
           onLogout={handleLogout}
         />
         <ReplayRunModal
@@ -436,6 +440,12 @@ export const AppContent: React.FC = () => {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onSuccess={handleAuthSuccess}
+        />
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
+          onEditQuestionnaire={() => setView('onboarding')}
         />
       </>
     );
@@ -461,6 +471,7 @@ export const AppContent: React.FC = () => {
           customProfile={customProfile}
           activePersonaId={activePersonaId}
           onEditProfile={() => setView('onboarding')}
+          onOpenProfile={currentUser ? () => setIsProfileModalOpen(true) : undefined}
           onRunQuery={handleStartRun}
           onOpenHistory={() => setIsReplayModalOpen(true)}
           currentUser={currentUser}
@@ -478,6 +489,12 @@ export const AppContent: React.FC = () => {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
           onSuccess={handleAuthSuccess}
+        />
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
+          onEditQuestionnaire={() => setView('onboarding')}
         />
       </>
     );
@@ -568,6 +585,7 @@ export const AppContent: React.FC = () => {
             requestText={lastPayload?.request_text || runState.request_text}
             onAskAnother={() => setView('query')}
             onEditProfile={() => setView('onboarding')}
+            onOpenProfile={currentUser ? () => setIsProfileModalOpen(true) : undefined}
             onSelectEvidence={setSelectedEvidenceId}
             whatIfDiff={whatIfDiff}
             whatIfBaseline={whatIfBaseline}
@@ -599,6 +617,12 @@ export const AppContent: React.FC = () => {
             isOpen={isAuthModalOpen}
             onClose={() => setIsAuthModalOpen(false)}
             onSuccess={handleAuthSuccess}
+          />
+          <ProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => setIsProfileModalOpen(false)}
+            currentUser={currentUser}
+            onEditQuestionnaire={() => setView('onboarding')}
           />
         </>
       );
