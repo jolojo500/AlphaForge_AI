@@ -43,6 +43,7 @@ import { Button } from './components/ui/button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 
 const STORAGE_KEY = 'alphaforge_user_profile';
+const PROFILE_OWNER_KEY = 'alphaforge_user_profile_owner';
 
 type AppView = 'welcome' | 'onboarding' | 'query' | 'analysis_results';
 type PersonaChoice = 'custom' | 'robert' | 'amira' | 'mateo';
@@ -95,6 +96,8 @@ export const AppContent: React.FC = () => {
       if (!q) return false;
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(q));
+        const owner = getStoredUser()?.username;
+        if (owner) localStorage.setItem(PROFILE_OWNER_KEY, owner);
       } catch (e) {
         console.warn('Error saving to localStorage:', e);
       }
@@ -110,7 +113,28 @@ export const AppContent: React.FC = () => {
 
   const handleAuthSuccess = (user: AuthUser) => {
     setCurrentUser(user);
-    void hydrateProfileFromServer();
+    void hydrateProfileFromServer().then((found) => {
+      if (found) return;
+      // No questionnaire saved for this account: never show another user's local copy.
+      let owner: string | null = null;
+      try {
+        owner = localStorage.getItem(PROFILE_OWNER_KEY);
+      } catch {
+        owner = null;
+      }
+      if (owner !== user.username) {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PROFILE_OWNER_KEY);
+          localStorage.removeItem(PROFILE_OWNER_KEY);
+        } catch {
+          /* ignore storage errors */
+        }
+        setCustomProfile(null);
+        setActivePersonaId('custom');
+        setView('onboarding');
+      }
+    });
   };
 
   // Verify auth session on mount, then restore the server profile (#170)
@@ -193,6 +217,8 @@ export const AppContent: React.FC = () => {
   const persistProfile = (profile: UserOnboardingProfile) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+      if (currentUser) localStorage.setItem(PROFILE_OWNER_KEY, currentUser.username);
+      else localStorage.removeItem(PROFILE_OWNER_KEY);
     } catch (e) {
       console.warn('Error saving to localStorage:', e);
     }
@@ -455,7 +481,7 @@ export const AppContent: React.FC = () => {
   if (view === 'onboarding') {
     return (
       <OnboardingFlow
-        initialProfile={customProfile || activeProfile}
+        initialProfile={activePersonaId !== 'custom' ? activeProfile : customProfile}
         onComplete={handleOnboardingComplete}
         onCancel={customProfile || currentUser ? () => setView('query') : () => setView('welcome')}
       />
